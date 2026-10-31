@@ -141,6 +141,17 @@ def _save_json(path, data):
     os.replace(tmp, path)
 
 
+ANNOUNCE_FILE = os.path.join(BASE_DIR, "announcements.json")
+
+
+def load_announcements():
+    return _load_json(ANNOUNCE_FILE, [])
+
+
+def save_announcements(items):
+    _save_json(ANNOUNCE_FILE, items)
+
+
 ACCOUNTS_FILE = os.path.join(BASE_DIR, "accounts.json")
 
 
@@ -1345,6 +1356,23 @@ class Handler(BaseHTTPRequestHandler):
             out.sort(key=lambda x: x.get("createdAt") or 0, reverse=True)
             return self._json(out)
 
+        if path == "/api/announcements":
+            with LOCK:
+                arr = load_announcements()
+            pub = [a for a in arr if a.get("status") == "published"]
+            pub.sort(key=lambda x: (not x.get("pinned"), -(x.get("publishedAt") or 0)))
+            return self._json([{"id": a.get("id"), "title": a.get("title"),
+                                "body": a.get("body"), "pinned": bool(a.get("pinned")),
+                                "publishedAt": a.get("publishedAt") or 0} for a in pub])
+
+        if path == "/api/admin/announcements":
+            if not self._need_admin():
+                return
+            with LOCK:
+                arr = load_announcements()
+            arr.sort(key=lambda x: (not x.get("pinned"), -(x.get("updatedAt") or 0)))
+            return self._json(arr)
+
         if path == "/api/admin/items":
             if not self._need_admin():
                 return
@@ -1390,6 +1418,27 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         path = unquote(urlparse(self.path).path)
+        if path == "/api/admin/announcements":
+            if not self._need_admin():
+                return
+            body = self._read_body()
+            title = str(body.get("title") or "").strip()[:60]
+            text = str(body.get("body") or "").strip()[:2000]
+            if len(title) < 2 or len(text) < 5:
+                return self._json({"error": "标题或正文太短"}, 400)
+            now = now_ms()
+            item = {"id": "a_" + uuid.uuid4().hex[:10], "title": title, "body": text,
+                    "pinned": bool(body.get("pinned")), "status": "draft",
+                    "createdAt": now, "updatedAt": now, "publishedAt": 0}
+            if body.get("publish"):
+                item["status"] = "published"
+                item["publishedAt"] = now
+            with LOCK:
+                arr = load_announcements()
+                arr.append(item)
+                save_announcements(arr)
+            return self._json(item, 201)
+
 
         if path == "/api/format":
             body = self._read_body()
@@ -2008,6 +2057,30 @@ class Handler(BaseHTTPRequestHandler):
                 save_notices(notices)
             return self._json({"ok": True, "status": status})
 
+        if path.startswith("/api/admin/announcements/"):
+            if not self._need_admin():
+                return
+            aid = path[len("/api/admin/announcements/"):]
+            body = patch
+            with LOCK:
+                arr = load_announcements()
+                target = next((x for x in arr if x.get("id") == aid), None)
+                if not target:
+                    return self._json({"error": "not found"}, 404)
+                if "title" in body:
+                    target["title"] = str(body.get("title") or "").strip()[:60]
+                if "body" in body:
+                    target["body"] = str(body.get("body") or "").strip()[:2000]
+                if "pinned" in body:
+                    target["pinned"] = bool(body.get("pinned"))
+                if body.get("status") in ("draft", "published"):
+                    target["status"] = body["status"]
+                    if body["status"] == "published" and not target.get("publishedAt"):
+                        target["publishedAt"] = now_ms()
+                target["updatedAt"] = now_ms()
+                save_announcements(arr)
+            return self._json(target)
+
         if path.startswith("/api/admin/items/"):
             if not self._need_admin():
                 return
@@ -2099,6 +2172,16 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_DELETE(self):
         path = unquote(urlparse(self.path).path)
+        if path.startswith("/api/admin/announcements/"):
+            if not self._need_admin():
+                return
+            aid = path[len("/api/admin/announcements/"):]
+            with LOCK:
+                arr = load_announcements()
+                arr = [x for x in arr if x.get("id") != aid]
+                save_announcements(arr)
+            return self._json({"ok": True})
+
         if not path.startswith("/api/items/"):
             return self._send(404, "not found", "text/plain; charset=utf-8")
         owner = self._owner()

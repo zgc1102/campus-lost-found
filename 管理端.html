@@ -143,6 +143,7 @@ main{padding:14px}
         <button data-tab="rejected">已驳回</button>
         <button data-tab="all">全部</button>
         <button data-tab="users">注册用户</button>
+        <button data-tab="announce">公告</button>
       </div>
       <input class="search" id="search" placeholder="搜索标题 / 地点 / 描述">
       <div id="list"></div>
@@ -211,6 +212,7 @@ main{padding:14px}
     try{
       items = await api('/api/admin/items') || [];
       if(tab === 'users'){ await loadAccounts(); return; }
+      if(tab === 'announce'){ await loadAnnouncements(); return; }
       render();
     }catch(e){ $('list').innerHTML = '<div class="empty">' + e.message + '</div>'; }
   }
@@ -238,6 +240,72 @@ main{padding:14px}
         '<div class="meta">最近登录：' + (a.lastLoginAt ? fmt(a.lastLoginAt) : '—') +
         '　发布 ' + a.posts + ' 条</div></div>';
     }).join('');
+  }
+
+  let announcements = [];
+  let editingAnn = null;
+
+  async function loadAnnouncements(){
+    try{
+      announcements = await api('/api/admin/announcements') || [];
+      renderAnnounce();
+    }catch(e){ $('list').innerHTML = '<div class="empty">' + e.message + '</div>'; }
+  }
+
+  function annForm(a){
+    a = a || {title:'', body:'', pinned:false};
+    return '<div class="item" style="padding:14px">' +
+      '<div class="tt" style="margin-bottom:8px">' + (editingAnn ? '编辑公告' : '新建公告') + '</div>' +
+      '<input id="annTitle" placeholder="公告标题（必填，例如：失物招领点调整通知）" value="' + esc(a.title || '') + '" style="width:100%;padding:9px;border:1px solid #ddd;border-radius:8px;margin-bottom:8px;font-family:inherit">' +
+      '<textarea id="annBody" placeholder="公告正文（必填）" style="width:100%;height:110px;padding:9px;border:1px solid #ddd;border-radius:8px;margin-bottom:8px;font-family:inherit">' + esc(a.body || '') + '</textarea>' +
+      '<label style="font-size:13px;display:block;margin-bottom:10px"><input type="checkbox" id="annPinned" ' + (a.pinned ? 'checked' : '') + '> 置顶</label>' +
+      '<div class="acts">' +
+      '<button class="btn ok" data-ann-save="1">' + (editingAnn ? '保存修改' : '保存草稿') + '</button>' +
+      '<button class="btn" data-ann-pub="1">保存并发布</button>' +
+      (editingAnn ? '<button class="btn gray" data-ann-cancel="1">取消编辑</button>' : '') +
+      '</div></div>';
+  }
+
+  function renderAnnounce(){
+    $('stats').innerHTML = '<div class="s"><b>' + announcements.length + '</b><span>公告</span></div>';
+    $('list').innerHTML = annForm(editingAnn) + (announcements.length ? announcements.map(function(a){
+      return '<div class="item"><div class="row1">' +
+        '<span class="tag">' + (a.status === 'published' ? '已发布' : '草稿') + '</span>' +
+        (a.pinned ? '<span class="status" style="background:#fff4d6;color:#a97a00">置顶</span>' : '') +
+        '<div class="tt">' + esc(a.title) + '</div></div>' +
+        '<div class="meta">' + esc((a.body || '').slice(0, 80)) + '</div>' +
+        '<div class="meta">更新：' + fmt(a.updatedAt) + '　发布：' + (a.publishedAt ? fmt(a.publishedAt) : '—') + '</div>' +
+        '<div class="acts">' +
+        '<button class="btn ghost" data-ann-edit="' + a.id + '">编辑</button>' +
+        (a.status === 'published'
+          ? '<button class="btn gray" data-ann-draft="' + a.id + '">下线</button>'
+          : '<button class="btn ok" data-ann-publish="' + a.id + '">发布</button>') +
+        '<button class="btn danger" data-ann-del="' + a.id + '">删除</button>' +
+        '</div></div>';
+    }).join('') : '<div class="empty">还没有公告，上面写一条吧</div>');
+  }
+
+  async function saveAnnounce(publish){
+    const title = ($('annTitle') || {}).value || '';
+    const body = ($('annBody') || {}).value || '';
+    const pinned = !!($('annPinned') || {}).checked;
+    if(title.trim().length < 2 || body.trim().length < 5){ alert('标题或正文太短'); return; }
+    try{
+      if(editingAnn){
+        await api('/api/admin/announcements/' + encodeURIComponent(editingAnn.id), {
+          method: 'PATCH',
+          body: JSON.stringify({title: title.trim(), body: body.trim(), pinned: pinned,
+                                status: publish ? 'published' : undefined})
+        });
+      } else {
+        await api('/api/admin/announcements', {
+          method: 'POST',
+          body: JSON.stringify({title: title.trim(), body: body.trim(), pinned: pinned, publish: !!publish})
+        });
+      }
+      editingAnn = null;
+      await loadAnnouncements();
+    }catch(e){ alert(e.message); }
   }
 
   function statusText(s){
@@ -462,11 +530,48 @@ main{padding:14px}
     Array.prototype.forEach.call($('tabs').children, x => x.classList.remove('on'));
     b.classList.add('on');
     if(tab === 'users'){ loadAccounts(); return; }
+    if(tab === 'announce'){ loadAnnouncements(); return; }
     render();
   });
   $('search').addEventListener('input', e => { keyword = e.target.value.trim(); render(); });
 
   $('list').addEventListener('click', e => {
+    const annSave = e.target.closest('[data-ann-save]');
+    if(annSave){ saveAnnounce(false); return; }
+    const annPub = e.target.closest('[data-ann-pub]');
+    if(annPub){ saveAnnounce(true); return; }
+    const annCancel = e.target.closest('[data-ann-cancel]');
+    if(annCancel){ editingAnn = null; renderAnnounce(); return; }
+    const annEdit = e.target.closest('[data-ann-edit]');
+    if(annEdit){
+      editingAnn = announcements.find(function(x){ return x.id === annEdit.getAttribute('data-ann-edit'); }) || null;
+      renderAnnounce();
+      return;
+    }
+    const annPublish = e.target.closest('[data-ann-publish]');
+    if(annPublish){
+      const id = annPublish.getAttribute('data-ann-publish');
+      api('/api/admin/announcements/' + encodeURIComponent(id), {
+        method: 'PATCH', body: JSON.stringify({status: 'published'})
+      }).then(loadAnnouncements).catch(function(err){ alert(err.message); });
+      return;
+    }
+    const annDraft = e.target.closest('[data-ann-draft]');
+    if(annDraft){
+      const id = annDraft.getAttribute('data-ann-draft');
+      api('/api/admin/announcements/' + encodeURIComponent(id), {
+        method: 'PATCH', body: JSON.stringify({status: 'draft'})
+      }).then(loadAnnouncements).catch(function(err){ alert(err.message); });
+      return;
+    }
+    const annDel = e.target.closest('[data-ann-del]');
+    if(annDel){
+      if(!confirm('确定删除这条公告？')) return;
+      const id = annDel.getAttribute('data-ann-del');
+      api('/api/admin/announcements/' + encodeURIComponent(id), {method: 'DELETE'})
+        .then(loadAnnouncements).catch(function(err){ alert(err.message); });
+      return;
+    }
     const run = e.target.closest('[data-ai-run]');
     if(run){ runAi(run.getAttribute('data-ai-run')); return; }
     const ap = e.target.closest('[data-ai-apply]');

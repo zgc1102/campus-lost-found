@@ -165,6 +165,10 @@ python 公网启动器.py
 | `/api/agent/review/stream` | POST(SSE) | Agent 流式步骤与结论 |
 | `/api/ask` | POST | RAG 校园失物问答（带引用） |
 | `/api/vision/analyze` | POST | 图片识别（需配置视觉模型） |
+| `/api/format` | POST | AI 信息整理：摘要 + 精简描述 + 字段 |
+| `/api/announcements` | GET | 已发布公告（首页轮播） |
+| `/api/admin/announcements` | GET/POST | 公告管理：列表 / 新建 |
+| `/api/admin/announcements/<id>` | PATCH/DELETE | 发布、下线、编辑、删除 |
 | `/api/sync` | GET | 公开列表 + 我的发布 |
 | `/api/admin/*` | - | 审核、AI 配置、用户 |
 

@@ -1229,20 +1229,46 @@ function renderBorrow(tab){
 }
 
 /* ============ 渲染：中央宣传窗 ============ */
+let MEMORIAL_DATA = MEMORIAL.slice();
+
+async function loadAnnouncements(){
+  if(!API_BASE) return;
+  try{
+    const arr = await fetch(API_BASE + '/announcements').then(function(r){ return r.json(); });
+    if(Array.isArray(arr) && arr.length){
+      MEMORIAL_DATA = arr.slice(0, 5).map(function(a){
+        return {
+          key: 'ann_' + a.id,
+          star: a.pinned ? '📌' : '📢',
+          name: a.title,
+          sub: '校园公告 · ' + fmtTime(a.publishedAt),
+          blocks: [{h: a.title, p: [a.body]}]
+        };
+      });
+      renderMemorial();
+    }
+  }catch(e){}
+}
+
 function renderMemorial(){
   const track=document.getElementById('memTrack');
-  track.innerHTML = MEMORIAL.map((m,i)=>
+  track.innerHTML = MEMORIAL_DATA.map((m,i)=>
     '<div class="mem-slide" data-mem="'+i+'">'+
     '<div class="mem-star">'+m.star+'</div>'+
     '<div><div class="mn">'+m.name+'</div><div class="ms">'+m.sub+'</div></div></div>'
   ).join('');
+  const dots=document.getElementById('memDots');
+  if(dots){
+    dots.innerHTML = MEMORIAL_DATA.map(function(_,i){ return '<i class="'+(i===0?'on':'')+'"></i>'; }).join('');
+  }
   track.onscroll=()=>{
     const idx=Math.round(track.scrollLeft/track.clientWidth);
     document.querySelectorAll('#memDots i').forEach((d,i)=>d.classList.toggle('on',i===idx));
   };
 }
 function renderMemorialDetail(idx){
-  const m=MEMORIAL[idx];
+  const m=MEMORIAL_DATA[idx];
+  if(!m) return;
   const w=document.getElementById('memorialWrap');
   w.innerHTML = '<div class="sectitle">'+m.name+' · '+m.sub+'</div>'+
     m.blocks.map(b=>'<div class="blk"><h3>'+b.h+'</h3>'+b.p.map(p=>'<p>'+p+'</p>').join('')+'</div>').join('');
@@ -2488,6 +2514,7 @@ function checkStorage(){
 try{
   checkStorage();
   renderMemorial();
+  loadAnnouncements();
   renderImgSearch();
   renderLost(); renderFound(); renderLend('lend'); renderBorrow('borrow');
   renderMine();
