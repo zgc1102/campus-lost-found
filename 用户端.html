@@ -242,6 +242,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .cs-box .k{color:var(--sub);font-size:11.5px;display:block;margin-bottom:3px;}
 .cs-secret{color:var(--purple);font-weight:700;}
 .cs-tip{font-size:11.5px;color:var(--sub);line-height:1.6;margin:2px 0 10px;}
+/* AI 核验过程 */
+.agent-box{margin-top:10px;background:#f7f5ff;border:1px solid #e2dcf5;border-radius:12px;padding:12px;}
+.agent-title{font-size:12px;font-weight:700;color:#5a4b8a;margin-bottom:8px;}
+.agent-step{font-size:12px;color:#4a4552;line-height:1.6;padding:4px 0;border-bottom:1px dashed #e6e1f2;display:flex;gap:8px;}
+.agent-step .dot{color:#2f7d46;}
+.agent-verdict{margin-top:8px;font-size:12.5px;line-height:1.7;color:#3a3645;}
+.agent-verdict .v-ok{color:#2f7d46;font-weight:700;}
+.agent-verdict .v-more{color:#a15c00;font-weight:700;}
+.agent-verdict .v-no{color:#a12f2f;font-weight:700;}
 
 .netbadge{font-size:11px;line-height:1.5;border-radius:8px;padding:7px 10px;background:#f2f0f7;color:#6b6480;margin:0 0 10px;}
 /* 账号登录 */
@@ -618,6 +627,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
     <div class="sectitle" id="csClaimTitle">对方提供的特征</div>
     <div class="cs-box hl" id="csClaim"></div>
     <div class="cs-tip" id="csTip">只有细节真的对得上，才点「通过」。通过后双方才会看到联系方式。</div>
+    <div id="csAgentWrap" style="margin:10px 0 12px">
+      <button class="btn ghost" id="csAgentBtn" style="width:100%">🔍 让 AI 帮我核验一下</button>
+      <div class="agent-box" id="csAgentBox" style="display:none">
+        <div class="agent-title">AI 核验过程</div>
+        <div id="csAgentSteps"></div>
+        <div class="agent-verdict" id="csAgentVerdict"></div>
+      </div>
+    </div>
     <button class="btn ok" id="csAccept" style="width:100%;margin-bottom:8px">通过，交换联系方式</button>
     <div style="display:flex;gap:8px">
       <button class="btn ghost" id="csNeedMore" style="flex:1">信息不够，请补充</button>
@@ -1471,6 +1488,36 @@ function openClaimReview(id){
 
   const sheet = document.getElementById('claimSheet');
   sheet.classList.add('show');
+
+  // AI 核验（只对「我收到的、待处理」的申请开放）
+  const agentBtn = document.getElementById('csAgentBtn');
+  const agentBox = document.getElementById('csAgentBox');
+  const agentSteps = document.getElementById('csAgentSteps');
+  const agentVerdict = document.getElementById('csAgentVerdict');
+  const canAgent = (c.itemSecret !== undefined) && c.status === 'pending';
+  agentBox.style.display = 'none';
+  agentSteps.innerHTML = '';
+  agentVerdict.innerHTML = '';
+  agentBtn.style.display = canAgent ? 'block' : 'none';
+  agentBtn.disabled = false;
+  agentBtn.textContent = '🔍 让 AI 帮我核验一下';
+  agentBtn.onclick = async function(){
+    this.disabled = true;
+    this.textContent = 'AI 正在核验…';
+    agentBox.style.display = 'block';
+    agentSteps.innerHTML = '<div class="agent-step"><span class="dot">…</span><span>正在读取物品与申请</span></div>';
+    agentVerdict.innerHTML = '';
+    try{
+      await runAgentReview(c.itemId, c.id, agentSteps, agentVerdict);
+      this.textContent = '重新核验';
+    }catch(e){
+      agentSteps.innerHTML = '<div class="agent-step">核验失败：' + esc((e && e.message) || '网络问题') + '</div>';
+      this.textContent = '重试';
+    }finally{
+      this.disabled = false;
+    }
+  };
+
   document.getElementById('csAccept').onclick = function(){
     Net.claimAction(id, {status:'accepted'}).then(function(){
       sheet.classList.remove('show');
@@ -1493,6 +1540,49 @@ function openClaimReview(id){
     }).catch(function(){ toast('操作失败，稍后再试'); });
   };
   document.getElementById('csClose').onclick = function(){ sheet.classList.remove('show'); };
+}
+
+const AGENT_LABELS = {
+  get_item: '读取物品与独有特征',
+  get_claim: '读取申请内容与补充记录',
+  check_reports: '查询举报记录',
+  policy_check: '检查平台规则',
+  search_similar: '检索库内相似物品'
+};
+
+async function runAgentReview(itemId, claimId, stepsEl, verdictEl){
+  const resp = await fetch(API_BASE + '/agent/review', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-Owner': myId()},
+    body: JSON.stringify({itemId: itemId, claimId: claimId})
+  });
+  let obj = null;
+  try{ obj = await resp.json(); }catch(e){ obj = null; }
+  if(!resp.ok || !obj || obj.error){
+    throw new Error((obj && obj.error) || '核验失败');
+  }
+  stepsEl.innerHTML = '';
+  const steps = obj.steps || [];
+  for(let i = 0; i < steps.length; i++){
+    const st = steps[i];
+    const div = document.createElement('div');
+    div.className = 'agent-step';
+    div.innerHTML = '<span class="dot">✓</span><span>' + esc(AGENT_LABELS[st.tool] || st.tool) + '</span>';
+    stepsEl.appendChild(div);
+    await new Promise(function(res){ setTimeout(res, 180); });
+  }
+  const map = {
+    accept: ['v-ok', '建议通过'],
+    need_more: ['v-more', '建议请对方补充'],
+    reject: ['v-no', '建议拒绝']
+  };
+  const m = map[obj.decision] || ['', '建议人工判断'];
+  let html = '<span class="' + m[0] + '">' + m[1] + '</span>' +
+    '（置信度 ' + Math.round((obj.confidence || 0) * 100) + '%）<br>' + esc(obj.reason || '');
+  if(obj.missing && obj.missing.length){
+    html += '<br><span style="color:var(--sub)">还需要：' + obj.missing.map(esc).join('、') + '</span>';
+  }
+  verdictEl.innerHTML = html;
 }
 
 function updateBell(n){
