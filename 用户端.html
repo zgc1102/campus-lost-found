@@ -278,6 +278,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .netbadge.on{background:#e6f4ea;color:#2f7d46;}
 .netbadge.off{background:#fff4d6;color:#a97a00;}
 .editnote{display:none;background:#fff8e6;border:1px solid #f0e0b8;color:#8a6100;border-radius:10px;padding:9px 11px;font-size:12px;line-height:1.6;margin:0 0 12px;}
+
+/* ===== 轻量动画 ===== */
+@keyframes screenIn{from{opacity:.35;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+@keyframes sheetUp{from{opacity:.5;transform:translateX(-50%) translateY(26px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+.screen.active{animation:screenIn .18s ease both;}
+.item,.ask-card,.claim{animation:fadeUp .22s ease both;}
+.sheet.show{animation:sheetUp .22s ease both;}
+.agent-step{animation:fadeUp .18s ease both;}
+.btn{transition:transform .12s ease, opacity .12s ease;}
+.btn:active{transform:scale(.97);}
+.ask-chip{transition:transform .12s ease, background .12s ease;}
+.ask-chip:active{transform:scale(.96);background:#e9e1fb;}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
@@ -655,6 +669,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
       <div class="close" id="claimCancel" style="margin-top:6px">取消</div>
     </div>
     <div class="close" id="isReport" style="display:none;color:#c0392b;margin-top:8px">🚩 举报这条信息</div>
+    <div class="tip-small" id="reportHint" style="display:none;margin-top:4px;line-height:1.6">
+      遇到索要验证码、要求转账、发送陌生链接等诈骗行为，请直接拨打 <b>110</b> 报警，并保留聊天记录。
+    </div>
     <div class="close" data-close-sheet>收起</div>
   </div>
 
@@ -1366,13 +1383,16 @@ function openItem(id){
     btn.style.display = 'none';
   }
   const rep = document.getElementById('isReport');
+  const repHint = document.getElementById('reportHint');
   if(rep){
     const canReport = API_BASE && !mine && it.status && ['approved','claimed'].indexOf(it.status) >= 0;
     rep.style.display = canReport ? 'block' : 'none';
+    if(repHint) repHint.style.display = canReport ? 'block' : 'none';
     rep.onclick = function(){
       this.style.display = 'none';
+      if(repHint) repHint.style.display = 'none';
       Net.report(it.id).then(function(r){
-        toast('已收到举报（' + (r && r.reports || 1) + ' 人），达到 3 人会重新审核');
+        toast('已收到举报（' + (r && r.reports || 1) + ' 人），达到 3 人会重新审核；如遇诈骗请拨打 110');
       }).catch(function(){ toast('举报失败，请稍后重试'); });
     };
   }
