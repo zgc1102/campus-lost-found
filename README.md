@@ -87,8 +87,14 @@ campus-lost-found/
 ├─ .gitignore
 ├─ requirements.txt
 ├─ server.py            # 服务端与接口
-├─ 用户端.html           # 用户界面
-├─ 管理端.html           # 管理界面
+├─ 用户端.html           # 用户端页面结构
+├─ 管理端.html           # 管理端页面结构
+├─ assets/
+│  ├─ styles.css        # 用户端样式
+│  ├─ app.js            # 用户端逻辑
+│  ├─ admin.css         # 管理端样式
+│  └─ admin.js          # 管理端逻辑
+├─ data/kb/             # RAG 知识库
 ├─ 公网启动器.py         # 本机启动 + 公网隧道
 ├─ docs/
 │  ├─ PROGRESS.md       # 开发日志
