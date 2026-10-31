@@ -1085,17 +1085,20 @@ COND_WORDS = ["全新", "九成新", "八成新", "七成新", "六成新", "五
               "轻微磨损", "破损", "划痕", "掉漆", "断裂"]
 
 
-def _format_fallback(title, desc):
+def _format_fallback(title, desc, place=""):
     t = desc or ""
     for w in FILLER_WORDS:
         t = t.replace(w, "")
     t = re.sub(r"\s+", " ", t).strip("，。 ；;,.!")
-    color = next((c for c in COLOR_WORDS if c in ((title or "") + t)), "")
-    cond = next((c for c in COND_WORDS if c in (t + (title or ""))), "")
+    title = (title or "").strip()
+    color = next((c for c in COLOR_WORDS if c in (title + t)), "")
+    cond = next((c for c in COND_WORDS if c in (t + title)), "")
     desc_out = t[:60]
-    summary = (title or t)[:16]
-    if color:
+    summary = title or t[:16]
+    if color and not summary.startswith(color):
         summary = color + " " + summary
+    if place and place not in summary and place != "未填写地点":
+        summary += " · " + place
     summary = summary[:30]
     return {
         "summary": summary,
@@ -1737,6 +1740,12 @@ class Handler(BaseHTTPRequestHandler):
             if not isinstance(body, dict) or not body.get("title"):
                 return self._json({"error": "title required"}, 400)
             item = self._clean(body)
+            # 强制模板化：客户端没带摘要时用规则整理兜底，保证展示一致
+            if not item.get("summary"):
+                _fmt = _format_fallback(item.get("title") or "", item.get("desc") or "", item.get("place") or "")
+                item["summary"] = _fmt["summary"]
+                if not item.get("fields"):
+                    item["fields"] = _fmt["fields"]
             item["id"] = "p_" + uuid.uuid4().hex[:12]
             item["status"] = "pending"
             item["rejectReason"] = ""
@@ -2040,6 +2049,11 @@ class Handler(BaseHTTPRequestHandler):
                             it["contact"] = {"phone": str(patch["phone"])[:20]}
                         it["summary"] = str(patch.get("summary") or "")[:40]
                         it["fields"] = patch.get("fields") if isinstance(patch.get("fields"), dict) else None
+                        if not it["summary"]:
+                            _f = _format_fallback(it.get("title") or "", it.get("desc") or "", it.get("place") or "")
+                            it["summary"] = _f["summary"]
+                            if not it.get("fields"):
+                                it["fields"] = _f["fields"]
                         it["status"] = "pending"
                         it["rejectReason"] = ""
                         it["updatedAt"] = now_ms()
