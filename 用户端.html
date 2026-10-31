@@ -889,6 +889,7 @@ const Net = {
   claimAction(id, body){ return this.call('/claims/' + encodeURIComponent(id), {method:'PATCH', body: JSON.stringify(body)}); },
   complete(id){ return this.call('/claims/' + encodeURIComponent(id) + '/complete', {method:'POST'}); },
   supplement(id, body){ return this.call('/claims/' + encodeURIComponent(id) + '/supplement', {method:'POST', body: JSON.stringify(body)}); },
+  vision(image, mime){ return this.call('/vision/analyze', {method:'POST', body: JSON.stringify({image: image, mime: mime || 'image/jpeg'})}); },
   notices(){ return this.call('/notices'); },
   recover(body){ return this.call('/recover', {method:'POST', body: JSON.stringify(body)}); },
   accountLogin(body){ return this.call('/account/login', {method:'POST', body: JSON.stringify(body)}); },
@@ -1940,6 +1941,16 @@ function compressImage(file){
     img.src = url;
   });
 }
+function guessCategory(text){
+  const t = String(text || '');
+  if(/包|书包|背包|箱/.test(t)) return '书包';
+  if(/卡|证|身份证|学生证/.test(t)) return '证件';
+  if(/耳机|手机|电脑|电子|充电|相机|键盘|鼠标/.test(t)) return '电子设备';
+  if(/衣|外套|帽子|围巾|手套|鞋/.test(t)) return '衣物';
+  if(/杯|水壶|保温/.test(t)) return '水杯';
+  return '其他';
+}
+
 document.getElementById('photoInput').onchange = function(){
   const f = this.files && this.files[0];
   const box = document.getElementById('photoPreview');
@@ -1953,6 +1964,38 @@ document.getElementById('photoInput').onchange = function(){
     photoBusy = false;
     pendingPhoto = d;
     box.innerHTML = '<img src="'+d+'" alt="预览" style="width:100%;max-height:170px;object-fit:cover;border-radius:10px;margin-top:8px">';
+    if(API_BASE){
+      const hint = document.createElement('div');
+      hint.className = 'tip-small';
+      hint.id = 'visionHint';
+      hint.textContent = 'AI 正在识别图片…';
+      box.appendChild(hint);
+      const raw = String(d).split(',')[1] || '';
+      Net.vision(raw, 'image/jpeg').then(function(r){
+        if(seq !== photoSeq) return;
+        const h = document.getElementById('visionHint');
+        if(!r || !r.ok){
+          if(h) h.textContent = (r && r.reason) ? ('AI 识别暂不可用：' + r.reason) : 'AI 识别暂不可用，可手动填写分类和描述';
+          return;
+        }
+        const cat = guessCategory((r.category || '') + ' ' + (r.desc || ''));
+        const sel = document.querySelector('#publishForm select[name="category"]');
+        if(sel && !sel.value) sel.value = cat;
+        const ta = document.querySelector('#publishForm textarea[name="desc"]');
+        if(ta && ta.value.trim().length < 5 && r.desc){
+          const base = String(r.desc).replace(/[。.!！]+$/, '');
+          const color = (r.color && base.indexOf(r.color) < 0) ? ('，' + r.color) : '';
+          ta.value = base + color;
+          ta.dispatchEvent(new Event('input'));
+        }
+        if(h){
+          h.textContent = 'AI 识别：' + [r.color, r.category, r.features].filter(Boolean).join(' · ') + '（可修改）';
+        }
+      }).catch(function(){
+        const h = document.getElementById('visionHint');
+        if(h) h.textContent = 'AI 识别失败，可手动填写分类和描述';
+      });
+    }
   }).catch(function(){
     if(seq !== photoSeq) return;
     photoBusy = false;
