@@ -9,6 +9,7 @@
 
 import hashlib
 import json
+import math
 import os
 import random
 import re
@@ -765,6 +766,315 @@ def startup_gate():
     return False
 
 
+
+# ================= 扩展 AI：核验 Agent / RAG / 多模态 =================
+KB_DIR = os.path.join(BASE_DIR, "data", "kb")
+_KB_CACHE = {"at": 0.0, "chunks": []}
+
+
+def _kb_chunks():
+    chunks = []
+    if not os.path.isdir(KB_DIR):
+        return chunks
+    for fn in sorted(os.listdir(KB_DIR)):
+        if not fn.lower().endswith(".md"):
+            continue
+        try:
+            with open(os.path.join(KB_DIR, fn), "r", encoding="utf-8") as f:
+                text = f.read()
+        except Exception:
+            continue
+        title = fn[:-3]
+        for i, p in enumerate(re.split(r"\n\s*\n", text)):
+            p = p.strip()
+            if len(p) < 20:
+                continue
+            chunks.append({"id": "%s#%d" % (fn, i), "title": title, "text": p[:800]})
+    return chunks
+
+
+def kb_chunks():
+    if time.time() - _KB_CACHE["at"] > 60:
+        _KB_CACHE["chunks"] = _kb_chunks()
+        _KB_CACHE["at"] = time.time()
+    return _KB_CACHE["chunks"]
+
+
+def kb_search(query, k=4):
+    """本地 BM25 检索，零额外接口成本"""
+    chunks = kb_chunks()
+    if not chunks:
+        return []
+    q = list(_bigrams(query))
+    if not q:
+        return []
+    docs, df = [], {}
+    for c in chunks:
+        toks = list(_bigrams(c["text"] + " " + c["title"]))
+        docs.append(toks)
+        for t in set(toks):
+            df[t] = df.get(t, 0) + 1
+    n = len(docs)
+    avg = sum(len(d) for d in docs) / max(1, n)
+    k1, b = 1.5, 0.75
+    scored = []
+    for c, toks in zip(chunks, docs):
+        tf = {}
+        for t in toks:
+            tf[t] = tf.get(t, 0) + 1
+        s = 0.0
+        for t in q:
+            if t not in tf:
+                continue
+            idf = math.log(1 + (n - df.get(t, 0) + 0.5) / (df.get(t, 0) + 0.5))
+            s += idf * (tf[t] * (k1 + 1)) / (tf[t] + k1 * (1 - b + b * len(toks) / avg))
+        if s > 0:
+            scored.append((s, c))
+    scored.sort(key=lambda x: x[0], reverse=True)
+    return [{"score": round(s, 3), "title": c["title"], "text": c["text"]}
+            for s, c in scored[:k]]
+
+
+def _ask_llm(question, hits):
+    cfg = load_ai_config()
+    if not (cfg.get("enabled") and cfg.get("api_key") and cfg.get("base_url")):
+        return ""
+    context = "\n\n".join("[%d] %s：%s" % (i + 1, h["title"], h["text"]) for i, h in enumerate(hits))
+    payload = {
+        "model": cfg.get("model") or "deepseek-chat",
+        "temperature": 0.2,
+        "messages": [
+            {"role": "system", "content": "你是校园失物招领平台的问答助手。只能依据给定资料回答，"
+                                          "引用资料时用 [1][2] 标注；资料里没有的信息就直说不知道。"},
+            {"role": "user", "content": "资料：\n%s\n\n问题：%s" % (context, question)},
+        ],
+    }
+    try:
+        data = _post_chat(cfg.get("base_url").rstrip("/") + "/chat/completions", payload,
+                          cfg.get("api_key"), timeout=25)
+        return (data["choices"][0]["message"]["content"] or "").strip()
+    except Exception:
+        return ""
+
+
+def ask_kb(question):
+    hits = kb_search(question, 4)
+    answer = _ask_llm(question, hits) if hits else ""
+    if not answer:
+        if not hits:
+            answer = "知识库里暂时没有找到相关内容，可以换个说法，或直接发布一条启事。"
+        else:
+            answer = "根据资料：\n" + "\n".join(
+                "[%d] %s" % (i + 1, h["text"][:160]) for i, h in enumerate(hits))
+    return {"ok": True, "answer": answer,
+            "sources": [{"title": h["title"], "text": h["text"][:200], "score": h["score"]} for h in hits]}
+
+
+# ---------- 核验 Agent ----------
+AGENT_TOOL_DEFS = [
+    {"name": "get_item", "description": "读取物品详情与独有特征", "params": {"item_id": "string"}},
+    {"name": "get_claim", "description": "读取申请内容与补充历史", "params": {"claim_id": "string"}},
+    {"name": "search_similar", "description": "检索库内相似物品", "params": {"text": "string", "k": "int"}},
+    {"name": "check_reports", "description": "查询举报记录", "params": {"item_id": "string"}},
+    {"name": "policy_check", "description": "检查内容是否命中平台规则", "params": {"text": "string"}},
+]
+
+
+def _tool_get_item(item_id):
+    with LOCK:
+        items = load_items()
+    it = next((x for x in items if x.get("id") == item_id), None)
+    if not it:
+        return {"error": "not found"}
+    return {"id": it.get("id"), "title": it.get("title"), "desc": it.get("desc"),
+            "place": it.get("place"), "cat": it.get("cat"), "status": it.get("status"),
+            "secret": it.get("secret") or "", "reports": len(it.get("reports") or [])}
+
+
+def _tool_get_claim(claim_id):
+    with LOCK:
+        claims = load_claims()
+    c = next((x for x in claims if x.get("id") == claim_id), None)
+    if not c:
+        return {"error": "not found"}
+    return {"id": c.get("id"), "status": c.get("status"), "kind": c.get("kind"),
+            "message": c.get("message") or "", "updatedAt": c.get("updatedAt")}
+
+
+def _tool_search_similar(text, k=5):
+    with LOCK:
+        items = load_items()
+    probe = {"title": text, "desc": text, "place": "", "cat": ""}
+    scored = []
+    for it in items:
+        if it.get("status") not in ("approved", "claimed", "closed"):
+            continue
+        sc = match_score(probe, it)
+        if sc > 0.05:
+            scored.append((sc, it))
+    scored.sort(key=lambda x: x[0], reverse=True)
+    return [{"id": it.get("id"), "title": it.get("title"), "score": sc}
+            for sc, it in scored[:k]]
+
+
+def _tool_check_reports(item_id):
+    with LOCK:
+        items = load_items()
+    it = next((x for x in items if x.get("id") == item_id), None)
+    reps = (it or {}).get("reports") or []
+    return {"count": len(reps), "reasons": [r.get("reason") for r in reps if r.get("reason")][:5]}
+
+
+def _tool_policy_check(text):
+    hits = scope_violation({"title": text, "desc": "", "secret": ""})
+    blocked = [w for w in TITLE_BLOCK if w in (text or "")]
+    return {"scope_hits": hits, "blocked_words": blocked}
+
+
+TOOL_IMPL = {
+    "get_item": _tool_get_item,
+    "get_claim": _tool_get_claim,
+    "search_similar": _tool_search_similar,
+    "check_reports": _tool_check_reports,
+    "policy_check": _tool_policy_check,
+}
+
+
+def _agent_synthesize(item, claim, evidence):
+    cfg = load_ai_config()
+    prompt = (
+        "你是校园失物招领平台的核验助手。根据证据判断申请人是否是物品主人。\n"
+        "规则：如果申请人描述的特征与物品独有特征吻合，倾向 accept；细节不足则 need_more；"
+        "明显不符或举报过多则 reject。\n"
+        "只输出 JSON：{\"decision\":\"accept|need_more|reject\",\"confidence\":0到1,"
+        "\"reason\":\"不超过60字\",\"missing\":[\"还缺哪些细节\"]}\n"
+        "证据：%s" % json.dumps(evidence, ensure_ascii=False)
+    )
+    if cfg.get("enabled") and cfg.get("api_key") and cfg.get("base_url"):
+        try:
+            data = _post_chat(cfg.get("base_url").rstrip("/") + "/chat/completions",
+                              {"model": cfg.get("model") or "deepseek-chat", "temperature": 0.1,
+                               "messages": [{"role": "user", "content": prompt}]},
+                              cfg.get("api_key"), timeout=25)
+            text = data["choices"][0]["message"]["content"] or ""
+            m = re.search(r"\{[\s\S]*\}", text)
+            if m:
+                obj = json.loads(m.group(0))
+                d = str(obj.get("decision") or "").strip()
+                if d not in ("accept", "need_more", "reject"):
+                    d = "need_more"
+                try:
+                    conf = float(obj.get("confidence"))
+                except Exception:
+                    conf = 0.5
+                return {"decision": d, "confidence": max(0.0, min(1.0, conf)),
+                        "reason": str(obj.get("reason") or "")[:120],
+                        "missing": [str(x)[:40] for x in (obj.get("missing") or [])][:3],
+                        "source": "llm"}
+        except Exception:
+            pass
+    secret = (item.get("secret") or "").strip()
+    msg = (claim.get("message") or "").strip()
+    reports = len(item.get("reports") or [])
+    overlap = _cosine(_bigrams(secret), _bigrams(msg)) if secret and msg else 0.0
+    if reports >= 3:
+        return {"decision": "reject", "confidence": 0.8,
+                "reason": "该物品被多次举报，建议先核实发布内容", "missing": [], "source": "rule"}
+    if secret and overlap >= 0.22:
+        return {"decision": "accept", "confidence": round(min(0.9, 0.55 + overlap), 2),
+                "reason": "申请中提到的细节与独有特征吻合（重合度 %d%%）" % int(overlap * 100),
+                "missing": [], "source": "rule"}
+    if secret:
+        return {"decision": "need_more", "confidence": 0.55,
+                "reason": "申请细节与独有特征重合度较低，建议请对方补充",
+                "missing": ["物品上特有的标记", "丢失的具体位置或时间"], "source": "rule"}
+    return {"decision": "need_more", "confidence": 0.5,
+            "reason": "发布者没有填写独有特征，建议补充后再判断",
+            "missing": ["独有特征"], "source": "rule"}
+
+
+def agent_review(item, claim, on_step=None):
+    steps, evidence = [], []
+
+    def call(name, **args):
+        try:
+            out = TOOL_IMPL[name](**args)
+        except Exception as e:
+            out = {"error": str(e)[:80]}
+        step = {"tool": name, "args": args, "result": out}
+        steps.append(step)
+        if on_step:
+            try:
+                on_step(step)
+            except Exception:
+                pass
+        finding = ""
+        if name == "get_item":
+            finding = "物品：%s；独有特征：%s" % (out.get("title"), out.get("secret") or "（未填写）")
+        elif name == "get_claim":
+            finding = "申请内容：%s" % (out.get("message") or "")[:80]
+        elif name == "search_similar":
+            finding = "相似物品 %d 条；最高 %s" % (
+                len(out), (out[0]["score"] if out else "无"))
+        elif name == "check_reports":
+            finding = "举报 %d 次" % out.get("count", 0)
+        elif name == "policy_check":
+            finding = "范围命中：%s；违禁词：%s" % (
+                "、".join(out.get("scope_hits") or []) or "无",
+                "、".join(out.get("blocked_words") or []) or "无")
+        evidence.append({"tool": name, "finding": finding})
+
+    call("get_item", item_id=item.get("id"))
+    call("get_claim", claim_id=claim.get("id"))
+    call("check_reports", item_id=item.get("id"))
+    call("policy_check", text=(item.get("title") or "") + " " + (item.get("desc") or "") + " " + (claim.get("message") or ""))
+    call("search_similar", text=(item.get("title") or "") + " " + (item.get("desc") or ""), k=5)
+
+    verdict = _agent_synthesize(item, claim, evidence)
+    return {"ok": True, "decision": verdict["decision"], "confidence": verdict["confidence"],
+            "reason": verdict["reason"], "missing": verdict.get("missing") or [],
+            "source": verdict.get("source"), "evidence": evidence, "steps": steps,
+            "tools": [t["name"] for t in AGENT_TOOL_DEFS]}
+
+
+# ---------- 多模态 ----------
+def vision_config():
+    return {
+        "api_key": os.environ.get("VISION_API_KEY", ""),
+        "base_url": os.environ.get("VISION_BASE_URL", "https://open.bigmodel.cn/api/paas/v4"),
+        "model": os.environ.get("VISION_MODEL", "glm-4v-flash"),
+    }
+
+
+def vision_analyze(image_b64, mime="image/jpeg"):
+    cfg = vision_config()
+    if not cfg["api_key"]:
+        return {"ok": False, "reason": "未配置视觉模型（VISION_API_KEY），可先手动选择分类"}
+    endpoint = cfg["base_url"].rstrip("/") + "/chat/completions"
+    payload = {
+        "model": cfg["model"],
+        "temperature": 0.1,
+        "messages": [{"role": "user", "content": [
+            {"type": "text", "text": "识别这张失物照片，只输出 JSON："
+                                     "{\"category\":\"物品类别\",\"color\":\"主色\",\"brand\":\"品牌或文字\","
+                                     "\"features\":\"显著特征\",\"desc\":\"一句话描述\"}"},
+            {"type": "image_url", "image_url": {"url": "data:%s;base64,%s" % (mime, image_b64)}},
+        ]}],
+    }
+    try:
+        data = _post_chat(endpoint, payload, cfg["api_key"], timeout=35)
+        text = data["choices"][0]["message"]["content"] or ""
+        m = re.search(r"\{[\s\S]*\}", text)
+        obj = json.loads(m.group(0)) if m else {}
+        return {"ok": True, "category": str(obj.get("category") or "")[:20],
+                "color": str(obj.get("color") or "")[:20], "brand": str(obj.get("brand") or "")[:40],
+                "features": str(obj.get("features") or "")[:80], "desc": str(obj.get("desc") or "")[:120],
+                "model": cfg["model"]}
+    except Exception as e:
+        return {"ok": False, "reason": str(e)[:120]}
+
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = "Shiguangli/4.0"
 
@@ -1011,6 +1321,70 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         path = unquote(urlparse(self.path).path)
+
+        if path == "/api/agent/review":
+            owner = self._owner()
+            body = self._read_body()
+            item_id = str(body.get("itemId") or "")
+            claim_id = str(body.get("claimId") or "")
+            with LOCK:
+                items = load_items()
+                claims = load_claims()
+            item = next((x for x in items if x.get("id") == item_id), None)
+            claim = next((c for c in claims if c.get("id") == claim_id), None)
+            if not item or not claim:
+                return self._json({"error": "not found"}, 404)
+            if item.get("ownerToken") != owner:
+                return self._json({"error": "只有发布者能核验"}, 403)
+            return self._json(agent_review(item, claim))
+
+        if path == "/api/agent/review/stream":
+            owner = self._owner()
+            body = self._read_body()
+            item_id = str(body.get("itemId") or "")
+            claim_id = str(body.get("claimId") or "")
+            with LOCK:
+                items = load_items()
+                claims = load_claims()
+            item = next((x for x in items if x.get("id") == item_id), None)
+            claim = next((c for c in claims if c.get("id") == claim_id), None)
+            if not item or not claim:
+                return self._json({"error": "not found"}, 404)
+            if item.get("ownerToken") != owner:
+                return self._json({"error": "只有发布者能核验"}, 403)
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+            self.send_header("Cache-Control", "no-cache")
+            self.end_headers()
+
+            def sse(event, data):
+                chunk = "event: %s\ndata: %s\n\n" % (event, json.dumps(data, ensure_ascii=False))
+                self.wfile.write(chunk.encode("utf-8"))
+                self.wfile.flush()
+
+            result = agent_review(item, claim, on_step=lambda st: sse("step", {
+                "tool": st["tool"], "finding": (st.get("result") or {})}))
+            reason = result.get("reason") or ""
+            for i in range(0, len(reason), 10):
+                sse("delta", {"text": reason[i:i + 10]})
+            sse("done", result)
+            return
+
+        if path == "/api/ask":
+            body = self._read_body()
+            q = str(body.get("question") or "").strip()
+            if len(q) < 2:
+                return self._json({"error": "请输入问题"}, 400)
+            return self._json(ask_kb(q))
+
+        if path == "/api/vision/analyze":
+            body = self._read_body()
+            img = str(body.get("image") or "")
+            mime = str(body.get("mime") or "image/jpeg")
+            if len(img) < 20:
+                return self._json({"error": "缺少图片"}, 400)
+            return self._json(vision_analyze(img, mime))
+
 
         if path == "/api/account/login":
             body = self._read_body()

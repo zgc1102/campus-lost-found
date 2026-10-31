@@ -47,10 +47,10 @@
 | 内容审核 | ✅ 已上线 | 语义审核 + 二元终审 + 分数归一化 + 范围拦截 |
 | 反规避 | ✅ 已上线 | 拼音、英文、谐音、拆字、跨行断句 |
 | 类型识别 | ✅ 已上线 | 判断更像寻物还是招领，发布前提醒 |
-| 核验 Agent | 🚧 开发中 | 工具调用 + 证据链，协助发布者核对认领 |
-| RAG 知识库 | 🚧 开发中 | 校园失物问答，回答带引用来源 |
-| 多模态 | 🚧 开发中 | 上传图片自动识别类别/颜色，参与匹配 |
-| 流式交互 | 🚧 开发中 | 审核理由、Agent 步骤、问答 SSE 输出 |
+| 核验 Agent | ✅ 已上线 | 5 个工具、证据链、LLM 裁决 + 规则兜底 |
+| RAG 知识库 | ✅ 已上线 | 本地 BM25 检索 + 引用来源，零额外接口成本 |
+| 多模态 | 🟡 接口就绪 | `/api/vision/analyze` 已实现，配置 `VISION_API_KEY` 后启用 |
+| 流式交互 | ✅ 已上线 | `/api/agent/review/stream` SSE：step / delta / done |
 
 ---
 
@@ -161,6 +161,10 @@ python 公网启动器.py
 | `/api/notices` | GET | 通知 |
 | `/api/account/login` | POST | 登录 / 注册 |
 | `/api/precheck` | POST | 发布前 AI 预检 |
+| `/api/agent/review` | POST | 核验 Agent：5 个工具 + 证据链 |
+| `/api/agent/review/stream` | POST(SSE) | Agent 流式步骤与结论 |
+| `/api/ask` | POST | RAG 校园失物问答（带引用） |
+| `/api/vision/analyze` | POST | 图片识别（需配置视觉模型） |
 | `/api/sync` | GET | 公开列表 + 我的发布 |
 | `/api/admin/*` | - | 审核、AI 配置、用户 |
 
