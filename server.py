@@ -1075,6 +1075,72 @@ def vision_analyze(image_b64, mime="image/jpeg"):
 
 
 
+
+# ================= 信息整理（AI 规范化） =================
+FILLER_WORDS = ["大概", "好像", "似乎", "可能", "非常", "特别", "真的", "就是", "然后",
+                "那个", "这个", "一下", "有点", "比较", "挺", "应该是", "反正", "其实"]
+COLOR_WORDS = ["黑色", "白色", "蓝色", "红色", "绿色", "黄色", "紫色", "灰色", "粉色",
+               "棕色", "银色", "金色", "橙色", "透明", "深蓝", "浅蓝", "米色", "卡其"]
+COND_WORDS = ["全新", "九成新", "八成新", "七成新", "六成新", "五成新", "有磨损",
+              "轻微磨损", "破损", "划痕", "掉漆", "断裂"]
+
+
+def _format_fallback(title, desc):
+    t = desc or ""
+    for w in FILLER_WORDS:
+        t = t.replace(w, "")
+    t = re.sub(r"\s+", " ", t).strip("，。 ；;,.!")
+    color = next((c for c in COLOR_WORDS if c in ((title or "") + t)), "")
+    cond = next((c for c in COND_WORDS if c in (t + (title or ""))), "")
+    desc_out = t[:60]
+    summary = (title or t)[:16]
+    if color:
+        summary = color + " " + summary
+    summary = summary[:30]
+    return {
+        "summary": summary,
+        "desc": desc_out,
+        "fields": {"color": color, "condition": cond, "brand": "", "feature": "", "contents": ""},
+        "source": "rule",
+    }
+
+
+def format_item(title, desc):
+    cfg = load_ai_config()
+    prompt = (
+        "你是校园失物招领的信息整理助手。把用户写的内容压缩成固定结构，"
+        "只能使用原文已有的事实，绝对不要编造颜色、品牌、地点。\n"
+        "要求：\n"
+        "1) summary：不超过 30 字，格式「颜色 物品 · 一个最显著特征 · 地点」；\n"
+        "2) desc：不超过 60 字，去掉形容堆砌和口头语，只保留事实；\n"
+        "3) fields：从原文提取 color / brand / condition / feature / contents，没有就留空。\n"
+        '只输出 JSON：{"summary":"","desc":"","fields":{"color":"","brand":"","condition":"","feature":"","contents":""}}\n'
+        "标题：%s\n描述：%s" % (title, desc)
+    )
+    if cfg.get("enabled") and cfg.get("api_key") and cfg.get("base_url"):
+        try:
+            data = _post_chat(cfg.get("base_url").rstrip("/") + "/chat/completions",
+                              {"model": cfg.get("model") or "deepseek-chat", "temperature": 0.1,
+                               "messages": [{"role": "user", "content": prompt}]},
+                              cfg.get("api_key"), timeout=20)
+            text = data["choices"][0]["message"]["content"] or ""
+            m = re.search(r"\{[\s\S]*\}", text)
+            if m:
+                obj = json.loads(m.group(0))
+                out = {
+                    "summary": str(obj.get("summary") or "")[:40],
+                    "desc": str(obj.get("desc") or "")[:120],
+                    "fields": {k: str((obj.get("fields") or {}).get(k) or "")[:30]
+                               for k in ("color", "brand", "condition", "feature", "contents")},
+                    "source": "llm",
+                }
+                if out["summary"] and out["desc"]:
+                    return out
+        except Exception:
+            pass
+    return _format_fallback(title, desc)
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = "Shiguangli/4.0"
 
@@ -1321,6 +1387,18 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         path = unquote(urlparse(self.path).path)
+
+        if path == "/api/format":
+            body = self._read_body()
+            title = str(body.get("title") or "")[:40]
+            desc = str(body.get("desc") or "")[:400]
+            if len(desc) < 5:
+                return self._json({"error": "描述太短，不需要整理"}, 400)
+            out = format_item(title, desc)
+            out["originalLen"] = len(desc)
+            out["newLen"] = len(out["desc"])
+            return self._json(out)
+
 
         if path == "/api/agent/review":
             owner = self._owner()
@@ -1960,6 +2038,8 @@ class Handler(BaseHTTPRequestHandler):
                             it["contact"] = {"phone": str(patch["contact"].get("phone") or "")[:20]}
                         elif "phone" in patch:
                             it["contact"] = {"phone": str(patch["phone"])[:20]}
+                        it["summary"] = str(patch.get("summary") or "")[:40]
+                        it["fields"] = patch.get("fields") if isinstance(patch.get("fields"), dict) else None
                         it["status"] = "pending"
                         it["rejectReason"] = ""
                         it["updatedAt"] = now_ms()
@@ -2047,6 +2127,10 @@ class Handler(BaseHTTPRequestHandler):
             "eventTime": str(body.get("eventTime") or "")[:40],
             "secret": str(body.get("secret") or "").strip()[:100],
             "photo": body.get("photo") if isinstance(body.get("photo"), str) else None,
+            "fields": {k: str((body.get("fields") or {}).get(k) or "")[:30]
+                       for k in ("color", "brand", "condition", "feature", "contents")}
+            if isinstance(body.get("fields"), dict) else None,
+            "summary": str(body.get("summary") or "").strip()[:40],
             "contact": {"phone": str((body.get("contact") or {}).get("phone") or "")[:20]}
             if isinstance(body.get("contact"), dict) else {"phone": ""},
         }
