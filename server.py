@@ -401,15 +401,17 @@ def ai_rules(it):
 
 
 AI_SYSTEM_PROMPT = (
-    "你是清华大学校园失物招领平台的内容审核员，负责判断一条启事能否公开展示。"
-    "本平台**只接受两类内容**：丢了东西（寻物启事）、捡到东西（招领启事），"
-    "必须围绕一件具体物品。\n"
+    "你是校园失物招领与爱心求助平台的内容审核员，负责判断一条信息能否公开展示。"
+    "本平台接受三类内容：寻物启事（丢了东西）、招领启事（捡到东西）、"
+    "爱心求助（同学之间无偿借用工具、代办跑腿、闲置捐赠、志愿帮忙）。\n"
     "第一步：判断是否属于本平台业务范围。"
     "以下都**不属于**，一律 reject（risk 85-100），"
-    "理由写“不属于失物招领范围”："
+    "理由写“不属于平台范围”："
     "找对象、征婚、相亲、交友、找搭子、组局、找人陪聊；"
     "招嫖或性暗示（找小妹妹、小姐姐、妹妹、包夜、上门、陪侍、服务）；"
-    "招聘兼职、租房卖房、二手交易、代购跑腿、拼车、拉群、广告推广。\n"
+    "招聘兼职、租房卖房、二手买卖、付费代购、商业跑腿、拼车、拉群、广告推广。"
+    "注意：同学之间**无偿**借用、代办、捐赠、志愿帮忙属于允许范围，不要误判。"
+    "但**借钱、垫付、转账、刷单、代考代写、投资理财**一律 reject。\n"
     "第二步：检查标题与正文是否一致。"
     "如果标题带有交友/招嫖暗示，而正文写的是正常寻物，"
     "这是**借寻物名义规避审核**，必须 reject（risk 85-100），"
@@ -1615,7 +1617,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"error": "title required"}, 400)
             ai = review_item(item)
             suggestion = ""
-            if ai.get("guessType") and ai["guessType"] != item["type"]:
+            if (item["type"] in ("lost", "found") and ai.get("guessType")
+                    and ai["guessType"] != item["type"]):
                 suggestion = ai["guessType"]
             cid = "k_" + uuid.uuid4().hex[:10]
             CHECK_CACHE[cid] = {"owner": owner, "ai": ai, "at": time.time(), "type": item["type"]}
@@ -1649,10 +1652,16 @@ class Handler(BaseHTTPRequestHandler):
                 claims = load_claims()
                 if any(c.get("itemId") == item_id and c.get("from") == owner for c in claims):
                     return self._json({"error": "你已经申请过了"}, 400)
-                # 两个方向不一样：
+                # 三个方向：
                 #  - 招领帖(found)：申请人=失主，填「只有失主知道的特征」
-                #  - 寻物帖(lost)：申请人=捡到的人，填「在哪捡到的」，他不可能知道特征
-                kind = "found" if target.get("type") == "lost" else "claim"
+                #  - 寻物帖(lost)：申请人=捡到的人，填「在哪捡到的」
+                #  - 爱心求助(help)：申请人=愿意帮忙的人
+                if target.get("type") == "help":
+                    kind = "help"
+                elif target.get("type") == "lost":
+                    kind = "found"
+                else:
+                    kind = "claim"
                 claim = {
                     "id": "c_" + uuid.uuid4().hex[:10],
                     "itemId": item_id,
@@ -1667,9 +1676,12 @@ class Handler(BaseHTTPRequestHandler):
                 claims.append(claim)
                 save_claims(claims)
                 notices = load_notices()
-                text = ("有人捡到了你丢失的《%s》，快去核对" % (target.get("title") or "")
-                        if kind == "found"
-                        else "有人申请认领你捡到的《%s》" % (target.get("title") or ""))
+                if kind == "found":
+                    text = "有人捡到了你丢失的《%s》，快去核对" % (target.get("title") or "")
+                elif kind == "help":
+                    text = "有人愿意帮忙《%s》，去看看吧" % (target.get("title") or "")
+                else:
+                    text = "有人申请认领你捡到的《%s》" % (target.get("title") or "")
                 add_notice(notices, target.get("ownerToken"), "claim", text, item_id, claim["id"])
                 save_notices(notices)
             return self._json({"ok": True, "id": claim["id"]})
@@ -1823,7 +1835,8 @@ class Handler(BaseHTTPRequestHandler):
             ai_trusted = ai.get("source") == "llm"
             scope_hits = scope_violation(item)
             # 用户可能把「丢了」和「捡到」写反，AI 看出来就提示（仍按用户选的类型发布）
-            if ai_trusted and ai.get("guessType") and ai["guessType"] != item["type"]:
+            if (ai_trusted and item["type"] in ("lost", "found")
+                    and ai.get("guessType") and ai["guessType"] != item["type"]):
                 item["typeSuggestion"] = ai["guessType"]
             if scope_hits:
                 item["status"] = "rejected"
@@ -2162,7 +2175,8 @@ class Handler(BaseHTTPRequestHandler):
                         it["reviewedBy"] = "AI" if trusted else "system"
                         it["reviewedAt"] = now_ms()
                         it["updatedAt"] = now_ms()
-                        if trusted and ai.get("guessType") and ai["guessType"] != it.get("type"):
+                        if (trusted and it.get("type") in ("lost", "found")
+                                and ai.get("guessType") and ai["guessType"] != it.get("type")):
                             it["typeSuggestion"] = ai["guessType"]
                         save_items(items)
                         return self._json(it)
@@ -2216,7 +2230,7 @@ class Handler(BaseHTTPRequestHandler):
     # ---------- 实现 ----------
     def _clean(self, body):
         return {
-            "type": body.get("type") if body.get("type") in ("lost", "found") else "lost",
+            "type": body.get("type") if body.get("type") in ("lost", "found", "help") else "lost",
             "cat": str(body.get("cat") or "other")[:20],
             "title": str(body.get("title") or "").strip()[:30],
             "desc": str(body.get("desc") or "").strip()[:300],
@@ -2228,6 +2242,7 @@ class Handler(BaseHTTPRequestHandler):
                        for k in ("color", "brand", "condition", "feature", "contents")}
             if isinstance(body.get("fields"), dict) else None,
             "summary": str(body.get("summary") or "").strip()[:40],
+            "helpCat": str(body.get("helpCat") or "")[:20],
             "contact": {"phone": str((body.get("contact") or {}).get("phone") or "")[:20]}
             if isinstance(body.get("contact"), dict) else {"phone": ""},
         }

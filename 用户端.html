@@ -110,6 +110,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 /* sheet (item detail) */
 .sheet{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:100%;max-width:390px;background:#fff;border-radius:18px 18px 0 0;padding:18px 16px 24px;box-shadow:0 -6px 24px rgba(0,0,0,.18);display:none;z-index:20;max-height:80vh;overflow-y:auto;}
 .sheet.show{display:block;}
+.sheet input,.sheet textarea,.sheet select{width:100%;border:1px solid var(--line);border-radius:9px;padding:9px;font-size:13px;font-family:inherit;outline:none;margin-bottom:8px;background:#fff;color:var(--ink);}
+.sheet textarea{min-height:74px;resize:vertical;}
 .sheet .sh{font-size:17px;font-weight:700;margin-bottom:8px;}
 .sheet .sa{font-size:13.5px;line-height:1.6;color:#3a3645;}
 .sheet .big-thumb{width:100%;height:150px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:52px;color:#fff;margin:6px 0 12px;}
@@ -363,8 +365,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
       <div class="cat-group g-b">
         <div class="cg-title"><span class="cg-dot"></span>爱心 · 求助</div>
         <div class="grid">
-          <div class="fn" data-nav="lend"><div class="ic">🛠️</div><div class="lb">出借工具</div><div class="lb-sub">工具+服务</div></div>
-          <div class="fn" data-nav="borrow"><div class="ic">🙏</div><div class="lb">求借求助</div><div class="lb-sub">工具+服务</div></div>
+          <div class="fn" data-help-cat="help_borrow"><div class="ic">🛠️</div><div class="lb">借用工具</div><div class="lb-sub">借个东西</div></div>
+          <div class="fn" data-help-cat="help_errand"><div class="ic">🏃</div><div class="lb">代办跑腿</div><div class="lb-sub">帮取帮带</div></div>
+          <div class="fn" data-help-cat="help_donate"><div class="ic">🎁</div><div class="lb">爱心捐赠</div><div class="lb-sub">闲置送人</div></div>
+          <div class="fn" data-help-cat="help_volunteer"><div class="ic">🤝</div><div class="lb">志愿帮忙</div><div class="lb-sub">找人搭把手</div></div>
         </div>
       </div>
 
@@ -511,6 +515,46 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
       </form>
     </div>
   </section>
+
+  <!-- ============ 爱心求助 ============ -->
+  <section class="screen" id="screen-help">
+    <div class="topbar">
+      <div class="back" data-back>‹</div>
+      <div class="t" id="helpTitle">爱心求助</div>
+      <button class="btn" id="helpPublishBtn">发布</button>
+    </div>
+    <div class="scroll">
+      <div class="hintline" id="helpHint">同学之间互相搭把手：借个东西、帮取快递、闲置送人、找人帮忙。</div>
+      <div id="helpList"></div>
+    </div>
+  </section>
+
+  <!-- 发布求助 -->
+  <div class="sheet" id="helpSheet">
+    <div class="sh">发布爱心求助</div>
+    <select id="helpCatSel">
+      <option value="help_borrow">借用工具 / 借个东西</option>
+      <option value="help_errand">代办跑腿 / 帮取帮带</option>
+      <option value="help_donate">爱心捐赠 / 闲置送人</option>
+      <option value="help_volunteer">志愿帮忙 / 找人搭把手</option>
+    </select>
+    <input id="helpTitleInput" maxlength="30" placeholder="标题，例如：想借一把雨伞">
+    <textarea id="helpDesc" maxlength="200" placeholder="说明你的需求、时间和地点，越具体越容易有人帮"></textarea>
+    <input id="helpPlace" maxlength="40" placeholder="地点（可选）">
+    <input id="helpPhone" maxlength="20" placeholder="联系方式（可选，公开展示会打码）">
+    <button class="btn" id="helpSubmit" style="width:100%">发布求助</button>
+    <div class="close" id="helpSheetClose">收起</div>
+  </div>
+
+  <!-- 我来帮忙 -->
+  <div class="sheet" id="helpGoSheet">
+    <div class="sh">我来帮忙</div>
+    <div class="tip-small" id="helpGoTitle" style="margin-bottom:8px"></div>
+    <textarea id="helpGoMsg" maxlength="120" placeholder="说一句你能怎么帮，例如：我明天上午可以带过去"></textarea>
+    <input id="helpGoPhone" maxlength="20" placeholder="你的联系方式（对方确认后可见）">
+    <button class="btn" id="helpGoSubmit" style="width:100%">发送</button>
+    <div class="close" id="helpGoClose">收起</div>
+  </div>
 
   <!-- ============ 校园问答 ============ -->
   <section class="screen" id="screen-ask">
@@ -776,7 +820,9 @@ const CAT = {
   book:{e:'📚',c:'#8a52c7',l:'书籍'}, sports:{e:'🏀',c:'#e08a2b',l:'运动'}, cup:{e:'🥤',c:'#2f9e8f',l:'杯具'},
   charger:{e:'🔋',c:'#4e9a4e',l:'充电'}, repair:{e:'🛠️',c:'#62269c',l:'维修'}, life:{e:'🏠',c:'#2f6f8f',l:'生活'},
   office:{e:'🖨️',c:'#7a35b8',l:'办公'}, outdoor:{e:'⛺',c:'#3a86a8',l:'户外'},
-  cloth:{e:'🧥',c:'#8a52c7',l:'衣物'}, other:{e:'📦',c:'#6b6480',l:'其他'}
+  cloth:{e:'🧥',c:'#8a52c7',l:'衣物'}, other:{e:'📦',c:'#6b6480',l:'其他'},
+  help_borrow:{e:'🛠️',c:'#62269c',l:'借用'}, help_errand:{e:'🏃',c:'#e08a2b',l:'代办'},
+  help_donate:{e:'🎁',c:'#2f9e8f',l:'捐赠'}, help_volunteer:{e:'🤝',c:'#2f6f8f',l:'志愿'}
 };
 function catInfo(k){ return CAT[k] || {e:'📦',c:'#62269c',l:'其他'}; }
 function thumbHTML(k){ const m=catInfo(k); return '<div class="thumb" style="background:linear-gradient(135deg,'+m.c+','+shade(m.c)+')">'+m.e+'</div>'; }
@@ -1236,7 +1282,7 @@ async function loadAnnouncements(){
   try{
     const arr = await fetch(API_BASE + '/announcements').then(function(r){ return r.json(); });
     if(Array.isArray(arr) && arr.length){
-      MEMORIAL_DATA = arr.slice(0, 5).map(function(a){
+      const annSlides = arr.slice(0, 2).map(function(a){
         return {
           key: 'ann_' + a.id,
           star: a.pinned ? '📌' : '📢',
@@ -1245,6 +1291,8 @@ async function loadAnnouncements(){
           blocks: [{h: a.title, p: [a.body]}]
         };
       });
+      // 公告排在最前，原来的内容保留在后面
+      MEMORIAL_DATA = annSlides.concat(MEMORIAL);
       renderMemorial();
     }
   }catch(e){}
@@ -1509,7 +1557,8 @@ function claimCard(c, side){
   }
   return '<div class="claim"><div class="ch">' +
     (side === 'received'
-      ? (c.kind === 'found' ? '📥 有人捡到了你的东西' : '📥 有人申请认领')
+      ? (c.kind === 'help' ? '🙋 有人愿意帮忙'
+         : (c.kind === 'found' ? '📥 有人捡到了你的东西' : '📥 有人申请认领'))
       : '📤 我发出的申请') +
     ' · ' + esc(c.itemTitle || '') + ' <span class="st ' + cls + '">' + st + '</span></div>' +
     '<div class="cm">' + esc(c.message || '') + '</div>' + contact +
@@ -1592,18 +1641,21 @@ async function openClaimById(cid){
 function openClaimReview(id){
   const c = claimsMap[id];
   if(!c) return;
-  const isFinder = c.kind === 'found';   /* 对方是捡到的人，来认领你的寻物帖 */
+  const isFinder = c.kind === 'found';
+  const isHelp = c.kind === 'help';
   document.getElementById('csItem').innerHTML =
     '<span class="k">标题</span>' + esc(c.itemTitle || '') +
     '<div style="margin-top:6px"><span class="k">你填写的描述</span>' + esc(c.itemDesc || '（无）') + '</div>' +
     (c.itemPlace ? '<div style="margin-top:6px"><span class="k">地点</span>' + esc(c.itemPlace) + '</div>' : '') +
-    (c.itemSecret
+    (!isHelp && (c.itemSecret
       ? '<div style="margin-top:6px"><span class="k">你填写的独有特征（对方看不到）</span><span class="cs-secret">' + esc(c.itemSecret) + '</span></div>'
-      : '<div style="margin-top:6px" class="cs-tip">你当时没填独有特征，这次只能靠描述核对。</div>');
-  document.getElementById('csClaimTitle').textContent = isFinder ? '对方说在哪捡到的' : '对方提供的物品特征';
-  document.getElementById('csTip').textContent = isFinder
-    ? '核对地点、时间是否合理，确认是你丢的东西再点通过；通过后双方才会看到联系方式。'
-    : '只有对方说的特征真的对得上，才点「通过」。通过后双方才会看到联系方式。';
+      : '<div style="margin-top:6px" class="cs-tip">你当时没填独有特征，这次只能靠描述核对。</div>'));
+  document.getElementById('csClaimTitle').textContent = isHelp ? '对方的留言' : (isFinder ? '对方说在哪捡到的' : '对方提供的物品特征');
+  document.getElementById('csTip').textContent = isHelp
+    ? '确认对方能帮上忙后点「通过」，双方就能看到联系方式。'
+    : (isFinder
+      ? '核对地点、时间是否合理，确认是你丢的东西再点通过；通过后双方才会看到联系方式。'
+      : '只有对方说的特征真的对得上，才点「通过」。通过后双方才会看到联系方式。');
   document.getElementById('csClaim').innerHTML =
     '<span class="k">' + (isFinder ? '对方说' : '对方说的特征') + '</span>' + esc(c.message || '（没有填写）') +
     (c.claimContact ? '<div style="margin-top:6px"><span class="k">对方联系方式</span>' + esc(c.claimContact) +
@@ -1618,7 +1670,7 @@ function openClaimReview(id){
   const agentBox = document.getElementById('csAgentBox');
   const agentSteps = document.getElementById('csAgentSteps');
   const agentVerdict = document.getElementById('csAgentVerdict');
-  const canAgent = (c.itemSecret !== undefined) && c.status === 'pending';
+  const canAgent = (c.kind !== 'help') && (c.itemSecret !== undefined) && c.status === 'pending';
   agentBox.style.display = 'none';
   agentSteps.innerHTML = '';
   agentVerdict.innerHTML = '';
@@ -1766,6 +1818,8 @@ function renderImgSearch(){
 document.addEventListener('click', e=>{
   const b=e.target.closest('[data-back]'); if(b){ back(); return; }
   const nav=e.target.closest('[data-nav]');
+  const hcat=e.target.closest('[data-help-cat]');
+  if(hcat){ openHelp(hcat.getAttribute('data-help-cat')); return; }
   if(nav){ const t=nav.getAttribute('data-nav');
     if(t==='lost'){renderLost();show('lost');return;}
     if(t==='found'){renderFound();show('found');return;}
@@ -2502,6 +2556,116 @@ document.getElementById('askChips').addEventListener('click', function(e){
   document.getElementById('askInput').value = q;
   askQuestion(q);
 });
+
+/* ============ 爱心求助 ============ */
+const HELP_NAMES = {help_borrow:'借用工具', help_errand:'代办跑腿', help_donate:'爱心捐赠', help_volunteer:'志愿帮忙'};
+let currentHelpCat = '';
+let helpGoId = '';
+
+function openHelp(cat){
+  currentHelpCat = cat || '';
+  document.getElementById('helpTitle').textContent = cat ? (HELP_NAMES[cat] || '爱心求助') : '爱心求助';
+  renderHelp();
+  show('help');
+}
+
+function renderHelp(){
+  const wrap = document.getElementById('helpList');
+  if(!wrap) return;
+  let arr = Store.list({statuses:['approved','claimed','closed']}).filter(function(x){ return x.type === 'help'; });
+  if(currentHelpCat){
+    arr = arr.filter(function(x){ return x.cat === currentHelpCat || x.helpCat === currentHelpCat; });
+  }
+  arr.sort(function(a,b){ return (b.createdAt||0) - (a.createdAt||0); });
+  if(!arr.length){
+    wrap.innerHTML = '<div class="empty">这个分类还没有求助，点右上角「发布」发一条吧</div>';
+    return;
+  }
+  wrap.innerHTML = arr.map(function(it){
+    const m = catInfo(it.cat);
+    return '<div class="item" data-help-item="' + esc(it.id) + '">' +
+      '<div class="thumb" style="background:linear-gradient(135deg,' + m.c + ',' + shade(m.c) + ')">' + m.e + '</div>' +
+      '<div class="body">' +
+      '<div class="tt">' + esc(it.title) + statusChip(it.status) + '</div>' +
+      '<div class="dd">' + esc(it.desc || '') + '</div>' +
+      '<div class="row"><span class="meta">📍 ' + esc(it.place || '未填写地点') + ' · ' + fmtTime(it.createdAt) + '</span>' +
+      '<button class="btn" data-help-go="' + esc(it.id) + '">我来帮忙</button></div>' +
+      '</div></div>';
+  }).join('');
+}
+
+document.getElementById('helpPublishBtn').onclick = function(){
+  document.getElementById('helpCatSel').value = currentHelpCat || 'help_borrow';
+  document.getElementById('helpSheet').classList.add('show');
+};
+document.getElementById('helpSheetClose').onclick = function(){
+  document.getElementById('helpSheet').classList.remove('show');
+};
+document.getElementById('helpSubmit').onclick = async function(){
+  const title = document.getElementById('helpTitleInput').value.trim();
+  const desc = document.getElementById('helpDesc').value.trim();
+  const cat = document.getElementById('helpCatSel').value;
+  const place = document.getElementById('helpPlace').value.trim();
+  const phone = document.getElementById('helpPhone').value.trim();
+  if(title.length < 2){ toast('写个标题，比如「想借一把雨伞」'); return; }
+  if(desc.length < 5){ toast('说明一下需求、时间和地点'); return; }
+  this.disabled = true;
+  this.textContent = '发布中…';
+  try{
+    const payload = {type:'help', cat:cat, helpCat:cat, title:title, desc:desc,
+                     place: place || '未填写地点', eventTime:'', secret:'', photo:null,
+                     contact:{phone: phone}};
+    if(API_BASE){ await Net.create(payload); await netSync(); }
+    else {
+      Store.add(Object.assign({id:'p_'+Date.now().toString(36), status:'approved', ownerId:myId(),
+                               createdAt:Date.now(), updatedAt:Date.now()}, payload));
+    }
+    document.getElementById('helpSheet').classList.remove('show');
+    document.getElementById('helpTitleInput').value = '';
+    document.getElementById('helpDesc').value = '';
+    document.getElementById('helpPlace').value = '';
+    document.getElementById('helpPhone').value = '';
+    renderHelp();
+    toast('已发布，审核通过后会出现在列表');
+  }catch(e){
+    toast((e && e.message) || '发布失败');
+  }finally{
+    this.disabled = false;
+    this.textContent = '发布求助';
+  }
+};
+
+document.getElementById('helpList').addEventListener('click', function(e){
+  const b = e.target.closest('[data-help-go]');
+  if(!b) return;
+  e.stopPropagation();
+  helpGoId = b.getAttribute('data-help-go');
+  const it = Store.get(helpGoId);
+  document.getElementById('helpGoTitle').textContent = it ? ('《' + it.title + '》') : '';
+  document.getElementById('helpGoMsg').value = '';
+  document.getElementById('helpGoPhone').value = '';
+  document.getElementById('helpGoSheet').classList.add('show');
+});
+document.getElementById('helpGoClose').onclick = function(){
+  document.getElementById('helpGoSheet').classList.remove('show');
+};
+document.getElementById('helpGoSubmit').onclick = async function(){
+  const msg = document.getElementById('helpGoMsg').value.trim();
+  const phone = document.getElementById('helpGoPhone').value.trim();
+  if(msg.length < 2){ toast('说一句你能怎么帮'); return; }
+  this.disabled = true;
+  this.textContent = '发送中…';
+  try{
+    await Net.claim(helpGoId, {message: msg, contact: phone});
+    document.getElementById('helpGoSheet').classList.remove('show');
+    toast('已告诉对方，等 TA 确认');
+  }catch(e){
+    toast((e && e.message) || '发送失败');
+  }finally{
+    this.disabled = false;
+    this.textContent = '发送';
+  }
+};
 
 /* ============ 初始化 ============ */
 function checkStorage(){
