@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>扫码打开 · 清华校园拾光里</title>
+<style>
+body{margin:0;min-height:100vh;background:linear-gradient(160deg,#45106e,#62269c 55%,#8a52c7);
+font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;color:#fff;padding:24px 16px;box-sizing:border-box;display:flex;justify-content:center}
+.wrap{width:100%;max-width:900px;display:flex;gap:18px;flex-wrap:wrap;justify-content:center;align-items:flex-start}
+.card{background:#fff;color:#23202b;border-radius:22px;padding:22px 18px;flex:1 1 320px;max-width:420px;
+text-align:center;box-shadow:0 18px 50px rgba(0,0,0,.28)}
+.card.admin{border:3px solid #ffd166}
+h1{font-size:18px;margin:0 0 2px}
+.badge{display:inline-block;font-size:11px;border-radius:99px;padding:2px 10px;margin-bottom:8px}
+.badge.user{background:#e6f4ea;color:#2f7d46}
+.badge.adminb{background:#fff4d6;color:#a97a00}
+p{font-size:12px;color:#8a8594;line-height:1.65;margin:0 0 6px}
+img{width:100%;max-width:260px;display:block;margin:12px auto;border-radius:12px;image-rendering:pixelated}
+.url{font-size:12px;word-break:break-all;background:#f1eaf9;color:#62269c;border-radius:10px;
+padding:9px 11px;user-select:all;line-height:1.5}
+.pwd{margin-top:12px;font-size:22px;letter-spacing:4px;font-weight:800;color:#a97a00;
+background:#fff8e6;border:1px dashed #e3c98a;border-radius:10px;padding:8px}
+.pwd small{display:block;font-size:11px;letter-spacing:0;color:#8a6100;font-weight:400;margin-bottom:2px}
+.note{font-size:11px;color:#c0392b;background:#fdf0f0;border-radius:10px;padding:8px 10px;
+margin-top:12px;line-height:1.6;text-align:left}
+</style></head><body>
+<div class="wrap">
+  <div class="card">
+    <span class="badge user">用户端 · 发给同学</span>
+    <h1>手机扫码打开</h1>
+    <p>任何网络都行：流量、别家 WiFi 都可以</p>
+    <img src="二维码.png" alt="用户端二维码">
+    <div class="url">https://connection-cal-side-michel.trycloudflare.com/</div>
+    <div class="note">⚠️ 地址只在本次运行期间有效，电脑关了就失效。</div>
+  </div>
+  <div class="card admin">
+    <span class="badge adminb">管理端 · 只给自己</span>
+    <h1>管理员扫码登录</h1>
+    <p>用这个码打开审核后台</p>
+    <img src="管理端二维码.png" alt="管理端二维码">
+    <div class="url">https://connection-cal-side-michel.trycloudflare.com/admin</div>
+    <div class="pwd"><small>管理员密码</small>KSKBLZDJD</div>
+    <div class="note">⚠️ 管理端链接和密码都不要发给别人。</div>
+  </div>
+</div>
+</body></html>

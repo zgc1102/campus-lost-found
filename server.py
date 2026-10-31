@@ -1,0 +1,1938 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+清华校园拾光里 · 服务端 v4
+- 用户端：只看公开内容、只能管自己的帖子（凭本机令牌）
+- 管理端：独立页面，密码登录后才能审核
+- 数据文件：items.json；管理员密码：admin.json / 管理员密码.txt
+"""
+
+import hashlib
+import json
+import os
+import random
+import re
+import socket
+import string
+import subprocess
+import sys
+import threading
+import time
+import uuid
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import unquote, urlparse
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+def load_dotenv(path=None):
+    """极简 .env 读取：KEY=VALUE，忽略注释与空行，不覆盖已有环境变量"""
+    path = path or os.path.join(BASE_DIR, ".env")
+    if not os.path.exists(path):
+        return
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                k, v = line.split("=", 1)
+                os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
+    except Exception:
+        pass
+
+
+load_dotenv()
+DATA_FILE = os.path.join(BASE_DIR, "items.json")
+ADMIN_FILE = os.path.join(BASE_DIR, "admin.json")
+PASSWORD_FILE = os.path.join(BASE_DIR, "管理员密码.txt")
+LOCK = threading.Lock()
+START_TS = time.time()
+TOKENS = {}          # admin token -> expire ts
+TOKEN_TTL = 8 * 3600
+
+PUBLIC_STATUS = ("approved", "claimed", "closed")
+ALLOWED_STATUS = ("pending", "approved", "rejected", "claimed", "closed", "removed", "hidden")
+
+
+def now_ms():
+    return int(time.time() * 1000)
+
+
+# ---------------------------------------------------------------- 数据
+
+def seed_items():
+    lost = [
+        ("l1", "bag", "黑色双肩书包（含课本）", "在六教课间丢失，内有《高等数学》等课本，急寻。", "第六教学楼 3 区"),
+        ("l2", "card", "校园卡一张", "紫荆公寓附近捡到，姓名已遮挡，请失主认领。", "紫荆公寓 15 号楼"),
+        ("l3", "watch", "银色手表", "操场跑步后遗落，卡西欧款式。", "东大操场"),
+        ("l4", "electronics", "AirPods 耳机", "图书馆二层自习室遗失，白色。", "图书馆 2 层"),
+        ("l5", "umbrella", "蓝色雨伞", "食堂门口遗留，长柄。", "观畴园食堂"),
+        ("l6", "key", "钥匙串（含门禁卡）", "教学楼楼梯间捡到。", "第四教学楼"),
+    ]
+    found = [
+        ("f1", "card", "求找：黑色钱包", "昨晚在食堂丢失，内有身份证和少量现金。", "桃李园食堂"),
+        ("f2", "electronics", "求找：机械键盘", "机房使用后未带走，茶轴。", "东主楼机房"),
+        ("f3", "sports", "求找：篮球", "篮球场上遗落，斯伯丁。", "北区篮球场"),
+        ("f4", "book", "求找：课本《线性代数》", "图书馆借的书丢了。", "图书馆"),
+        ("f5", "cup", "求找：保温杯", "体育馆更衣室遗留。", "综合体育馆"),
+        ("f6", "charger", "求找：充电宝", "教室插座上忘拿。", "第五教学楼"),
+    ]
+    out = []
+    for i, (pid, cat, title, desc, place) in enumerate(lost):
+        out.append({
+            "id": pid, "type": "found", "cat": cat, "title": title, "desc": desc,
+            "place": place, "eventTime": "", "secret": "", "photo": None,
+            "contact": {}, "status": "closed" if i in (3, 5) else "approved",
+            "rejectReason": "", "ownerId": "seed", "ownerToken": "seed",
+            "createdAt": now_ms() - 86400000 * 3, "updatedAt": now_ms(),
+        })
+    for i, (pid, cat, title, desc, place) in enumerate(found):
+        out.append({
+            "id": pid, "type": "lost", "cat": cat, "title": title, "desc": desc,
+            "place": place, "eventTime": "", "secret": "", "photo": None,
+            "contact": {}, "status": "closed" if i == 4 else "approved",
+            "rejectReason": "", "ownerId": "seed", "ownerToken": "seed",
+            "createdAt": now_ms() - 86400000 * 3, "updatedAt": now_ms(),
+        })
+    return out
+
+
+def load_items():
+    if not os.path.exists(DATA_FILE):
+        items = seed_items()
+        save_items(items)
+        return items
+    try:
+        with open(DATA_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, list) else seed_items()
+    except Exception:
+        return seed_items()
+
+
+def save_items(items):
+    tmp = DATA_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(items, f, ensure_ascii=False, indent=1)
+    os.replace(tmp, DATA_FILE)
+
+
+# ---------------------------------------------------------------- 认领 / 通知 / 匹配
+
+CLAIMS_FILE = os.path.join(BASE_DIR, "claims.json")
+NOTICES_FILE = os.path.join(BASE_DIR, "notices.json")
+
+
+def _load_json(path, default):
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, type(default)) else default
+    except Exception:
+        return default
+
+
+def _save_json(path, data):
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=1)
+    os.replace(tmp, path)
+
+
+ACCOUNTS_FILE = os.path.join(BASE_DIR, "accounts.json")
+
+
+def load_accounts():
+    return _load_json(ACCOUNTS_FILE, [])
+
+
+def save_accounts(accs):
+    _save_json(ACCOUNTS_FILE, accs)
+
+
+def load_claims():
+    return _load_json(CLAIMS_FILE, [])
+
+
+def save_claims(data):
+    _save_json(CLAIMS_FILE, data)
+
+
+def load_notices():
+    return _load_json(NOTICES_FILE, [])
+
+
+def save_notices(data):
+    _save_json(NOTICES_FILE, data)
+
+
+def add_notice(notices, owner, kind, text, item_id="", claim_id=""):
+    notices.append({
+        "id": "n_" + uuid.uuid4().hex[:10],
+        "owner": owner,
+        "type": kind,
+        "text": text,
+        "itemId": item_id,
+        "claimId": claim_id,
+        "read": False,
+        "at": now_ms(),
+    })
+    return notices
+
+
+def _bigrams(text):
+    s = re.sub(r"\s+", "", (text or "").lower())
+    return [s[i:i + 2] for i in range(len(s) - 1)] or ([s] if s else [])
+
+
+def _cosine(a, b):
+    from collections import Counter
+    ca, cb = Counter(a), Counter(b)
+    if not ca or not cb:
+        return 0.0
+    inter = sum((ca & cb).values())
+    return 2.0 * inter / (sum(ca.values()) + sum(cb.values()))
+
+
+def match_score(lost, found):
+    """两件物品的相似度：标题权重最高，其次描述、地点、分类"""
+    a = _bigrams((lost.get("title") or "") * 2 + (lost.get("desc") or "") + (lost.get("place") or ""))
+    b = _bigrams((found.get("title") or "") * 2 + (found.get("desc") or "") + (found.get("place") or ""))
+    score = _cosine(a, b)
+    if lost.get("cat") and lost.get("cat") == found.get("cat"):
+        score += 0.08
+    return min(1.0, round(score, 3))
+
+
+def run_matching(threshold=0.42):
+    """把「寻物」和「招领」两两比对，命中就互相通知（少量数据下很快）"""
+    with LOCK:
+        items = load_items()
+        notices = load_notices()
+    losts = [x for x in items if x.get("type") == "lost" and x.get("status") in ("approved", "claimed")]
+    founds = [x for x in items if x.get("type") == "found" and x.get("status") in ("approved", "claimed")]
+    created = 0
+    for l in losts:
+        for f in founds:
+            if l.get("ownerToken") == f.get("ownerToken"):
+                continue
+            score = match_score(l, f)
+            if score < threshold:
+                continue
+            lmatches = l.setdefault("matches", [])
+            if any(m.get("id") == f["id"] for m in lmatches):
+                continue
+            lmatches.append({"id": f["id"], "score": score, "at": now_ms()})
+            f.setdefault("matches", []).append({"id": l["id"], "score": score, "at": now_ms()})
+            pct = int(score * 100)
+            add_notice(notices, l.get("ownerToken"), "match",
+                       "发现一条相似度 %d%% 的招领：%s" % (pct, f.get("title") or ""), f["id"])
+            add_notice(notices, f.get("ownerToken"), "match",
+                       "发现一条相似度 %d%% 的寻物：%s" % (pct, l.get("title") or ""), l["id"])
+            created += 1
+    with LOCK:
+        save_items(items)
+        save_notices(notices)
+    return created
+
+
+
+def ensure_admin_password():
+    if os.path.exists(ADMIN_FILE):
+        try:
+            with open(ADMIN_FILE, "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+            if isinstance(cfg, dict) and cfg.get("password"):
+                return cfg["password"]
+        except Exception:
+            pass
+    alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+    pwd = "".join(random.choice(alphabet) for _ in range(8))
+    with open(ADMIN_FILE, "w", encoding="utf-8") as f:
+        json.dump({"password": pwd, "updated": now_ms()}, f, ensure_ascii=False, indent=1)
+    try:
+        with open(PASSWORD_FILE, "w", encoding="utf-8") as f:
+            f.write("管理员密码：%s\n\n"
+                    "管理端地址：https://你的公网地址/管理端.html\n"
+                    "（本机也可用：http://127.0.0.1:8000/管理端.html）\n\n"
+                    "改密码：编辑同目录的 admin.json，把 password 改成新的，然后重启服务。\n"
+                    "别把这个文件发给别人。\n" % pwd)
+    except Exception:
+        pass
+    return pwd
+
+
+AI_FILE = os.path.join(BASE_DIR, "ai.json")
+
+AI_DEFAULT = {
+    "enabled": False,
+    "base_url": "",
+    "api_key": "",
+    "model": "",
+    "auto_review": True,
+    "auto_approve": True,
+    "approve_threshold": 20,
+    "auto_reject": True,
+    "reject_threshold": 80,
+}
+
+SEVERE_WORDS = [
+    # 色情 / 招嫖
+    "嫖娼", "招嫖", "援交", "外围女", "楼凤", "包夜", "约炮", "一夜情", "找女大",
+    "学生妹", "陪睡", "陪侍", "特殊服务", "上门服务", "成人服务", "大保健", "开房",
+    "裸聊", "色情", "黄片", "约p", "找小姐", "卖淫", "性服务",
+    # 毒品 / 管制物品
+    "冰毒", "大麻", "K粉", "摇头丸", "迷药", "春药", "催情", "枪支", "手枪",
+    "仿真枪", "管制刀具",
+    # 考试 / 证件作弊
+    "代考", "替考", "代写论文", "办证", "假证", "刻章",
+]
+BANNED_WORDS = ["现金", "转账", "刷单", "贷款", "博彩", "赌博",
+                "高利贷", "套现", "洗钱", "发票", "黄牛", "外挂", "代练",
+                "网贷", "押金", "返利", "兼职刷", "跑分"]
+AD_WORDS = ["出售", "转让", "低价", "批发", "代购", "促销", "秒杀", "包邮",
+            "出租", "招租", "招聘", "兼职", "日结", "扫码领", "加微信", "加v"]
+CONTACT_RE = re.compile(r"(1[3-9]\d{9}|微信|weixin|wechat|加v|加V|vx|VX|\bqq\b|QQ号)")
+
+# 平台业务范围限制：标题里出现这些，直接判定「不是失物招领」
+TITLE_BLOCK = ["找对象", "征婚", "相亲", "交友", "找搭子", "组局", "陪聊", "陪侍",
+               "小妹妹", "小姐姐", "包夜"]
+
+
+def scope_violation(it):
+    title = it.get("title") or ""
+    return [w for w in TITLE_BLOCK if w in title]
+
+
+def load_ai_config():
+    cfg = dict(AI_DEFAULT)
+    try:
+        with open(AI_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if isinstance(data, dict):
+            cfg.update({k: data.get(k, cfg[k]) for k in cfg})
+    except Exception:
+        pass
+    # 环境变量优先：公开仓库里不出现任何密钥
+    for env_key, cfg_key in (("DEEPSEEK_API_KEY", "api_key"),
+                             ("DEEPSEEK_BASE_URL", "base_url"),
+                             ("DEEPSEEK_MODEL", "model")):
+        v = os.environ.get(env_key)
+        if v:
+            cfg[cfg_key] = v
+    if os.environ.get("AI_ENABLED"):
+        cfg["enabled"] = os.environ.get("AI_ENABLED") == "1"
+    return cfg
+
+
+def save_ai_config(cfg):
+    merged = dict(AI_DEFAULT)
+    merged.update({k: cfg.get(k, merged[k]) for k in merged})
+    with open(AI_FILE, "w", encoding="utf-8") as f:
+        json.dump(merged, f, ensure_ascii=False, indent=1)
+    return merged
+
+
+def ai_rules(it):
+    """本地规则预审：零成本、立即出结果"""
+    text = "%s %s %s" % (it.get("title") or "", it.get("desc") or "", it.get("secret") or "")
+    score = 0
+    reasons = []
+
+    severe = [w for w in SEVERE_WORDS if w in text]
+    if severe:
+        score += 90
+        reasons.append("命中高危词（色情/毒品/作弊等）：" + "、".join(severe))
+
+    banned = [w for w in BANNED_WORDS if w in text]
+    if banned:
+        score += 70
+        reasons.append("命中违禁词：" + "、".join(banned))
+
+    ads = [w for w in AD_WORDS if w in text]
+    if ads:
+        score += 25
+        reasons.append("疑似商业推广：" + "、".join(ads))
+
+    if CONTACT_RE.search(text):
+        score += 10
+        reasons.append("正文含联系方式，建议改为平台内联系")
+
+    if len(it.get("desc") or "") < 10:
+        score += 20
+        reasons.append("描述过短，难以核对")
+
+    title = it.get("title") or ""
+    if re.search(r"(.)\1{4,}", title):
+        score += 15
+        reasons.append("标题含大量重复字符")
+    if len(title) < 2:
+        score += 20
+        reasons.append("标题过短")
+
+    score = min(score, 95)
+    if score >= 60:
+        decision = "reject"
+    elif score >= 30:
+        decision = "review"
+    else:
+        decision = "approve"
+
+    return {
+        "decision": decision,
+        "score": score,
+        "reason": "；".join(reasons) if reasons else "未发现明显问题",
+        "source": "rule",
+        "at": now_ms(),
+    }
+
+
+AI_SYSTEM_PROMPT = (
+    "你是清华大学校园失物招领平台的内容审核员，负责判断一条启事能否公开展示。"
+    "本平台**只接受两类内容**：丢了东西（寻物启事）、捡到东西（招领启事），"
+    "必须围绕一件具体物品。\n"
+    "第一步：判断是否属于本平台业务范围。"
+    "以下都**不属于**，一律 reject（risk 85-100），"
+    "理由写“不属于失物招领范围”："
+    "找对象、征婚、相亲、交友、找搭子、组局、找人陪聊；"
+    "招嫖或性暗示（找小妹妹、小姐姐、妹妹、包夜、上门、陪侍、服务）；"
+    "招聘兼职、租房卖房、二手交易、代购跑腿、拼车、拉群、广告推广。\n"
+    "第二步：检查标题与正文是否一致。"
+    "如果标题带有交友/招嫖暗示，而正文写的是正常寻物，"
+    "这是**借寻物名义规避审核**，必须 reject（risk 85-100），"
+    "理由写明“标题与内容不符，疑似借寻物发布交友/招嫖信息”。"
+    "反过来，标题正常但正文夹带广告或联系方式营销，也要 reject。\n"
+    "第三步：识别规避写法。用户可能用拼音（piaochang、daikao）、"
+    "英文（escort、cheat exam）、谐音、缩写（PC、代K）、拆字、emoji、"
+    "间隔符号、繁体字来隐藏违规含义，请先还原真实语义再判断。\n"
+    "违法内容（色情招嫖、性服务、代考代写、毒品枪支、赌博贷款洗钱、"
+    "买卖证件发票账号、诈骗引流）一律 reject。\n"
+    "正常情况：真实的失物招领/寻物启事，哪怕描述很短、带了手机号，"
+    "或提到悬赏酬谢，都算通过。\n"
+    "只输出 JSON，不要输出任何其他文字。字段："
+    "decision 取 approve/review/reject；"
+    "risk 为风险分 0-100，approve 时 0-20，review 时 30-70，reject 时 80-100；"
+    "guessType 取 lost 或 found：这条内容更像「用户丢了东西」还是「用户捡到东西」，按内容判断，不要照抄；"
+    "reason 不超过 40 字，要点出你识别到的真实含义或范围问题。"
+    '格式：{"decision":"approve","risk":5,"reason":"...","guessType":"lost"}'
+)
+
+
+AI_ERROR_HINTS = {
+    400: "请求格式不对（多半是模型名写错了）",
+    401: "API Key 无效或还没开通",
+    403: "这个 Key 没有该模型的权限",
+    404: "接口地址不对（检查 base_url 有没有写错）",
+    402: "账户余额不足，需要先充值",
+    429: "请求太频繁或额度用完了，稍后再试",
+    500: "模型服务内部错误，稍后再试",
+    503: "模型服务繁忙，稍后再试",
+}
+
+
+def _endpoints(base):
+    b = (base or "").strip().rstrip("/")
+    if not b:
+        return []
+    if b.endswith("/chat/completions"):
+        return [b]
+    out = [b + "/chat/completions"]
+    if not b.endswith("/v1") and not b.endswith("/v4"):
+        out.append(b + "/v1/chat/completions")
+    return out
+
+
+def _post_chat(endpoint, payload, api_key, timeout=25):
+    import urllib.error
+    import urllib.request
+
+    req = urllib.request.Request(
+        endpoint,
+        data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + (api_key or ""),
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        detail = ""
+        try:
+            detail = e.read().decode("utf-8", "ignore")[:200]
+        except Exception:
+            pass
+        hint = AI_ERROR_HINTS.get(e.code, "调用失败")
+        raise RuntimeError("HTTP %s · %s %s" % (e.code, hint, detail))
+    except Exception as e:
+        raise RuntimeError("网络错误：%s" % str(e)[:120])
+
+
+def ai_llm(it, cfg, timeout=25):
+    """调用 OpenAI 兼容接口做语义审核"""
+    user_text = "标题：%s\n类型：%s\n地点：%s\n描述：%s\n核验特征：%s" % (
+        it.get("title") or "", "寻物" if it.get("type") == "lost" else "招领",
+        it.get("place") or "", it.get("desc") or "", it.get("secret") or "",
+    )
+    payload = {
+        "model": cfg.get("model") or "deepseek-flash",
+        "temperature": 0,
+        "messages": [
+            {"role": "system", "content": AI_SYSTEM_PROMPT},
+            {"role": "user", "content": user_text},
+        ],
+    }
+
+    data = None
+    last_err = None
+    for endpoint in _endpoints(cfg.get("base_url")):
+        try:
+            data = _post_chat(endpoint, payload, cfg.get("api_key"), timeout=timeout)
+            break
+        except RuntimeError as e:
+            last_err = e
+            if "HTTP 404" in str(e):
+                continue          # 换一个候选地址再试
+            raise
+    if data is None:
+        raise last_err or RuntimeError("没有可用的接口地址")
+
+    content = ""
+    try:
+        content = data["choices"][0]["message"]["content"]
+    except Exception:
+        content = json.dumps(data, ensure_ascii=False)
+
+    m = re.search(r"\{[\s\S]*\}", content)
+    if not m:
+        raise ValueError("模型没有返回 JSON，返回内容：" + content[:80])
+    obj = json.loads(m.group(0))
+    decision = str(obj.get("decision") or "review").lower()
+    if decision not in ("approve", "review", "reject"):
+        decision = "review"
+    raw = obj.get("risk", obj.get("score", 50))
+    try:
+        score = int(float(raw))
+    except Exception:
+        score = 50
+    score = max(0, min(100, score))
+    # 关键：以模型的结论为准，把分数归一到该结论的区间
+    # （不同模型对"分数"的含义理解不一致，直接拿去比阈值会误判）
+    if decision == "approve":
+        score = min(score, 20)
+    elif decision == "reject":
+        score = max(score, 80)
+    else:
+        score = max(30, min(70, score))
+    return {
+        "decision": decision,
+        "score": score,
+        "reason": str(obj.get("reason") or "")[:120],
+        "guessType": str(obj.get("guessType") or "").lower() if str(obj.get("guessType") or "").lower() in ("lost", "found") else "",
+        "source": "llm",
+        "model": cfg.get("model") or "",
+        "at": now_ms(),
+    }
+
+
+def ai_test(cfg):
+    """测试连接：发一句最短的话，确认地址 / Key / 模型名都对"""
+    import time as _t
+
+    payload = {
+        "model": cfg.get("model") or "deepseek-flash",
+        "temperature": 0,
+        "max_tokens": 16,
+        "messages": [
+            {"role": "system", "content": "只回复两个字：正常"},
+            {"role": "user", "content": "连接测试"},
+        ],
+    }
+    started = _t.time()
+    last_err = None
+    for endpoint in _endpoints(cfg.get("base_url")):
+        try:
+            data = _post_chat(endpoint, payload, cfg.get("api_key"), timeout=25)
+            reply = ""
+            try:
+                reply = data["choices"][0]["message"]["content"]
+            except Exception:
+                reply = json.dumps(data, ensure_ascii=False)[:80]
+            return {
+                "ok": True,
+                "endpoint": endpoint,
+                "latency": round(_t.time() - started, 2),
+                "reply": (reply or "").strip()[:60],
+            }
+        except RuntimeError as e:
+            last_err = e
+            if "HTTP 404" in str(e):
+                continue
+            return {"ok": False, "error": str(e)}
+    return {"ok": False, "error": str(last_err or "没有可用的接口地址")}
+
+
+AI_BINARY_PROMPT = (
+    "你是校园失物招领平台的终审员。判断这条启事能不能直接公开给同学看。"
+    "只回答 JSON：{\"publish\": true 或 false, \"reason\": \"不超过 30 字\"}。"
+    "规则：真实的丢东西/捡到东西 = true；"
+    "交友、找对象、招嫖、招聘、二手交易、广告、诈骗、违法 = false；"
+    "拿不准时宁可 false。"
+)
+
+
+def ai_binary(it, cfg, timeout=12):
+    """终审：把「需要复核」压成明确的 通过/不通过（无人工场景的关键）"""
+    payload = {
+        "model": cfg.get("model") or "deepseek-flash",
+        "temperature": 0,
+        "messages": [
+            {"role": "system", "content": AI_BINARY_PROMPT},
+            {"role": "user", "content": "标题：%s\n描述：%s\n地点：%s" % (
+                it.get("title") or "", it.get("desc") or "", it.get("place") or "")},
+        ],
+    }
+    data = None
+    last_err = None
+    for endpoint in _endpoints(cfg.get("base_url")):
+        try:
+            data = _post_chat(endpoint, payload, cfg.get("api_key"), timeout=timeout)
+            break
+        except RuntimeError as e:
+            last_err = e
+            if "HTTP 404" in str(e):
+                continue
+            raise
+    if data is None:
+        raise last_err or RuntimeError("no endpoint")
+
+    content = ""
+    try:
+        content = data["choices"][0]["message"]["content"]
+    except Exception:
+        content = json.dumps(data, ensure_ascii=False)
+    m = re.search(r"\{[\s\S]*\}", content)
+    if not m:
+        raise ValueError("终审没有返回 JSON")
+    obj = json.loads(m.group(0))
+    return bool(obj.get("publish")), str(obj.get("reason") or "")[:120]
+
+
+def ai_review(it, use_llm=True, timeout=25):
+    cfg = load_ai_config()
+    if use_llm and cfg.get("enabled") and cfg.get("api_key") and cfg.get("base_url"):
+        try:
+            return ai_llm(it, cfg, timeout=timeout)
+        except Exception as e:
+            result = ai_rules(it)
+            result["reason"] = "（大模型调用失败，已用规则预审：%s）%s" % (str(e)[:60], result["reason"])
+            result["source"] = "rule-fallback"
+            return result
+    return ai_rules(it)
+
+
+def mask_contact(v):
+    """未通过认领前，联系方式只给打码版本"""
+    s = str(v or "")
+    digits = re.sub(r"\D", "", s)
+    if len(digits) >= 11:
+        return re.sub(r"(\d{3})\d{4}(\d{4})", r"\1****\2", s)
+    if len(s) <= 2:
+        return s[:1] + "***"
+    return s[:2] + "****" + s[-1:]
+
+
+CHECK_CACHE = {}
+
+
+def review_item(item):
+    """跑一遍 AI 审核（含终审），发布和预检共用"""
+    ai = ai_review(item, use_llm=True, timeout=12)
+    cfg = load_ai_config()
+    if ai.get("source") == "llm" and ai.get("decision") == "review":
+        try:
+            ok2, why2 = ai_binary(item, cfg, timeout=12)
+        except Exception as e:
+            ok2, why2 = False, "终审暂时不可用：" + str(e)[:30]
+        ai["decision"] = "approve" if ok2 else "reject"
+        ai["score"] = 15 if ok2 else 85
+        ai["reason"] = ((ai.get("reason") or "") + "；终审：" + why2).strip("；")
+        ai["second"] = True
+    return ai
+
+
+def public_item(it, owner=None):
+    """用户端能看到的内容：不含核验特征、发布者令牌，电话脱敏"""
+    out = {k: v for k, v in it.items()
+           if k not in ("secret", "ownerToken", "ownerId")}
+    phone = str((it.get("contact") or {}).get("phone") or "")
+    if phone:
+        out["contact"] = {"phone": re.sub(r"(\d{3})\d{4}(\d{4})", r"\1****\2", phone)}
+    else:
+        out["contact"] = {}
+    # 告诉前端「这条是不是我自己发的」，避免让用户去认领自己的东西
+    out["isMine"] = bool(owner and it.get("ownerToken") == owner)
+    return out
+
+
+STARTUP_FILE = os.path.join(BASE_DIR, "启动密码.json")
+
+
+def _machine_id():
+    """本机指纹：换一台电脑就会变"""
+    import platform
+    import uuid as _uuid
+    raw = "%s|%s|%s" % (platform.node(), _uuid.getnode(), os.environ.get("COMPUTERNAME", ""))
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
+
+
+def _hash_pwd(pwd, salt):
+    return hashlib.pbkdf2_hmac("sha256", pwd.encode("utf-8"), salt.encode("utf-8"), 120000).hex()
+
+
+def _ask(prompt):
+    import getpass
+    try:
+        return getpass.getpass(prompt).strip()
+    except Exception:
+        return input(prompt).strip()
+
+
+def _save_startup(cfg):
+    with open(STARTUP_FILE, "w", encoding="utf-8") as f:
+        json.dump(cfg, f, ensure_ascii=False, indent=1)
+
+
+def startup_gate():
+    """启动前校验：本机指纹 + 启动密码。返回 True 才继续启动。"""
+    if os.environ.get("SG_STARTUP_SKIP") == "1":
+        return True
+    cfg = None
+    try:
+        if os.path.exists(STARTUP_FILE):
+            with open(STARTUP_FILE, "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+    except Exception:
+        cfg = None
+
+    mid = _machine_id()
+    print()
+    print("=" * 60)
+    if not cfg:
+        print("  第一次启动：请设置「启动密码」")
+        print("  （只用来启动程序，和后台管理密码不是一回事）")
+        print("=" * 60)
+        p1 = _ask("设置启动密码（至少 4 位）：")
+        if len(p1) < 4:
+            print("  密码太短，已取消。")
+            return False
+        p2 = _ask("再输一次：")
+        if p1 != p2:
+            print("  两次输入不一致，已取消。")
+            return False
+        salt = hashlib.sha256(os.urandom(32)).hexdigest()[:16]
+        _save_startup({"salt": salt, "hash": _hash_pwd(p1, salt),
+                       "machine": mid, "updated": now_ms()})
+        print("  已设置，并绑定到这台电脑。")
+        print("=" * 60)
+        return True
+
+    same = cfg.get("machine") == mid
+    if not same:
+        print("  [!] 这台电脑不是最初启动的那台。")
+        print("      如果是你本人换了电脑，输入启动密码可以迁移；")
+        print("      如果不是，请不要转发/使用这个程序。")
+        print("=" * 60)
+    else:
+        print("  清华校园拾光里 · 启动验证")
+        print("=" * 60)
+
+    for _ in range(3):
+        pwd = _ask("启动密码：" if same else "启动密码（迁移到本机）：")
+        if _hash_pwd(pwd, cfg.get("salt") or "") == cfg.get("hash"):
+            if not same:
+                cfg["machine"] = mid
+                cfg["updated"] = now_ms()
+                _save_startup(cfg)
+                print("  已绑定到这台电脑。")
+            print("=" * 60)
+            return True
+        print("  密码不对，再试一次。")
+    print("  连续 3 次错误，已退出。")
+    return False
+
+
+class Handler(BaseHTTPRequestHandler):
+    server_version = "Shiguangli/4.0"
+
+    def log_message(self, fmt, *args):
+        try:
+            sys.stdout.write("  · " + (fmt % args) + "\n")
+            sys.stdout.flush()
+        except Exception:
+            pass
+
+    # ---------- 基础 ----------
+    def _send(self, code, body=b"", ctype="application/json; charset=utf-8", extra=None):
+        if isinstance(body, str):
+            body = body.encode("utf-8")
+        headers = dict(extra or {})
+        # 文本类内容做 gzip：首屏 88KB -> 约 18KB，跨国线路差别很大
+        if body and len(body) > 800 and ("text/" in ctype or "json" in ctype or "javascript" in ctype):
+            if "gzip" in (self.headers.get("Accept-Encoding") or "").lower():
+                import gzip
+                body = gzip.compress(body, 6)
+                headers["Content-Encoding"] = "gzip"
+                headers["Vary"] = "Accept-Encoding"
+        self.send_response(code)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", headers.pop("Cache-Control", "no-store"))
+        self.send_header("X-Content-Type-Options", "nosniff")
+        for k, v in headers.items():
+            self.send_header(k, v)
+        self.end_headers()
+        try:
+            self.wfile.write(body)
+        except Exception:
+            pass
+
+    def _json(self, obj, code=200):
+        self._send(code, json.dumps(obj, ensure_ascii=False).encode("utf-8"))
+
+    def _read_body(self):
+        try:
+            n = int(self.headers.get("Content-Length") or 0)
+            raw = self.rfile.read(n) if n else b""
+            return json.loads(raw.decode("utf-8")) if raw else {}
+        except Exception:
+            return {}
+
+    def _owner(self):
+        return (self.headers.get("X-Owner") or "").strip()[:64]
+
+    def _is_admin(self):
+        tok = (self.headers.get("X-Admin-Token") or "").strip()
+        exp = TOKENS.get(tok)
+        if not exp:
+            return False
+        if exp < time.time():
+            TOKENS.pop(tok, None)
+            return False
+        return True
+
+    def _need_admin(self):
+        if self._is_admin():
+            return True
+        self._json({"error": "unauthorized"}, 401)
+        return False
+
+    # ---------- 路由 ----------
+    def do_GET(self):
+        path = unquote(urlparse(self.path).path)
+
+        if path in ("/", "/index.html"):
+            return self._serve_file("用户端.html")
+        if path == "/admin" or path == "/admin/":
+            return self._serve_file("管理端.html")
+        if path == "/api/ping":
+            with LOCK:
+                return self._json({"ok": True, "items": len(load_items()),
+                                   "uptime": int(time.time() - START_TS)})
+
+        if path == "/api/items":
+            owner = self._owner()
+            with LOCK:
+                items = [public_item(x, owner) for x in load_items()
+                         if x.get("status") in PUBLIC_STATUS]
+                _claims = load_claims()
+            _my_claims = {c.get("itemId"): c for c in _claims if c.get("from") == owner}
+            for _x in items:
+                _c = _my_claims.get(_x.get("id"))
+                if _c:
+                    _x["myClaim"] = _c.get("status")
+                    _x["myClaimId"] = _c.get("id")
+            items.sort(key=lambda x: x.get("createdAt") or 0, reverse=True)
+            return self._json(items)
+
+        if path == "/api/sync":
+            # 一次请求同时拿公开列表 + 我的发布，省掉一个往返（跨国线路很值钱）
+            owner = self._owner()
+            with LOCK:
+                all_items = load_items()
+            pub = [public_item(x, owner) for x in all_items if x.get("status") in PUBLIC_STATUS]
+            with LOCK:
+                _claims = load_claims()
+            _my_claims = {c.get("itemId"): c for c in _claims if c.get("from") == owner}
+            for _x in pub:
+                _c = _my_claims.get(_x.get("id"))
+                if _c:
+                    _x["myClaim"] = _c.get("status")
+                    _x["myClaimId"] = _c.get("id")
+            mine = [x for x in all_items if owner and x.get("ownerToken") == owner]
+            pub.sort(key=lambda x: x.get("createdAt") or 0, reverse=True)
+            mine.sort(key=lambda x: x.get("createdAt") or 0, reverse=True)
+            with LOCK:
+                notices = load_notices()
+                claims_all = load_claims()
+            mine_ids = {x.get("id") for x in mine}
+            unread = sum(1 for n in notices if n.get("owner") == owner and not n.get("read"))
+            pending_claims = sum(1 for c in claims_all
+                                 if c.get("itemId") in mine_ids and c.get("status") == "pending")
+            return self._json({"items": pub, "mine": mine, "serverTime": now_ms(),
+                               "unread": unread, "claims": pending_claims})
+
+        if path == "/api/mine":
+            owner = self._owner()
+            if not owner:
+                return self._json([])
+            with LOCK:
+                items = [x for x in load_items() if x.get("ownerToken") == owner]
+            items.sort(key=lambda x: x.get("createdAt") or 0, reverse=True)
+            return self._json(items)
+
+        if path == "/api/claims":
+            owner = self._owner()
+            if not owner:
+                return self._json({"received": [], "sent": []})
+            with LOCK:
+                items = {x.get("id"): x for x in load_items()}
+                claims = load_claims()
+
+            def pack(c, side):
+                it = items.get(c.get("itemId"), {})
+                out = {
+                    "id": c.get("id"), "itemId": c.get("itemId"),
+                    "kind": c.get("kind") or "claim",
+                    "itemTitle": it.get("title") or "",
+                    "itemStatus": it.get("status") or "",
+                    "message": c.get("message") or "",
+                    "status": c.get("status") or "pending",
+                    "createdAt": c.get("createdAt") or 0,
+                }
+                # 只有发布者能看到自己这条的完整细节（含独有特征），用来和申请人核对
+                if side == "received":
+                    out["itemDesc"] = it.get("desc") or ""
+                    out["itemPlace"] = it.get("place") or ""
+                    out["itemSecret"] = it.get("secret") or ""
+                    out["itemCat"] = it.get("cat") or ""
+                    out["itemPhoto"] = it.get("photo") or ""
+                    # 联系方式：没通过之前只给打码版本
+                    if c.get("contact"):
+                        out["claimContact"] = (
+                            c.get("contact") if c.get("status") in ("accepted", "completed")
+                            else mask_contact(c.get("contact"))
+                        )
+                if c.get("status") in ("accepted", "completed"):
+                    out["ownerContact"] = (it.get("contact") or {}).get("phone") or ""
+                    out["claimContact"] = c.get("contact") or ""
+                return out
+
+            received = [pack(c, "received") for c in claims
+                        if (items.get(c.get("itemId")) or {}).get("ownerToken") == owner]
+            sent = [pack(c, "sent") for c in claims if c.get("from") == owner]
+            received.sort(key=lambda x: x["createdAt"], reverse=True)
+            sent.sort(key=lambda x: x["createdAt"], reverse=True)
+            return self._json({"received": received, "sent": sent})
+
+        if path == "/api/notices":
+            owner = self._owner()
+            with LOCK:
+                notices = load_notices()
+            mine = [n for n in notices if n.get("owner") == owner]
+            mine.sort(key=lambda x: x.get("at") or 0, reverse=True)
+            unread = sum(1 for n in mine if not n.get("read"))
+            return self._json({"items": mine[:50], "unread": unread})
+
+        if path == "/api/admin/accounts":
+            if not self._need_admin():
+                return
+            with LOCK:
+                accs = load_accounts()
+                items = load_items()
+            counts = {}
+            for x in items:
+                t = x.get("ownerToken") or ""
+                counts[t] = counts.get(t, 0) + 1
+            out = []
+            for a in accs:
+                out.append({"id": a.get("id"), "phone": a.get("phone") or "",
+                            "createdAt": a.get("createdAt") or 0,
+                            "lastLoginAt": a.get("lastLoginAt") or 0,
+                            "posts": counts.get(a.get("id"), 0)})
+            out.sort(key=lambda x: x.get("createdAt") or 0, reverse=True)
+            return self._json(out)
+
+        if path == "/api/admin/items":
+            if not self._need_admin():
+                return
+            with LOCK:
+                items = load_items()
+            items.sort(key=lambda x: x.get("createdAt") or 0, reverse=True)
+            return self._json(items)
+
+        if path == "/api/admin/stats":
+            if not self._need_admin():
+                return
+            with LOCK:
+                items = load_items()
+            counts = {}
+            for x in items:
+                counts[x.get("status", "?")] = counts.get(x.get("status", "?"), 0) + 1
+            return self._json({"total": len(items), "byStatus": counts})
+
+        if path == "/api/admin/ai/config":
+            if not self._need_admin():
+                return
+            cfg = load_ai_config()
+            return self._json({
+                "enabled": bool(cfg.get("enabled")),
+                "base_url": cfg.get("base_url") or "",
+                "model": cfg.get("model") or "",
+                "has_key": bool(cfg.get("api_key")),
+                "auto_review": bool(cfg.get("auto_review")),
+                "auto_approve": bool(cfg.get("auto_approve")),
+                "approve_threshold": int(cfg.get("approve_threshold") or 0),
+                "auto_reject": bool(cfg.get("auto_reject")),
+                "reject_threshold": int(cfg.get("reject_threshold") or 0),
+            })
+
+        # 静态文件
+        rel = path.lstrip("/")
+        target = os.path.abspath(os.path.join(BASE_DIR, rel))
+        if rel and target.startswith(BASE_DIR + os.sep) and os.path.isfile(target):
+            return self._serve_path(target)
+        if path == "/favicon.ico":
+            return self._send(204)
+        return self._send(404, "not found", "text/plain; charset=utf-8")
+
+    def do_POST(self):
+        path = unquote(urlparse(self.path).path)
+
+        if path == "/api/account/login":
+            body = self._read_body()
+            phone = re.sub(r"\D", "", str(body.get("phone") or ""))
+            pwd = str(body.get("password") or "")
+            if len(phone) < 5:
+                return self._json({"error": "请输入手机号"}, 400)
+            if len(pwd) < 4:
+                return self._json({"error": "密码至少 4 位"}, 400)
+            with LOCK:
+                accs = load_accounts()
+                acc = next((a for a in accs if a.get("phone") == phone), None)
+                created = False
+                if not acc:
+                    salt = uuid.uuid4().hex[:16]
+                    acc = {"id": "acc_" + uuid.uuid4().hex[:10], "phone": phone,
+                           "salt": salt,
+                           "hash": hashlib.pbkdf2_hmac("sha256", pwd.encode("utf-8"),
+                                                       salt.encode("utf-8"), 120000).hex(),
+                           "createdAt": now_ms()}
+                    accs.append(acc)
+                    save_accounts(accs)
+                    created = True
+                else:
+                    if hashlib.pbkdf2_hmac("sha256", pwd.encode("utf-8"),
+                                           (acc.get("salt") or "").encode("utf-8"), 120000).hex() != acc.get("hash"):
+                        return self._json({"error": "密码不对"}, 401)
+                acc["lastLoginAt"] = now_ms()
+                save_accounts(accs)
+            adopted = 0
+            with LOCK:
+                items = load_items()
+                for x in items:
+                    if (re.sub(r"\D", "", str((x.get("contact") or {}).get("phone") or "")) == phone
+                            and x.get("ownerToken") != acc["id"]):
+                        x["ownerToken"] = acc["id"]
+                        x["ownerId"] = acc["id"]
+                        x["updatedAt"] = now_ms()
+                        adopted += 1
+                if adopted:
+                    save_items(items)
+            return self._json({"ok": True, "accountId": acc["id"], "phone": phone,
+                               "created": created, "adopted": adopted})
+
+        if path == "/api/recover":
+            owner = self._owner()
+            if not owner:
+                return self._json({"error": "缺少设备标识"}, 400)
+            body = self._read_body()
+            phone = re.sub(r"\D", "", str(body.get("phone") or ""))
+            if len(phone) < 5:
+                return self._json({"error": "请输入发布时留的手机号"}, 400)
+            confirm = bool(body.get("confirm"))
+            with LOCK:
+                items = load_items()
+                hits = [x for x in items
+                        if re.sub(r"\D", "", str((x.get("contact") or {}).get("phone") or "")) == phone]
+            if not hits:
+                return self._json({"ok": True, "count": 0, "titles": []})
+            if not confirm:
+                return self._json({"ok": True, "count": len(hits),
+                                   "titles": [x.get("title") or "" for x in hits][:10]})
+            with LOCK:
+                items = load_items()
+                n = 0
+                for x in items:
+                    if (re.sub(r"\D", "", str((x.get("contact") or {}).get("phone") or "")) == phone
+                            and x.get("ownerToken") != owner):
+                        x["ownerToken"] = owner
+                        x["ownerId"] = owner
+                        x["updatedAt"] = now_ms()
+                        n += 1
+                save_items(items)
+            return self._json({"ok": True, "count": n})
+
+
+        if path == "/api/login":
+            body = self._read_body()
+            pwd = str(body.get("password") or "")
+            if pwd and pwd == ensure_admin_password():
+                tok = uuid.uuid4().hex
+                TOKENS[tok] = time.time() + TOKEN_TTL
+                return self._json({"token": tok, "ttl": TOKEN_TTL})
+            time.sleep(0.8)
+            return self._json({"error": "密码不对"}, 401)
+
+        if path == "/api/precheck":
+            owner = self._owner()
+            if not owner:
+                return self._json({"error": "缺少设备标识"}, 400)
+            body = self._read_body()
+            item = self._clean(body)
+            item["type"] = body.get("type") if body.get("type") in ("lost", "found") else "lost"
+            if not item.get("title"):
+                return self._json({"error": "title required"}, 400)
+            ai = review_item(item)
+            suggestion = ""
+            if ai.get("guessType") and ai["guessType"] != item["type"]:
+                suggestion = ai["guessType"]
+            cid = "k_" + uuid.uuid4().hex[:10]
+            CHECK_CACHE[cid] = {"owner": owner, "ai": ai, "at": time.time(), "type": item["type"]}
+            # 清掉过期的
+            for k in [k for k, v in CHECK_CACHE.items() if time.time() - v.get("at", 0) > 900]:
+                CHECK_CACHE.pop(k, None)
+            return self._json({"checkId": cid, "ai": ai, "suggestion": suggestion,
+                               "type": item["type"]})
+
+        if path.startswith("/api/items/") and path.endswith("/claims"):
+            owner = self._owner()
+            if not owner:
+                return self._json({"error": "缺少设备标识"}, 400)
+            item_id = path[len("/api/items/"):-len("/claims")]
+            body = self._read_body()
+            message = str(body.get("message") or "").strip()[:200]
+            contact = str(body.get("contact") or "").strip()[:30]
+            if len(message) < 2:
+                return self._json({"error": "请说明一下物品的独有特征"}, 400)
+            with LOCK:
+                items = load_items()
+                target = next((x for x in items if x.get("id") == item_id), None)
+                if not target:
+                    return self._json({"error": "not found"}, 404)
+                if target.get("ownerToken") == owner:
+                    return self._json({"error": "这是你自己发布的"}, 400)
+                if target.get("status") == "claimed":
+                    return self._json({"error": "这个物品已经被别人认领了"}, 400)
+                if target.get("status") != "approved":
+                    return self._json({"error": "这条已经不在可认领状态"}, 400)
+                claims = load_claims()
+                if any(c.get("itemId") == item_id and c.get("from") == owner for c in claims):
+                    return self._json({"error": "你已经申请过了"}, 400)
+                # 两个方向不一样：
+                #  - 招领帖(found)：申请人=失主，填「只有失主知道的特征」
+                #  - 寻物帖(lost)：申请人=捡到的人，填「在哪捡到的」，他不可能知道特征
+                kind = "found" if target.get("type") == "lost" else "claim"
+                claim = {
+                    "id": "c_" + uuid.uuid4().hex[:10],
+                    "itemId": item_id,
+                    "from": owner,
+                    "kind": kind,
+                    "message": message,
+                    "contact": contact,
+                    "status": "pending",
+                    "createdAt": now_ms(),
+                    "updatedAt": now_ms(),
+                }
+                claims.append(claim)
+                save_claims(claims)
+                notices = load_notices()
+                text = ("有人捡到了你丢失的《%s》，快去核对" % (target.get("title") or "")
+                        if kind == "found"
+                        else "有人申请认领你捡到的《%s》" % (target.get("title") or ""))
+                add_notice(notices, target.get("ownerToken"), "claim", text, item_id, claim["id"])
+                save_notices(notices)
+            return self._json({"ok": True, "id": claim["id"]})
+
+        if path.startswith("/api/claims/") and path.endswith("/supplement"):
+            owner = self._owner()
+            claim_id = path[len("/api/claims/"):-len("/supplement")]
+            body = self._read_body()
+            extra = str(body.get("message") or "").strip()[:200]
+            if len(extra) < 2:
+                return self._json({"error": "请写一点补充说明"}, 400)
+            with LOCK:
+                claims = load_claims()
+                items = load_items()
+                claim = next((c for c in claims if c.get("id") == claim_id), None)
+                if not claim:
+                    return self._json({"error": "not found"}, 404)
+                if claim.get("from") != owner:
+                    return self._json({"error": "只有申请人能补充"}, 403)
+                if claim.get("status") not in ("need_more", "rejected"):
+                    return self._json({"error": "当前状态不能补充"}, 400)
+                if claim.get("status") == "rejected":
+                    # 被拒后重新申请：用新写的内容整体替换，而不是追加
+                    claim["message"] = extra[:400]
+                else:
+                    claim["message"] = ((claim.get("message") or "") + "\n补充：" + extra)[:400]
+                claim["status"] = "pending"
+                claim["updatedAt"] = now_ms()
+                save_claims(claims)
+                item = next((x for x in items if x.get("id") == claim.get("itemId")), None)
+                notices = load_notices()
+                if item:
+                    add_notice(notices, item.get("ownerToken"), "claim",
+                               "有人补充了《%s》的说明，请再核对一次" % (item.get("title") or ""),
+                               item.get("id"), claim.get("id"))
+                save_notices(notices)
+            return self._json({"ok": True})
+
+        if path.startswith("/api/claims/") and path.endswith("/complete"):
+            owner = self._owner()
+            claim_id = path[len("/api/claims/"):-len("/complete")]
+            with LOCK:
+                claims = load_claims()
+                items = load_items()
+                claim = next((c for c in claims if c.get("id") == claim_id), None)
+                if not claim:
+                    return self._json({"error": "not found"}, 404)
+                item = next((x for x in items if x.get("id") == claim.get("itemId")), None)
+                if not item or item.get("ownerToken") != owner:
+                    return self._json({"error": "只有发布者能确认完成"}, 403)
+                claim["status"] = "completed"
+                claim["updatedAt"] = now_ms()
+                item["status"] = "closed"
+                item["updatedAt"] = now_ms()
+                save_claims(claims)
+                save_items(items)
+                notices = load_notices()
+                add_notice(notices, claim.get("from"), "done",
+                           "《%s》已标记完成归还，谢谢你" % (item.get("title") or ""), item.get("id"))
+                save_notices(notices)
+            return self._json({"ok": True})
+
+        if path == "/api/notices/read":
+            owner = self._owner()
+            with LOCK:
+                notices = load_notices()
+                for n in notices:
+                    if n.get("owner") == owner:
+                        n["read"] = True
+                save_notices(notices)
+            return self._json({"ok": True})
+
+        if path.startswith("/api/items/") and path.endswith("/report"):
+            owner = self._owner()
+            if not owner:
+                return self._json({"error": "缺少设备标识"}, 400)
+            item_id = path[len("/api/items/"):-len("/report")]
+            need_recheck = False
+            with LOCK:
+                items = load_items()
+                target = next((x for x in items if x.get("id") == item_id), None)
+                if not target:
+                    return self._json({"error": "not found"}, 404)
+                reports = target.get("reports") or []
+                if owner not in reports:
+                    reports.append(owner)
+                target["reports"] = reports
+                target["reportCount"] = len(reports)
+                need_recheck = len(reports) >= 3 and target.get("status") in PUBLIC_STATUS
+                if need_recheck:
+                    target["status"] = "hidden"
+                    target["hiddenReason"] = "多人举报，正在复核"
+                save_items(items)
+            if need_recheck:
+                ai = ai_review(target, use_llm=True, timeout=12)
+                approved = ai.get("source") == "llm" and ai.get("decision") == "approve"
+                with LOCK:
+                    items = load_items()
+                    for x in items:
+                        if x.get("id") == item_id:
+                            x["ai"] = ai
+                            if approved:
+                                x["status"] = "approved"
+                                x["hiddenReason"] = ""
+                            else:
+                                x["status"] = "rejected"
+                                x["rejectReason"] = "多人举报并经 AI 复核：" + (ai.get("reason") or "")
+                            break
+                    save_items(items)
+            return self._json({"ok": True, "reports": len(reports)})
+
+        if path == "/api/items":
+            owner = self._owner()
+            if not owner:
+                return self._json({"error": "缺少设备标识，请刷新页面"}, 400)
+            body = self._read_body()
+            if not isinstance(body, dict) or not body.get("title"):
+                return self._json({"error": "title required"}, 400)
+            item = self._clean(body)
+            item["id"] = "p_" + uuid.uuid4().hex[:12]
+            item["status"] = "pending"
+            item["rejectReason"] = ""
+            item["ownerToken"] = owner
+            item["ownerId"] = owner
+            item["createdAt"] = now_ms()
+            item["updatedAt"] = item["createdAt"]
+            cfg = load_ai_config()
+            try:
+                approve_at = int(cfg.get("approve_threshold") or 0)
+            except Exception:
+                approve_at = 20
+            try:
+                reject_at = int(cfg.get("reject_threshold") or 80)
+            except Exception:
+                reject_at = 80
+            # 前端先做过预检就把结果直接用掉，没做过就现算
+            check_id = body.get("checkId")
+            cached = CHECK_CACHE.get(check_id) if check_id else None
+            if cached and cached.get("owner") == owner and time.time() - cached.get("at", 0) < 600:
+                ai = cached.get("ai") or review_item(item)
+                CHECK_CACHE.pop(check_id, None)
+            else:
+                ai = review_item(item)
+            item["ai"] = ai
+            ai_trusted = ai.get("source") == "llm"
+            scope_hits = scope_violation(item)
+            # 用户可能把「丢了」和「捡到」写反，AI 看出来就提示（仍按用户选的类型发布）
+            if ai_trusted and ai.get("guessType") and ai["guessType"] != item["type"]:
+                item["typeSuggestion"] = ai["guessType"]
+            if scope_hits:
+                item["status"] = "rejected"
+                item["autoRejected"] = True
+                item["rejectReason"] = "标题含交友/招嫖暗示（%s），不属于失物招领范围" % "、".join(scope_hits)
+                item["ai"]["decision"] = "reject"
+                item["ai"]["score"] = max(int(item["ai"].get("score") or 0), 85)
+                item["ai"]["reason"] = ((item["ai"].get("reason") or "") + "；标题范围检查命中：" + "、".join(scope_hits)).strip("；")
+                item["reviewedBy"] = "AI"
+                item["reviewedAt"] = now_ms()
+            elif (ai_trusted and cfg.get("auto_approve") and ai.get("decision") == "approve"
+                    and int(ai.get("score") or 0) <= approve_at):
+                item["status"] = "approved"
+                item["autoApproved"] = True
+                item["reviewedBy"] = "AI"
+                item["reviewedAt"] = now_ms()
+            elif (ai_trusted and cfg.get("auto_reject") and ai.get("decision") == "reject"
+                    and int(ai.get("score") or 0) >= reject_at):
+                item["status"] = "rejected"
+                item["autoRejected"] = True
+                item["rejectReason"] = "AI 自动拦截：" + (ai.get("reason") or "疑似违规内容")
+                item["reviewedBy"] = "AI"
+                item["reviewedAt"] = now_ms()
+            elif not ai_trusted:
+                item["status"] = "rejected"
+                item["rejectReason"] = "审核系统暂时不可用，内容没有公开，请稍后重新提交"
+                item["ai"]["fallback"] = True
+                item["reviewedBy"] = "system"
+                item["reviewedAt"] = now_ms()
+            with LOCK:
+                items = load_items()
+                items.append(item)
+                save_items(items)
+            try:
+                run_matching()
+            except Exception:
+                pass
+            return self._json(item, 201)
+
+        if path == "/api/admin/reset":
+            if not self._need_admin():
+                return
+            with LOCK:
+                items = seed_items()
+                save_items(items)
+                save_claims([])
+                save_notices([])
+            return self._json({"ok": True, "items": len(items)})
+
+        if path == "/api/admin/ai/test":
+            if not self._need_admin():
+                return
+            body = self._read_body()
+            cfg = load_ai_config()
+            for k in ("base_url", "api_key", "model"):
+                if body.get(k):
+                    cfg[k] = body[k]
+            return self._json(ai_test(cfg))
+
+        if path == "/api/admin/ai/config":
+            if not self._need_admin():
+                return
+            body = self._read_body()
+            cfg = load_ai_config()
+            for k in ("enabled", "base_url", "api_key", "model", "auto_review",
+                      "auto_approve", "approve_threshold", "auto_reject", "reject_threshold"):
+                if k in body:
+                    cfg[k] = body[k]
+            try:
+                cfg["approve_threshold"] = max(0, min(100, int(cfg.get("approve_threshold") or 0)))
+            except Exception:
+                cfg["approve_threshold"] = 20
+            try:
+                cfg["reject_threshold"] = max(0, min(100, int(cfg.get("reject_threshold") or 80)))
+            except Exception:
+                cfg["reject_threshold"] = 80
+            cfg = save_ai_config(cfg)
+            return self._json({
+                "enabled": bool(cfg.get("enabled")),
+                "base_url": cfg.get("base_url") or "",
+                "model": cfg.get("model") or "",
+                "has_key": bool(cfg.get("api_key")),
+                "auto_approve": bool(cfg.get("auto_approve")),
+                "approve_threshold": int(cfg.get("approve_threshold") or 0),
+            })
+
+        if path.startswith("/api/admin/ai/review/"):
+            if not self._need_admin():
+                return
+            item_id = path[len("/api/admin/ai/review/"):]
+            with LOCK:
+                items = load_items()
+            target = next((x for x in items if x.get("id") == item_id), None)
+            if not target:
+                return self._json({"error": "not found"}, 404)
+            result = ai_review(target, use_llm=True)
+            with LOCK:
+                items = load_items()
+                for x in items:
+                    if x.get("id") == item_id:
+                        x["ai"] = result
+                        break
+                save_items(items)
+            return self._json(result)
+
+        if path == "/api/admin/ai/review-all":
+            if not self._need_admin():
+                return
+            cfg = load_ai_config()
+            use_llm = bool(cfg.get("enabled") and cfg.get("api_key") and cfg.get("base_url"))
+            with LOCK:
+                items = load_items()
+            pending = [x for x in items if x.get("status") == "pending"][:20]
+            results = {}
+            for i, it in enumerate(pending):
+                results[it["id"]] = ai_review(it, use_llm=(use_llm and i < 5))
+            with LOCK:
+                items = load_items()
+                for x in items:
+                    if x.get("id") in results:
+                        x["ai"] = results[x["id"]]
+                save_items(items)
+            # 低风险自动上架 / 高危自动拦截
+            auto = 0
+            auto_rej = 0
+            try:
+                approve_at = int(cfg.get("approve_threshold") or 0)
+            except Exception:
+                approve_at = 20
+            try:
+                reject_at = int(cfg.get("reject_threshold") or 80)
+            except Exception:
+                reject_at = 80
+            with LOCK:
+                items = load_items()
+                for x in items:
+                    if x.get("status") != "pending":
+                        continue
+                    ai = x.get("ai") or {}
+                    hits = scope_violation(x)
+                    if hits:
+                        x["status"] = "rejected"
+                        x["autoRejected"] = True
+                        x["rejectReason"] = "标题含交友/招嫖暗示（%s），不属于失物招领范围" % "、".join(hits)
+                        x["reviewedBy"] = "AI"
+                        x["reviewedAt"] = now_ms()
+                        auto_rej += 1
+                        continue
+                    if ai.get("source") != "llm":
+                        continue          # 没有大模型结论时不自动放行
+                    score = int(ai.get("score") or 0)
+                    if cfg.get("auto_approve") and ai.get("decision") == "approve" and score <= approve_at:
+                        x["status"] = "approved"
+                        x["autoApproved"] = True
+                        x["reviewedBy"] = "AI"
+                        x["reviewedAt"] = now_ms()
+                        auto += 1
+                    elif cfg.get("auto_reject") and ai.get("decision") == "reject" and score >= reject_at:
+                        x["status"] = "rejected"
+                        x["autoRejected"] = True
+                        x["rejectReason"] = "AI 自动拦截：" + (ai.get("reason") or "疑似违规内容")
+                        x["reviewedBy"] = "AI"
+                        x["reviewedAt"] = now_ms()
+                        auto_rej += 1
+                save_items(items)
+            return self._json({"ok": True, "count": len(results),
+                               "llm": use_llm, "autoApproved": auto, "autoRejected": auto_rej})
+
+        return self._send(404, "not found", "text/plain; charset=utf-8")
+
+    def do_PATCH(self):
+        path = unquote(urlparse(self.path).path)
+        patch = self._read_body()
+
+        if path.startswith("/api/claims/") and not path.endswith("/complete"):
+            owner = self._owner()
+            claim_id = path[len("/api/claims/"):]
+            body = patch
+            status = body.get("status")
+            if status not in ("accepted", "rejected", "need_more"):
+                return self._json({"error": "bad status"}, 400)
+            with LOCK:
+                claims = load_claims()
+                items = load_items()
+                claim = next((c for c in claims if c.get("id") == claim_id), None)
+                if not claim:
+                    return self._json({"error": "not found"}, 404)
+                item = next((x for x in items if x.get("id") == claim.get("itemId")), None)
+                if not item or item.get("ownerToken") != owner:
+                    return self._json({"error": "只有发布者能处理"}, 403)
+                claim["status"] = status
+                claim["updatedAt"] = now_ms()
+                others = []
+                if status == "accepted":
+                    item["status"] = "claimed"
+                    # 同一个物品的其他待处理申请自动关闭，不能让它们一直挂着
+                    for c2 in claims:
+                        if (c2.get("itemId") == claim.get("itemId")
+                                and c2.get("id") != claim.get("id")
+                                and c2.get("status") == "pending"):
+                            c2["status"] = "rejected"
+                            c2["rejectReason"] = "物品已被其他人认领"
+                            c2["updatedAt"] = now_ms()
+                            others.append(c2)
+                save_claims(claims)
+                save_items(items)
+                notices = load_notices()
+                if status == "accepted":
+                    phone = (item.get("contact") or {}).get("phone") or "（发布者没留电话，请在详情里联系）"
+                    if claim.get("kind") == "found":
+                        add_notice(notices, claim.get("from"), "accepted",
+                                   "失主已确认你捡到的《%s》，对方电话：%s" % (item.get("title") or "", phone),
+                                   item.get("id"))
+                    else:
+                        add_notice(notices, claim.get("from"), "accepted",
+                                   "你申请的《%s》已通过，发布者电话：%s" % (item.get("title") or "", phone),
+                                   item.get("id"))
+                    for c2 in others:
+                        add_notice(notices, c2.get("from"), "rejected",
+                                   "《%s》已被其他同学认领，感谢你的申请" % (item.get("title") or ""),
+                                   item.get("id"))
+                elif status == "need_more":
+                    add_notice(notices, claim.get("from"), "need_more",
+                               "发布者希望你再补充一点《%s》的细节（颜色/标记/划痕）" % (item.get("title") or ""),
+                               item.get("id"), claim.get("id"))
+                else:
+                    add_notice(notices, claim.get("from"), "rejected",
+                               "发布者认为这不是他丢的《%s》。如果你确认是你的，可以补充说明后再申请"
+                               % (item.get("title") or ""),
+                               item.get("id"), claim.get("id"))
+                save_notices(notices)
+            return self._json({"ok": True, "status": status})
+
+        if path.startswith("/api/admin/items/"):
+            if not self._need_admin():
+                return
+            item_id = path[len("/api/admin/items/"):]
+            with LOCK:
+                items = load_items()
+                for it in items:
+                    if it.get("id") == item_id:
+                        status = patch.get("status")
+                        if status in ALLOWED_STATUS:
+                            it["status"] = status
+                        if "rejectReason" in patch:
+                            it["rejectReason"] = str(patch["rejectReason"])[:200]
+                        it["updatedAt"] = now_ms()
+                        save_items(items)
+                        return self._json(it)
+            return self._json({"error": "not found"}, 404)
+
+        if path.startswith("/api/items/"):
+            owner = self._owner()
+            item_id = path[len("/api/items/"):]
+            snapshot = None
+            with LOCK:
+                items = load_items()
+                for it in items:
+                    if it.get("id") == item_id:
+                        if not owner or it.get("ownerToken") != owner:
+                            return self._json({"error": "forbidden"}, 403)
+                        for k in ("title", "desc", "place", "eventTime", "secret", "photo"):
+                            if k in patch:
+                                it[k] = patch[k]
+                        if "cat" in patch:
+                            it["cat"] = str(patch["cat"])[:20]
+                        elif "category" in patch:
+                            it["cat"] = str(patch["category"])[:20]
+                        if isinstance(patch.get("contact"), dict):
+                            it["contact"] = {"phone": str(patch["contact"].get("phone") or "")[:20]}
+                        elif "phone" in patch:
+                            it["contact"] = {"phone": str(patch["phone"])[:20]}
+                        it["status"] = "pending"
+                        it["rejectReason"] = ""
+                        it["updatedAt"] = now_ms()
+                        save_items(items)
+                        snapshot = dict(it)
+                        break
+            if not snapshot:
+                return self._json({"error": "not found"}, 404)
+            # 改完重新过一遍 AI 审核（和首次发布同一条链路，不需要人工）
+            ai = review_item(snapshot)
+            trusted = ai.get("source") == "llm"
+            hits = scope_violation(snapshot)
+            status = "pending"
+            reason = ""
+            if hits:
+                status = "rejected"
+                reason = "内容涉及平台范围之外：" + "、".join(hits)
+            elif not trusted:
+                status = "rejected"
+                reason = "审核系统暂时不可用，内容没有公开，请稍后重新提交"
+            elif ai.get("decision") == "approve":
+                status = "approved"
+            elif ai.get("decision") == "reject":
+                status = "rejected"
+                reason = ai.get("reason") or "内容不符合平台规则，请修改后再提交"
+            with LOCK:
+                items = load_items()
+                for it in items:
+                    if it.get("id") == item_id:
+                        it["ai"] = ai
+                        it["status"] = status
+                        it["rejectReason"] = reason
+                        it["reviewedBy"] = "AI" if trusted else "system"
+                        it["reviewedAt"] = now_ms()
+                        it["updatedAt"] = now_ms()
+                        if trusted and ai.get("guessType") and ai["guessType"] != it.get("type"):
+                            it["typeSuggestion"] = ai["guessType"]
+                        save_items(items)
+                        return self._json(it)
+            return self._json({"error": "not found"}, 404)
+
+        return self._send(404, "not found", "text/plain; charset=utf-8")
+
+    def do_DELETE(self):
+        path = unquote(urlparse(self.path).path)
+        if not path.startswith("/api/items/"):
+            return self._send(404, "not found", "text/plain; charset=utf-8")
+        owner = self._owner()
+        item_id = path[len("/api/items/"):]
+        with LOCK:
+            items = load_items()
+            target = next((x for x in items if x.get("id") == item_id), None)
+            if not target:
+                return self._json({"error": "not found"}, 404)
+            if not owner or target.get("ownerToken") != owner:
+                return self._json({"error": "forbidden"}, 403)
+            save_items([x for x in items if x.get("id") != item_id])
+            # 删除后，这条的申请全部关闭，避免申请人一直显示"等待确认"
+            claims = load_claims()
+            affected = []
+            for c in claims:
+                if c.get("itemId") == item_id and c.get("status") == "pending":
+                    c["status"] = "rejected"
+                    c["rejectReason"] = "发布者已撤回这条信息"
+                    c["updatedAt"] = now_ms()
+                    affected.append(c)
+            if affected:
+                save_claims(claims)
+                notices = load_notices()
+                for c in affected:
+                    add_notice(notices, c.get("from"), "rejected",
+                               "《%s》已被发布者撤回，申请自动关闭" % (target.get("title") or ""),
+                               item_id)
+                save_notices(notices)
+        return self._json({"ok": True})
+
+    # ---------- 实现 ----------
+    def _clean(self, body):
+        return {
+            "type": body.get("type") if body.get("type") in ("lost", "found") else "lost",
+            "cat": str(body.get("cat") or "other")[:20],
+            "title": str(body.get("title") or "").strip()[:30],
+            "desc": str(body.get("desc") or "").strip()[:300],
+            "place": str(body.get("place") or "").strip()[:40],
+            "eventTime": str(body.get("eventTime") or "")[:40],
+            "secret": str(body.get("secret") or "").strip()[:100],
+            "photo": body.get("photo") if isinstance(body.get("photo"), str) else None,
+            "contact": {"phone": str((body.get("contact") or {}).get("phone") or "")[:20]}
+            if isinstance(body.get("contact"), dict) else {"phone": ""},
+        }
+
+    def _serve_file(self, name):
+        path = os.path.join(BASE_DIR, name)
+        if not os.path.exists(path):
+            return self._send(500, "找不到 %s，请确认它和 server.py 在同一个文件夹" % name,
+                              "text/plain; charset=utf-8")
+        return self._serve_path(path)
+
+    def _serve_path(self, path):
+        ext = os.path.splitext(path)[1].lower()
+        ctype = {
+            ".html": "text/html; charset=utf-8",
+            ".js": "application/javascript; charset=utf-8",
+            ".css": "text/css; charset=utf-8",
+            ".json": "application/json; charset=utf-8",
+            ".png": "image/png",
+            ".jpg": "image/jpeg",
+            ".jpeg": "image/jpeg",
+            ".svg": "image/svg+xml",
+        }.get(ext, "application/octet-stream")
+        with open(path, "rb") as f:
+            data = f.read()
+        if ext == ".html":
+            import hashlib
+            etag = '"' + hashlib.md5(data).hexdigest() + '"'
+            if self.headers.get("If-None-Match") == etag:
+                self.send_response(304)
+                self.send_header("ETag", etag)
+                self.end_headers()
+                return
+            self._send(200, data, ctype, {"ETag": etag, "Cache-Control": "no-cache"})
+            return
+        self._send(200, data, ctype)
+
+
+# ---------------------------------------------------------------- 网络地址 / 二维码
+
+def lan_ips():
+    import subprocess as sp
+
+    scored = []
+    try:
+        raw = sp.check_output(["ipconfig"], stderr=sp.DEVNULL)
+        try:
+            text = raw.decode("mbcs", errors="ignore")
+        except Exception:
+            text = raw.decode("utf-8", errors="ignore")
+        for block in re.split(r"\r?\n\r?\n", text):
+            m = re.search(r"IPv4[^:：]*[:：]\s*(\d{1,3}(?:\.\d{1,3}){3})", block, re.I)
+            if not m:
+                continue
+            ip = m.group(1)
+            if ip.startswith("127.") or ip.startswith("169.254."):
+                continue
+            head = block.strip().splitlines()[0] if block.strip() else ""
+            low = head.lower()
+            if any(k in low for k in ("vmware", "virtualbox", "vethernet", "hyper-v", "loopback", "vpn", "tap-")):
+                continue
+            if "无线" in head or "wi-fi" in low or "wlan" in low:
+                score = 0
+            elif "以太网" in head or "ethernet" in low:
+                score = 1
+            else:
+                score = 2
+            if not any(ip == x[1] for x in scored):
+                scored.append((score, ip))
+    except Exception:
+        pass
+
+    if not scored:
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            scored.append((0, s.getsockname()[0]))
+            s.close()
+        except Exception:
+            pass
+
+    def bonus(ip):
+        if ip.startswith("192.168."):
+            return 0
+        if ip.startswith("10."):
+            return 1
+        if re.match(r"172\.(1[6-9]|2\d|3[01])\.", ip):
+            return 2
+        return 3
+
+    scored.sort(key=lambda x: (x[0], bonus(x[1])))
+    return [ip for _, ip in scored]
+
+
+def make_qr_png(text, path, box=8, border=4):
+    import struct
+    import zlib
+
+    import qrcode
+
+    qr = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_M,
+                       border=border, box_size=1)
+    qr.add_data(text)
+    qr.make(fit=True)
+    matrix = qr.get_matrix()
+    n = len(matrix)
+    size = n * box
+    rows = []
+    for row in matrix:
+        line = bytearray()
+        for dark in row:
+            line += b"\x00" * box if dark else b"\xff" * box
+        line = b"\x00" + bytes(line)
+        for _ in range(box):
+            rows.append(line)
+    raw = b"".join(rows)
+
+    def chunk(tag, data):
+        return (struct.pack(">I", len(data)) + tag + data
+                + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF))
+
+    png = (b"\x89PNG\r\n\x1a\n"
+           + chunk(b"IHDR", struct.pack(">IIBBBBB", size, size, 8, 0, 0, 0, 0))
+           + chunk(b"IDAT", zlib.compress(raw, 9))
+           + chunk(b"IEND", b""))
+    with open(path, "wb") as f:
+        f.write(png)
+    return path
+
+
+QR_HTML = """<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>扫码打开 · 清华校园拾光里</title>
+<style>
+body{margin:0;min-height:100vh;background:linear-gradient(160deg,#45106e,#62269c 55%,#8a52c7);
+font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;color:#fff;padding:24px 16px;box-sizing:border-box;display:flex;justify-content:center}
+.wrap{width:100%;max-width:900px;display:flex;gap:18px;flex-wrap:wrap;justify-content:center;align-items:flex-start}
+.card{background:#fff;color:#23202b;border-radius:22px;padding:22px 18px;flex:1 1 320px;max-width:420px;
+text-align:center;box-shadow:0 18px 50px rgba(0,0,0,.28)}
+.card.admin{border:3px solid #ffd166}
+h1{font-size:18px;margin:0 0 2px}
+.badge{display:inline-block;font-size:11px;border-radius:99px;padding:2px 10px;margin-bottom:8px}
+.badge.user{background:#e6f4ea;color:#2f7d46}
+.badge.adminb{background:#fff4d6;color:#a97a00}
+p{font-size:12px;color:#8a8594;line-height:1.65;margin:0 0 6px}
+img{width:100%;max-width:260px;display:block;margin:12px auto;border-radius:12px;image-rendering:pixelated}
+.url{font-size:12px;word-break:break-all;background:#f1eaf9;color:#62269c;border-radius:10px;
+padding:9px 11px;user-select:all;line-height:1.5}
+.pwd{margin-top:12px;font-size:22px;letter-spacing:4px;font-weight:800;color:#a97a00;
+background:#fff8e6;border:1px dashed #e3c98a;border-radius:10px;padding:8px}
+.pwd small{display:block;font-size:11px;letter-spacing:0;color:#8a6100;font-weight:400;margin-bottom:2px}
+.note{font-size:11px;color:#c0392b;background:#fdf0f0;border-radius:10px;padding:8px 10px;
+margin-top:12px;line-height:1.6;text-align:left}
+</style></head><body>
+<div class="wrap">
+  <div class="card">
+    <span class="badge user">用户端 · 发给同学</span>
+    <h1>手机扫码打开</h1>
+    <p>任何网络都行：流量、别家 WiFi 都可以</p>
+    <img src="二维码.png" alt="用户端二维码">
+    <div class="url">__USER_URL__</div>
+    <div class="note">⚠️ 地址只在本次运行期间有效，电脑关了就失效。</div>
+  </div>
+  <div class="card admin">
+    <span class="badge adminb">管理端 · 只给自己</span>
+    <h1>管理员扫码登录</h1>
+    <p>用这个码打开审核后台</p>
+    <img src="管理端二维码.png" alt="管理端二维码">
+    <div class="url">__ADMIN_URL__</div>
+    <div class="pwd"><small>管理员密码</small>__PASSWORD__</div>
+    <div class="note">⚠️ 管理端链接和密码都不要发给别人。</div>
+  </div>
+</div>
+</body></html>
+"""
+
+
+def show_qr(user_url, admin_url=None, password=""):
+    try:
+        make_qr_png(user_url, os.path.join(BASE_DIR, "二维码.png"))
+        if admin_url:
+            make_qr_png(admin_url, os.path.join(BASE_DIR, "管理端二维码.png"))
+        page = os.path.join(BASE_DIR, "二维码.html")
+        html = (QR_HTML
+                .replace("__USER_URL__", user_url)
+                .replace("__ADMIN_URL__", admin_url or "")
+                .replace("__PASSWORD__", password or ""))
+        with open(page, "w", encoding="utf-8") as f:
+            f.write(html)
+        try:
+            os.startfile(page)
+        except Exception:
+            pass
+        return True
+    except Exception as e:
+        print("  （二维码生成失败：%s）" % e)
+        return False
+
+
+def print_qr(url):
+    return show_qr(url)
+
+
+# ---------------------------------------------------------------- 启动
+
+def main():
+    if not startup_gate():
+        try:
+            input("按回车退出…")
+        except Exception:
+            pass
+        return
+    port = int(os.environ.get("SG_PORT", "8000"))
+    server = None
+    for p in range(port, port + 12):
+        try:
+            server = ThreadingHTTPServer(("0.0.0.0", p), Handler)
+            port = p
+            break
+        except OSError:
+            continue
+    if server is None:
+        print("端口都被占用了，请关掉其他程序后重试。")
+        return
+
+    pwd = ensure_admin_password()
+    ips = lan_ips()
+    primary = "http://%s:%d/" % (ips[0], port) if ips else None
+
+    print()
+    print("=" * 60)
+    print("  清华校园拾光里 · 服务已启动")
+    print("=" * 60)
+    print("  用户端： http://127.0.0.1:%d/" % port)
+    print("  管理端： http://127.0.0.1:%d/管理端.html" % port)
+    for ip in ips:
+        print("  同一 Wi-Fi： http://%s:%d/" % (ip, port))
+    print()
+    print("  管理员密码： %s" % pwd)
+    print("  （也写在 管理员密码.txt 里；改密码编辑 admin.json）")
+    print()
+    print("  数据文件： %s" % DATA_FILE)
+    print("  停止服务： 关闭这个窗口，或按 Ctrl+C")
+    print("=" * 60)
+    print()
+
+    if os.environ.get("SG_OPEN") == "1" and primary:
+        try:
+            import webbrowser
+            webbrowser.open("http://127.0.0.1:%d/" % port)
+        except Exception:
+            pass
+
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("\n已停止。")
+
+
+if __name__ == "__main__":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+    main()

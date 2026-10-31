@@ -1,0 +1,41 @@
+# 依赖与密钥，绝不进仓库
+.env
+.env.local
+ai.json
+items.json
+claims.json
+notices.json
+accounts.json
+启动密码.json
+admin.json
+管理员密码.txt
+公网地址.txt
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Node（前端迁移后）
+node_modules/
+dist/
+.vite/
+
+# 工具与临时文件
+tools/
+*.log
+*.bak
+*.bak_*
+_shot_*.html
+_shot_*.html
+doc_assets/*.bak*
+
+# 系统
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 网盘同步临时文件
+*.baiduyun.*
+
