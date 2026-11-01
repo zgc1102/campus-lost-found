@@ -441,7 +441,8 @@ AI_SYSTEM_PROMPT = (
     "只输出 JSON，不要输出任何其他文字。字段："
     "decision 取 approve/review/reject；"
     "risk 为风险分 0-100，approve 时 0-20，review 时 30-70，reject 时 80-100；"
-    "guessType 取 lost 或 found：这条内容更像「用户丢了东西」还是「用户捡到东西」，按内容判断，不要照抄；"
+    "guessType 取 lost 或 found：判断发布者是「丢东西的人」还是「捡到东西的人」。"
+    "出现“我丢了/丢失/找不到/寻找”属于 lost；出现“我捡到/拾到/交到”属于 found，不要照抄用户选的类型；"
     "reason 不超过 40 字，要点出你识别到的真实含义或范围问题。"
     '格式：{"decision":"approve","risk":5,"reason":"...","guessType":"lost"}'
 )
@@ -497,6 +498,22 @@ def _post_chat(endpoint, payload, api_key, timeout=25):
         raise RuntimeError("HTTP %s · %s %s" % (e.code, hint, detail))
     except Exception as e:
         raise RuntimeError("网络错误：%s" % str(e)[:120])
+
+
+LOST_HINTS = ["我丢", "丢了", "丢失", "遗失", "不见了", "找不到", "寻找", "求找回",
+              "谁捡到", "谁看到", "帮我找", "急寻"]
+FOUND_HINTS = ["我捡", "捡到", "捡了", "拾到", "拾得", "发现一", "捡到一", "交到"]
+
+
+def detect_lost_found(text):
+    t = str(text or "")
+    lost = sum(1 for w in LOST_HINTS if w in t)
+    found = sum(1 for w in FOUND_HINTS if w in t)
+    if lost > found:
+        return "lost"
+    if found > lost:
+        return "found"
+    return ""
 
 
 def ai_llm(it, cfg, timeout=25):
@@ -1908,6 +1925,25 @@ class Handler(BaseHTTPRequestHandler):
             return self._json({"ok": True, "hasUpdate": True,
                                "msg": "发现新版本，正在更新，约 10 秒后自动刷新"})
 
+        if path.startswith("/api/admin/items/") and path.endswith("/type"):
+            if not self._need_admin():
+                return
+            item_id = path[len("/api/admin/items/"):-len("/type")]
+            body = self._read_body()
+            new_type = body.get("type")
+            if new_type not in ("lost", "found"):
+                return self._json({"error": "type must be lost/found"}, 400)
+            with LOCK:
+                items = load_items()
+                it = next((x for x in items if x.get("id") == item_id), None)
+                if not it:
+                    return self._json({"error": "not found"}, 404)
+                it["type"] = new_type
+                it["typeAutoFixed"] = True
+                it["updatedAt"] = now_ms()
+                save_items(items)
+            return self._json({"ok": True, "type": new_type})
+
         if path.startswith("/api/admin/items/") and path.endswith("/phone-approve"):
             if not self._need_admin():
                 return
@@ -2448,6 +2484,10 @@ class Handler(BaseHTTPRequestHandler):
             if _recent:
                 return self._json({"error": "同样的内容刚发过，别重复提交"}, 409)
             item = self._clean(body)
+            _rule_type = detect_lost_found((item.get("title") or "") + " " + (item.get("desc") or ""))
+            if _rule_type and _rule_type != item.get("type"):
+                item["type"] = _rule_type
+                item["typeAutoFixed"] = True
             # 强制模板化：客户端没带摘要时用规则整理兜底，保证展示一致
             if not item.get("summary"):
                 _fmt = _format_fallback(item.get("title") or "", item.get("desc") or "", item.get("place") or "")

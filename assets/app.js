@@ -1762,11 +1762,16 @@ function showSuccess(item, isEdit){
   document.getElementById('okTitle').textContent = title;
   const note = document.getElementById('okNote');
   if(note){
-    note.textContent = rejected
-      ? '内容命中了违规检测，没有公开展示。可以在「我的发布」里看到原因，修改后重新提交。'
-      : (approved
-        ? '已经出现在「失物招领 / 寻物启事」列表里，其他同学现在就能看到。'
-        : '审核通过后，其他同学才能在「失物招领 / 寻物启事」里看到这条信息。');
+    if(item && item.typeAutoFixed && approved){
+      note.textContent = 'AI 发现你写的内容更像「' + (item.type === 'lost' ? '寻物启事' : '招领启事') +
+        '」，已经自动归到正确分类，其他同学现在就能看到。';
+    }else{
+      note.textContent = rejected
+        ? '内容命中了违规检测，没有公开展示。可以在「我的发布」里看到原因，修改后重新提交。'
+        : (approved
+          ? '已经出现在「失物招领 / 寻物启事」列表里，其他同学现在就能看到。'
+          : '审核通过后，其他同学才能在「失物招领 / 寻物启事」里看到这条信息。');
+    }
   }
   document.getElementById('okMeta').textContent =
     (item.type === 'lost' ? '寻物启事' : '招领启事') + ' · 编号 ' + item.id + ' · ' + fmtTime(item.createdAt);
