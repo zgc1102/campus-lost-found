@@ -516,6 +516,37 @@ def detect_lost_found(text):
     return ""
 
 
+def claim_ai_check(item, claim):
+    """对多轮申请做一次总体一致性核验"""
+    cfg = load_ai_config()
+    if not (cfg.get("enabled") and cfg.get("api_key") and cfg.get("base_url")):
+        return None
+    rounds = claim.get("history") or [{"message": claim.get("message") or ""}]
+    said = "\n".join("第%d次：%s" % (i + 1, r.get("message") or "") for i, r in enumerate(rounds))
+    prompt = ("你是校园失物招领的核验助手。发布者描述：\n标题：%s\n描述：%s\n独有特征（申请人看不到）：%s\n"
+              "申请人先后说：\n%s\n"
+              "判断申请人说的与物品是否一致，是否有前后矛盾或明显编造。"
+              '只输出 JSON：{"verdict":"match|unclear|mismatch","confidence":0-100,"reason":"30字以内"}'
+              % (item.get("title") or "", item.get("desc") or "", item.get("secret") or "", said))
+    try:
+        data = _post_chat(cfg.get("base_url").rstrip("/") + "/chat/completions",
+                          {"model": cfg.get("model") or "deepseek-chat", "temperature": 0,
+                           "messages": [{"role": "user", "content": prompt}]},
+                          cfg.get("api_key"), timeout=25)
+        text = data["choices"][0]["message"]["content"] or ""
+        m = re.search(r"\{[\s\S]*\}", text)
+        obj = json.loads(m.group(0)) if m else {}
+        verdict = obj.get("verdict") if obj.get("verdict") in ("match", "unclear", "mismatch") else "unclear"
+        try:
+            conf = max(0, min(100, int(obj.get("confidence") or 0)))
+        except Exception:
+            conf = 0
+        return {"verdict": verdict, "confidence": conf,
+                "reason": str(obj.get("reason") or "")[:60], "at": now_ms()}
+    except Exception:
+        return None
+
+
 def ai_llm(it, cfg, timeout=25):
     """调用 OpenAI 兼容接口做语义审核"""
     user_text = "标题：%s\n类型：%s\n地点：%s\n描述：%s\n核验特征：%s" % (
@@ -1728,6 +1759,8 @@ class Handler(BaseHTTPRequestHandler):
                     "itemTitle": it.get("title") or "",
                     "itemStatus": it.get("status") or "",
                     "message": c.get("message") or "",
+                    "history": c.get("history") or [],
+                    "aiCheck": c.get("aiCheck") or None,
                     "status": c.get("status") or "pending",
                     "createdAt": c.get("createdAt") or 0,
                 }
@@ -2328,6 +2361,7 @@ class Handler(BaseHTTPRequestHandler):
                     "from": owner,
                     "kind": kind,
                     "message": message,
+                    "history": [{"message": message, "at": now_ms()}],
                     "contact": contact,
                     "status": "pending",
                     "createdAt": now_ms(),
@@ -2366,10 +2400,22 @@ class Handler(BaseHTTPRequestHandler):
                 if claim.get("status") == "rejected":
                     # 被拒后重新申请：用新写的内容整体替换，而不是追加
                     claim["message"] = extra[:400]
+                    claim["history"] = [{"message": extra, "at": now_ms()}]
                 else:
                     claim["message"] = ((claim.get("message") or "") + "\n补充：" + extra)[:400]
+                    hist = claim.get("history") or []
+                    hist.append({"message": extra, "at": now_ms()})
+                    claim["history"] = hist[-10:]
                 claim["status"] = "pending"
                 claim["updatedAt"] = now_ms()
+                try:
+                    _it = next((x for x in items if x.get("id") == claim.get("itemId")), None)
+                    if _it:
+                        _chk = claim_ai_check(_it, claim)
+                        if _chk:
+                            claim["aiCheck"] = _chk
+                except Exception:
+                    pass
                 save_claims(claims)
                 item = next((x for x in items if x.get("id") == claim.get("itemId")), None)
                 notices = load_notices()

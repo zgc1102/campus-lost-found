@@ -1000,11 +1000,26 @@ function openClaimReview(id){
     : (isFinder
       ? '核对地点、时间是否合理，确认是你丢的东西再点通过；通过后双方才会看到联系方式。'
       : '只有对方说的特征真的对得上，才点「通过」。通过后双方才会看到联系方式。');
-  document.getElementById('csClaim').innerHTML =
-    '<span class="k">' + (isFinder ? '对方说' : '对方说的特征') + '</span>' + esc(c.message || '（没有填写）') +
+  const rounds = (Array.isArray(c.history) && c.history.length)
+    ? c.history
+    : [{message: c.message, at: c.createdAt}];
+  const roundsHtml = rounds.map(function(r, i){
+    return '<div class="cs-round"><div class="cs-round-h">' +
+      (i === 0 ? '第 1 次申请' : '第 ' + (i + 1) + ' 次补充') + ' · ' + fmtTime(r.at || c.createdAt) +
+      '</div><div class="cs-round-b">' + esc(r.message || '（没有填写）') + '</div></div>';
+  }).join('');
+  let aiHtml = '';
+  if(c.aiCheck){
+    const v = c.aiCheck;
+    const label = v.verdict === 'match' ? '描述一致' : (v.verdict === 'mismatch' ? '存在矛盾' : '不确定');
+    aiHtml = '<div class="cs-ai">🤖 AI 总核验：<b>' + label + '</b>（' + (v.confidence || 0) + '%）' +
+      (v.reason ? '<br>' + esc(v.reason) : '') + '</div>';
+  }
+  document.getElementById('csClaim').innerHTML = roundsHtml +
     (c.claimContact ? '<div style="margin-top:6px"><span class="k">对方联系方式</span>' + esc(c.claimContact) +
       (c.status === 'pending' ? '（通过后显示完整号码）' : '') + '</div>' : '') +
-    '<div style="margin-top:6px"><span class="k">申请时间</span>' + fmtTime(c.createdAt) + '</div>';
+    '<div style="margin-top:6px"><span class="k">申请时间</span>' + fmtTime(c.createdAt) + '</div>' +
+    aiHtml;
 
   const sheet = document.getElementById('claimSheet');
   sheet.classList.add('show');
