@@ -244,6 +244,8 @@
         '<span class="status st-'+esc(it.status)+'">'+esc(statusText(it.status))+'</span>'+
         (it.autoApproved ? '<span class="status" style="background:#e6f4ea;color:#2f7d46">AI 自动通过</span>' : '')+
         (it.autoRejected ? '<span class="status" style="background:#fdeaea;color:#a12f2f">AI 自动拦截</span>' : '')+
+        (it.phoneStatus === 'yellow' ? '<span class="status" style="background:#fff4d6;color:#a97a00" title="'+esc(it.phoneReason||'')+'">⚠️ 号码存疑</span>' : '')+
+        (it.phoneStatus === 'red' ? '<span class="status" style="background:#fdeaea;color:#a12f2f" title="'+esc(it.phoneReason||'')+'">📵 号码无效</span>' : '')+
         '<div class="tt">'+esc(it.title)+'</div>'+
       '</div>'+
       '<div class="meta">'+esc(it.place || '未填写地点')+' · '+fmt(it.createdAt)+'</div>'+

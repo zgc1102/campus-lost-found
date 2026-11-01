@@ -198,6 +198,7 @@
         <div class="form-item" data-field="phone">
           <label>联系电话（选填）</label>
           <input type="tel" name="phone" maxlength="20" placeholder="会在列表里脱敏显示">
+          <div class="tip-small" id="phoneHint"></div>
           <div class="errmsg"></div>
         </div>
 
@@ -233,6 +234,7 @@
     <textarea id="helpDesc" maxlength="200" placeholder="说明你的需求、时间和地点，越具体越容易有人帮"></textarea>
     <input id="helpPlace" maxlength="40" placeholder="地点（可选）">
     <input id="helpPhone" maxlength="20" placeholder="联系方式（可选，公开展示会打码）">
+    <div class="tip-small" id="helpPhoneHint" style="margin-top:-4px;margin-bottom:8px"></div>
     <button class="btn" id="helpSubmit" style="width:100%">发布求助</button>
     <div class="close" id="helpSheetClose">收起</div>
   </div>
@@ -432,6 +434,7 @@
       <div class="tip-small" id="claimTip" style="margin:0 0 8px">写下只有失主知道的细节，对方核对后才会通过</div>
       <textarea id="claimMsg" maxlength="200" placeholder="例如：伞骨内侧缠过胶带，伞柄上有一张卡通贴纸"></textarea>
       <input id="claimPhone" maxlength="30" placeholder="你的联系方式（手机号 / 微信号）">
+    <div class="tip-small" id="claimPhoneHint" style="margin-top:-4px;margin-bottom:8px"></div>
       <button class="btn" id="claimSend" style="width:100%">发送认领申请</button>
       <div class="close" id="claimCancel" style="margin-top:6px">取消</div>
     </div>

@@ -803,6 +803,8 @@ async function renderAccBox(){
     const p = (document.getElementById('accPhone').value || '').trim();
     const w = (document.getElementById('accPwd').value || '').trim();
     if(p.length < 5){ toast('请输入手机号'); return; }
+    const pchk = phoneCheckLocal(p);
+    if(pchk.status === 'red' || pchk.type !== 'mobile'){ toast(pchk.reason || '请用 11 位手机号注册/登录'); return; }
     if(w.length < 4){ toast('密码至少 4 位'); return; }
     this.disabled = true; this.textContent = '处理中…';
     try{
@@ -1190,6 +1192,10 @@ document.getElementById('claimSend').onclick = function(){
   const msg = document.getElementById('claimMsg').value.trim();
   const phone = document.getElementById('claimPhone').value.trim();
   if(msg.length < 2){ toast('写点细节，方便对方核对'); return; }
+  if(phone){
+    const pchk = phoneCheckLocal(phone);
+    if(pchk.status === 'red'){ toast('电话号码不正确：' + pchk.reason); return; }
+  }
   if(!currentSheetId) return;
   const btn = this;
   btn.disabled = true; btn.textContent = '发送中…';
@@ -1520,6 +1526,10 @@ document.getElementById('publishForm').onsubmit = async function(e){
   if(desc.length < 5){ setErr('desc', '请描述一下物品特征（至少 5 个字），方便别人核对'); bad++; }
   else if(desc.length > 300){ setErr('desc', '描述不要超过 300 个字'); bad++; }
   if(phone && !/^[0-9+\-\s]{5,20}$/.test(phone)){ setErr('phone', '电话只支持数字、+、-，也可以留空'); bad++; }
+  if(phone){
+    const pchk = phoneCheckLocal(phone);
+    if(pchk.status === 'red'){ setErr('phone', '电话号不正确：' + pchk.reason); bad++; }
+  }
 
   if(bad){
     focusFirstErr();
@@ -1805,6 +1815,10 @@ document.getElementById('helpSubmit').onclick = async function(){
   const phone = document.getElementById('helpPhone').value.trim();
   if(title.length < 2){ toast('写个标题，比如「想借一把雨伞」'); return; }
   if(desc.length < 5){ toast('说明一下需求、时间和地点'); return; }
+  if(phone){
+    const pchk = phoneCheckLocal(phone);
+    if(pchk.status === 'red'){ toast('电话号码不正确：' + pchk.reason); return; }
+  }
   this.disabled = true;
   this.textContent = '发布中…';
   try{
@@ -1862,6 +1876,87 @@ document.getElementById('helpGoSubmit').onclick = async function(){
     this.textContent = '发送';
   }
 };
+
+/* ============ 电话号码校验（前端即时提示，服务端再校验） ============ */
+function phoneCheckLocal(raw){
+  let s = String(raw || '').trim();
+  s = s.replace(/[０-９]/g, function(ch){ return String.fromCharCode(ch.charCodeAt(0) - 65248); });
+  s = s.replace(/幺/g, '1').replace(/[〇零]/g, '0');
+  s = s.replace(/[\s()（）.．]/g, '').replace(/[－—]/g, '-');
+  if(!s) return {status:'none', type:'none', reason:'', normalized:''};
+  if(/[A-Za-z]/.test(s)) return {status:'red', type:'invalid', reason:'包含字母', normalized:''};
+  if(/[^\d+\-]/.test(s)) return {status:'red', type:'invalid', reason:'包含无法识别的字符', normalized:''};
+
+  let work = s;
+  if(work.indexOf('+86') === 0) work = work.slice(3);
+  else if(work.indexOf('0086') === 0) work = work.slice(4);
+  const digits = work.replace(/\D/g, '');
+  if(!digits) return {status:'red', type:'invalid', reason:'没有数字', normalized:''};
+  if(/^(400|800)/.test(digits) || /^(95|96)\d{3,5}$/.test(digits)){
+    return {status:'red', type:'service', reason:'企业或服务号码，请留个人号码', normalized:digits};
+  }
+  if(s.indexOf('+') === 0 && s.indexOf('+86') !== 0 && digits.length >= 8 && digits.length <= 15){
+    return {status:'green', type:'international', reason:'', normalized:'+' + digits};
+  }
+
+  function maxRun(d){ let b = 1, c = 1; for(let i = 1; i < d.length; i++){ c = d[i] === d[i-1] ? c + 1 : 1; b = Math.max(b, c); } return b; }
+  function maxSeq(d){ let u = 1, dn = 1, b = 1; for(let i = 1; i < d.length; i++){ const x = +d[i-1], y = +d[i]; u = y === x + 1 ? u + 1 : 1; dn = y === x - 1 ? dn + 1 : 1; b = Math.max(b, u, dn); } return b; }
+  function periodic(d){ for(const p of [2,3]){ if(d.length >= p * 4){ let ok = true; for(let i = 0; i < d.length; i++){ if(d[i] !== d[i % p]){ ok = false; break; } } if(ok) return p; } } return 0; }
+
+  if(/^0\d{2,3}-?\d{7,8}(-\d{1,6})?$/.test(work)){
+    const d = work.replace(/\D/g, '');
+    if(new Set(d).size === 1 || maxRun(d) >= 7){
+      return {status:'red', type:'landline', reason:'座机号码不真实（数字重复过多）', normalized:work};
+    }
+    return {status:'green', type:'landline', reason:'', normalized:work};
+  }
+
+  if(digits.length === 11 && digits[0] === '1'){
+    if(new Set(digits).size === 1) return {status:'red', type:'mobile', reason:'全部数字相同，不是有效号码', normalized:''};
+    const run = maxRun(digits);
+    if(run >= 6) return {status:'red', type:'mobile', reason:'连续 ' + run + ' 位数字相同，不是有效号码', normalized:''};
+    if(maxSeq(digits) >= 9) return {status:'red', type:'mobile', reason:'连续递增/递减，不是有效号码', normalized:''};
+    if(['13800138000','12345678901','11111111111'].indexOf(digits) >= 0) return {status:'red', type:'mobile', reason:'这是常见的测试号码', normalized:''};
+    if(periodic(digits) && digits.length >= 10) return {status:'red', type:'mobile', reason:'数字循环重复，不是有效号码', normalized:''};
+    if(!/^1[3-9]\d{9}$/.test(digits)) return {status:'red', type:'mobile', reason:'手机号应以 13–19 开头', normalized:''};
+    let warn = '';
+    if(run === 4 || run === 5) warn = '连续 ' + run + ' 位数字相同，确认是本人常用号吗？';
+    else if(new Set(digits.slice(-4)).size === 1) warn = '尾号 4 位相同，确认是本人常用号吗？';
+    else if(/^1(70|71|62|65|67)/.test(digits)) warn = '虚拟号段，建议留常用号码';
+    else if(digits.indexOf('123456') >= 0 || digits.indexOf('654321') >= 0) warn = '号码含连续数字，确认无误吗？';
+    return warn
+      ? {status:'yellow', type:'mobile', reason:warn, normalized:digits}
+      : {status:'green', type:'mobile', reason:'', normalized:digits};
+  }
+
+  if(/^\d{7,8}$/.test(digits)) return {status:'yellow', type:'landline', reason:'座机请带区号，例如 010-12345678', normalized:digits};
+  return {status:'red', type:'invalid', reason:'号码应为 11 位手机号，或带区号的座机', normalized:''};
+}
+
+function bindPhoneHint(input, hint){
+  if(!input || !hint) return;
+  const run = function(){
+    const r = phoneCheckLocal(input.value.trim());
+    if(r.status === 'none'){ hint.textContent = ''; return r; }
+    if(r.status === 'green'){
+      hint.textContent = '✅ 号码格式正常' + (r.type === 'landline' ? '（座机）' : '');
+      hint.style.color = '#2f7d46';
+    } else if(r.status === 'yellow'){
+      hint.textContent = '⚠️ ' + r.reason;
+      hint.style.color = '#a15c00';
+    } else {
+      hint.textContent = '❌ ' + r.reason + '。如果是座机，请带区号，如 010-12345678';
+      hint.style.color = '#a12f2f';
+    }
+    return r;
+  };
+  input.addEventListener('input', run);
+  input.addEventListener('blur', run);
+}
+
+bindPhoneHint(document.querySelector('#publishForm input[name="phone"]'), document.getElementById('phoneHint'));
+bindPhoneHint(document.getElementById('claimPhone'), document.getElementById('claimPhoneHint'));
+bindPhoneHint(document.getElementById('helpPhone'), document.getElementById('helpPhoneHint'));
 
 /* ============ 初始化 ============ */
 function checkStorage(){

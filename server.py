@@ -648,6 +648,123 @@ def ai_review(it, use_llm=True, timeout=25):
     return ai_rules(it)
 
 
+
+# ================= 电话号码校验 =================
+PHONE_PLACEHOLDERS = {"13800138000", "12345678901", "11111111111", "10086", "10010", "12345"}
+
+
+def _phone_max_run(d):
+    best = cur = 1
+    for i in range(1, len(d)):
+        cur = cur + 1 if d[i] == d[i - 1] else 1
+        best = max(best, cur)
+    return best
+
+
+def _phone_max_seq(d):
+    up = down = best = 1
+    for i in range(1, len(d)):
+        a, b = int(d[i - 1]), int(d[i])
+        up = up + 1 if b == a + 1 else 1
+        down = down + 1 if b == a - 1 else 1
+        best = max(best, up, down)
+    return best
+
+
+def _phone_periodic(d):
+    for p in (2, 3):
+        if len(d) >= p * 4 and all(d[i] == d[i % p] for i in range(len(d))):
+            return p
+    return 0
+
+
+def phone_check(raw):
+    s0 = str(raw or "").strip()
+    table = str.maketrans("０１２３４５６７８９", "0123456789")
+    s0 = s0.translate(table).replace("幺", "1").replace("〇", "0").replace("零", "0")
+    s0 = re.sub(r"[\s()（）.．]", "", s0).replace("－", "-").replace("—", "-")
+
+    def red(reason):
+        return {"status": "red", "type": "invalid", "normalized": "", "reason": reason}
+
+    if not s0:
+        return {"status": "none", "type": "none", "normalized": "", "reason": ""}
+    if re.search(r"[A-Za-z]", s0):
+        return red("包含字母")
+    if re.search(r"[^\d+\-]", s0):
+        return red("包含无法识别的字符")
+
+    work = s0
+    if work.startswith("+86"):
+        work = work[3:]
+    elif work.startswith("0086"):
+        work = work[4:]
+    elif work.startswith("86") and len(re.sub(r"\D", "", work)) == 13:
+        work = work[2:]
+
+    digits = re.sub(r"\D", "", work)
+    if not digits:
+        return red("没有数字")
+
+    # 企业/服务号
+    if re.match(r"^(400|800)", digits) or re.match(r"^(95|96)\d{3,5}$", digits):
+        return {"status": "red", "type": "service", "normalized": digits,
+                "reason": "这是企业或服务号码，请留个人号码"}
+    # 国际号码（非 +86）
+    if s0.startswith("+") and not s0.startswith("+86") and 8 <= len(digits) <= 15:
+        return {"status": "green", "type": "international", "normalized": "+" + digits, "reason": ""}
+
+    # 座机：0 + 2-3 位区号 + 7-8 位，可带分机
+    landline = re.match(r"^0\d{2,3}-?\d{7,8}(-\d{1,6})?$", work)
+    if landline:
+        d = re.sub(r"\D", "", work)
+        if len(set(d)) == 1 or _phone_max_run(d) >= 7:
+            return {"status": "red", "type": "landline", "normalized": work,
+                    "reason": "座机号码不真实（数字重复过多）"}
+        return {"status": "green", "type": "landline", "normalized": work, "reason": ""}
+
+    # 手机号
+    if len(digits) == 11 and digits.startswith("1"):
+        if len(set(digits)) == 1:
+            return red("全部数字相同，不是有效号码")
+        run = _phone_max_run(digits)
+        if run >= 6:
+            return red("连续 %d 位数字相同，不是有效号码" % run)
+        if _phone_max_seq(digits) >= 9:
+            return red("连续递增/递减，不是有效号码")
+        if digits in PHONE_PLACEHOLDERS:
+            return red("这是常见的测试号码")
+        if _phone_periodic(digits) >= 2 and len(digits) >= 10:
+            return red("数字循环重复，不是有效号码")
+        if not re.match(r"^1[3-9]\d{9}$", digits):
+            return red("手机号应以 13–19 开头")
+        if digits in PHONE_PLACEHOLDERS:
+            return red("这是常见的测试号码")
+
+        yellow = ""
+        if run in (4, 5):
+            yellow = "连续 %d 位相同，确认是本人常用号吗？" % run
+        elif len(set(digits[-4:])) == 1:
+            yellow = "尾号 4 位相同，确认是本人常用号吗？"
+        elif re.match(r"^1(70|71|62|65|67)", digits):
+            yellow = "这是虚拟号段，建议留常用号码"
+        elif "123456" in digits or "654321" in digits:
+            yellow = "号码含连续数字，确认无误吗？"
+        if yellow:
+            return {"status": "yellow", "type": "mobile", "normalized": digits, "reason": yellow}
+        return {"status": "green", "type": "mobile", "normalized": digits, "reason": ""}
+
+    # 没区号的 7-8 位，可能是座机
+    if re.match(r"^\d{7,8}$", digits):
+        return {"status": "yellow", "type": "landline", "normalized": digits,
+                "reason": "座机请带区号，例如 010-12345678"}
+
+    if len(digits) not in (11,):
+        return red("号码应为 11 位手机号，或带区号的座机")
+
+    return red("号码格式不正确")
+
+
 def mask_contact(v):
     """未通过认领前，联系方式只给打码版本"""
     s = str(v or "")
@@ -1418,6 +1535,12 @@ class Handler(BaseHTTPRequestHandler):
                 return
             with LOCK:
                 items = load_items()
+            for x in items:
+                _p = (x.get("contact") or {}).get("phone") or ""
+                _c = phone_check(_p)
+                x["phoneStatus"] = _c["status"]
+                x["phoneType"] = _c["type"]
+                x["phoneReason"] = _c["reason"]
             items.sort(key=lambda x: x.get("createdAt") or 0, reverse=True)
             return self._json(items)
 
@@ -1458,6 +1581,11 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         path = unquote(urlparse(self.path).path)
+
+        if path == "/api/phone/check":
+            body = self._read_body()
+            return self._json(phone_check(body.get("phone")))
+
         if path.startswith("/api/admin/accounts/") and path.endswith("/ban"):
             if not self._need_admin():
                 return
@@ -1587,6 +1715,9 @@ class Handler(BaseHTTPRequestHandler):
             body = self._read_body()
             phone = re.sub(r"\D", "", str(body.get("phone") or ""))
             pwd = str(body.get("password") or "")
+            _chk = phone_check(phone)
+            if _chk["status"] == "red" or _chk["type"] != "mobile":
+                return self._json({"error": "请用 11 位手机号注册/登录"}, 400)
             if len(phone) < 5:
                 return self._json({"error": "请输入手机号"}, 400)
             if len(pwd) < 4:
@@ -1700,6 +1831,11 @@ class Handler(BaseHTTPRequestHandler):
             body = self._read_body()
             message = str(body.get("message") or "").strip()[:200]
             contact = str(body.get("contact") or "").strip()[:30]
+            _chk = phone_check(contact)
+            if contact and _chk["status"] == "red":
+                return self._json({"error": "电话号码不正确：" + _chk["reason"]}, 400)
+            if _chk.get("normalized"):
+                contact = _chk["normalized"]
             if len(message) < 2:
                 return self._json({"error": "请说明一下物品的独有特征"}, 400)
             with LOCK:
@@ -1871,6 +2007,14 @@ class Handler(BaseHTTPRequestHandler):
                 item["summary"] = _fmt["summary"]
                 if not item.get("fields"):
                     item["fields"] = _fmt["fields"]
+            _ph = (item.get("contact") or {}).get("phone") or ""
+            if _ph:
+                _chk = phone_check(_ph)
+                if _chk["status"] == "red":
+                    return self._json({"error": "电话号码不正确：" + _chk["reason"]}, 400)
+                item["contact"]["phone"] = _chk["normalized"] or _ph
+                item["phoneStatus"] = _chk["status"]
+                item["phoneType"] = _chk["type"]
             item["id"] = "p_" + uuid.uuid4().hex[:12]
             item["status"] = "pending"
             item["rejectReason"] = ""
@@ -2197,6 +2341,14 @@ class Handler(BaseHTTPRequestHandler):
                             it["contact"] = {"phone": str(patch["contact"].get("phone") or "")[:20]}
                         elif "phone" in patch:
                             it["contact"] = {"phone": str(patch["phone"])[:20]}
+                        _ph = (it.get("contact") or {}).get("phone") or ""
+                        if _ph:
+                            _chk = phone_check(_ph)
+                            if _chk["status"] == "red":
+                                return self._json({"error": "电话号码不正确：" + _chk["reason"]}, 400)
+                            it["contact"]["phone"] = _chk["normalized"] or _ph
+                            it["phoneStatus"] = _chk["status"]
+                            it["phoneType"] = _chk["type"]
                         it["summary"] = str(patch.get("summary") or "")[:40]
                         it["fields"] = patch.get("fields") if isinstance(patch.get("fields"), dict) else None
                         if not it["summary"]:
