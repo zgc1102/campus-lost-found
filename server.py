@@ -143,6 +143,18 @@ def _save_json(path, data):
     os.replace(tmp, path)
 
 
+SPECIAL_FILE = os.path.join(BASE_DIR, "special_numbers.json")
+
+
+def load_special_numbers():
+    data = _load_json(SPECIAL_FILE, [])
+    return [str(x) for x in data] if isinstance(data, list) else []
+
+
+def save_special_numbers(arr):
+    _save_json(SPECIAL_FILE, arr)
+
+
 ANNOUNCE_FILE = os.path.join(BASE_DIR, "announcements.json")
 
 
@@ -743,6 +755,8 @@ def phone_check(raw):
     if not digits:
         return red("没有数字")
 
+    if digits in load_special_numbers():
+        return {"status": "green", "type": "mobile", "normalized": digits, "reason": ""}
     if re.match(r"^(400|800)", digits) or re.match(r"^(95|96)\d{3,5}$", digits):
         return {"status": "red", "type": "service", "normalized": digits,
                 "reason": "这是企业或服务号码，请留个人号码"}
@@ -1770,6 +1784,11 @@ class Handler(BaseHTTPRequestHandler):
                                 "body": a.get("body"), "pinned": bool(a.get("pinned")),
                                 "publishedAt": a.get("publishedAt") or 0} for a in pub])
 
+        if path == "/api/admin/special-numbers":
+            if not self._need_admin():
+                return
+            return self._json(load_special_numbers())
+
         if path == "/api/admin/stats":
             if not self._need_admin():
                 return
@@ -1898,12 +1917,34 @@ class Handler(BaseHTTPRequestHandler):
                 it = next((x for x in items if x.get("id") == item_id), None)
                 if not it:
                     return self._json({"error": "not found"}, 404)
+                _ph = re.sub(r"\D", "", str((it.get("contact") or {}).get("phone") or ""))
+                if re.match(r"^1[3-9]\d{9}$", _ph):
+                    _arr = load_special_numbers()
+                    if _ph not in _arr:
+                        _arr.append(_ph)
+                        save_special_numbers(_arr)
                 it["phoneStatus"] = "green"
                 it["phoneVerified"] = True
                 it["phoneReviewRequested"] = False
                 it["updatedAt"] = now_ms()
                 save_items(items)
             return self._json({"ok": True})
+
+        if path == "/api/admin/special-numbers":
+            if not self._need_admin():
+                return
+            body = self._read_body()
+            phone = re.sub(r"\D", "", str(body.get("phone") or ""))
+            if not re.match(r"^1[3-9]\d{9}$", phone):
+                return self._json({"error": "请输入 11 位手机号"}, 400)
+            with LOCK:
+                arr = load_special_numbers()
+                if body.get("remove"):
+                    arr = [x for x in arr if x != phone]
+                elif phone not in arr:
+                    arr.append(phone)
+                save_special_numbers(arr)
+            return self._json({"ok": True, "numbers": arr})
 
         if path == "/api/admin/recheck-images":
             if not self._need_admin():

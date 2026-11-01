@@ -59,6 +59,7 @@
       items = await api('/api/admin/items') || [];
       if(tab === 'users'){ await loadAccounts(); return; }
       if(tab === 'announce'){ await loadAnnouncements(); return; }
+      if(tab === 'phone'){ await loadSpecial(); return; }
       if(tab === 'overview'){ await loadStats(); return; }
       render();
     }catch(e){ $('list').innerHTML = '<div class="empty">' + e.message + '</div>'; }
@@ -209,6 +210,47 @@
       editingAnn = null;
       await loadAnnouncements();
     }catch(e){ alert(e.message); }
+  }
+
+  let specialNumbers = [];
+  async function loadSpecial(){
+    try{
+      items = await api('/api/admin/items') || [];
+      specialNumbers = await api('/api/admin/special-numbers') || [];
+      renderSpecial();
+    }catch(e){ $('list').innerHTML = '<div class="empty">' + e.message + '</div>'; }
+  }
+
+  function renderSpecial(){
+    const pending = items.filter(function(x){ return x.phoneReviewRequested; });
+    $('stats').innerHTML = '<div class="s"><b>' + specialNumbers.length + '</b><span>白名单号码</span></div>';
+    const pendingHtml = pending.length ? ('<div class="sectitle">用户申请</div>' + pending.map(function(it){
+      return '<div class="item"><div class="row1"><span class="tag">申请</span><div class="tt">' +
+        esc((it.contact || {}).phone || '') + '</div></div>' +
+        '<div class="meta">' + esc(it.title || '') + ' · ' + esc(it.place || '') + '</div>' +
+        '<div class="acts"><button class="btn ok" data-phone-approve="' + esc(it.id) + '">通过并加入白名单</button></div></div>';
+    }).join('')) : '';
+    const listHtml = specialNumbers.length ? specialNumbers.map(function(p){
+      return '<div class="item"><div class="row1"><div class="tt">' + esc(p) + '</div></div>' +
+        '<div class="acts"><button class="btn danger" data-special-del="' + esc(p) + '">移出白名单</button></div></div>';
+    }).join('') : '<div class="empty">还没有特殊号码</div>';
+    $('list').innerHTML =
+      '<div class="item"><div class="tt">添加特殊号码</div>' +
+      '<div class="meta">豹子号、连号等真实存在但被规则误判的号码，加入后发布直接通过，不再提示</div>' +
+      '<div style="display:flex;gap:8px;margin-top:8px">' +
+      '<input id="specialPhone" placeholder="11 位手机号，如 13311111111" style="flex:1;padding:9px;border:1px solid #ddd;border-radius:8px;font-family:inherit">' +
+      '<button class="btn ok" id="specialAdd">添加</button></div></div>' +
+      pendingHtml +
+      '<div class="sectitle">已加入白名单</div>' + listHtml;
+    const add = document.getElementById('specialAdd');
+    if(add) add.onclick = async function(){
+      const v = (document.getElementById('specialPhone').value || '').trim();
+      if(!v){ alert('请输入手机号'); return; }
+      try{
+        await api('/api/admin/special-numbers', {method:'POST', body: JSON.stringify({phone:v})});
+        await loadSpecial();
+      }catch(e){ alert(e.message); }
+    };
   }
 
   function statusText(s){
@@ -488,7 +530,7 @@
     if(tab === 'users'){ loadAccounts(); return; }
     if(tab === 'overview'){ loadStats(); return; }
     if(tab === 'announce'){ loadAnnouncements(); return; }
-    if(tab === 'phone'){ load(); return; }
+    if(tab === 'phone'){ loadSpecial(); return; }
     render();
   });
   $('search').addEventListener('input', e => { keyword = e.target.value.trim(); render(); });
@@ -497,9 +539,18 @@
     const pa = e.target.closest('[data-phone-approve]');
     if(pa){
       const id = pa.getAttribute('data-phone-approve');
-      if(!confirm('确认这个号码是真实可用的？')) return;
+      if(!confirm('确认这个号码真实存在，并加入白名单？')) return;
       api('/api/admin/items/' + encodeURIComponent(id) + '/phone-approve', {method:'POST'})
-        .then(load).catch(function(err){ alert(err.message); });
+        .then(function(){ return tab === 'phone' ? loadSpecial() : load(); })
+        .catch(function(err){ alert(err.message); });
+      return;
+    }
+    const sd = e.target.closest('[data-special-del]');
+    if(sd){
+      const p = sd.getAttribute('data-special-del');
+      if(!confirm('把 ' + p + ' 移出白名单？')) return;
+      api('/api/admin/special-numbers', {method:'POST', body: JSON.stringify({phone:p, remove:true})})
+        .then(loadSpecial).catch(function(err){ alert(err.message); });
       return;
     }
     const banBtn = e.target.closest('[data-ban]');
