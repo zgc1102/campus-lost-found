@@ -781,9 +781,14 @@ function openItem(id){
       renderMine(); renderClaims(); renderAccBox(); show('mine');
     };
   } else if(myClaim === 'pending'){
+    currentClaimMode = 'supplement';
+    currentClaimId = myClaimId;
     btn.style.display = 'block';
-    btn.disabled = true;
-    btn.textContent = '已申请，等待对方确认';
+    btn.disabled = false;
+    btn.textContent = '继续补充 / 修改我的申请';
+    document.getElementById('claimTip').textContent = '可以再补充一些细节，对方会看到';
+    document.getElementById('claimSend').textContent = '提交补充';
+    btn.onclick = function(){ toggleClaimBox(btn, box); };
   } else if(myClaim === 'accepted' || myClaim === 'completed'){
     btn.style.display = 'block';
     btn.disabled = true;

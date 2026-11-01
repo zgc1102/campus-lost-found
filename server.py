@@ -2361,7 +2361,7 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json({"error": "not found"}, 404)
                 if claim.get("from") != owner:
                     return self._json({"error": "只有申请人能补充"}, 403)
-                if claim.get("status") not in ("need_more", "rejected"):
+                if claim.get("status") not in ("pending", "need_more", "rejected"):
                     return self._json({"error": "当前状态不能补充"}, 400)
                 if claim.get("status") == "rejected":
                     # 被拒后重新申请：用新写的内容整体替换，而不是追加
