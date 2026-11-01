@@ -358,6 +358,24 @@
   $('pwd').onkeydown = e => { if(e.key === 'Enter') login(); };
   $('btnLogout').onclick = () => { if(confirm('确定退出登录？')) logout(false); };
   $('btnRefresh').onclick = load;
+  document.addEventListener('click', function(e){
+    const img = e.target.closest('.admin-photo');
+    if(img && img.src){
+      const v = document.getElementById('adminImgViewer');
+      const vi = document.getElementById('adminImgViewerImg');
+      if(v && vi){ vi.src = img.src; v.classList.add('show'); }
+    }
+  });
+  document.addEventListener('DOMContentLoaded', function(){
+    const v = document.getElementById('adminImgViewer');
+    if(v) v.addEventListener('click', function(){ v.classList.remove('show'); });
+  });
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape'){
+      const v = document.getElementById('adminImgViewer');
+      if(v) v.classList.remove('show');
+    }
+  });
   $('btnDeploy').onclick = async () => {
     if(!confirm('从 GitHub 拉取最新代码并重启服务？约 10 秒生效。')) return;
     const btn = $('btnDeploy');
