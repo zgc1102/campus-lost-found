@@ -1892,13 +1892,18 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/admin/recheck-images":
             if not self._need_admin():
                 return
+            body = self._read_body()
+            try:
+                limit = max(1, min(5, int(body.get("limit") or 3)))
+            except Exception:
+                limit = 3
             with LOCK:
                 items = load_items()
             checked = 0
             rejected = 0
             for it in items:
                 if (it.get("status") in ("approved", "claimed") and it.get("photo")
-                        and not it.get("visionDesc") and checked < 20):
+                        and not it.get("visionDesc") and checked < limit):
                     try:
                         raw = str(it["photo"]).split(",")[-1]
                         v = vision_moderate(raw, "image/jpeg")
