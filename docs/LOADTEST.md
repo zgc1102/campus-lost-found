@@ -12,13 +12,19 @@
 python scripts/loadtest.py --base http://127.0.0.1:8000 --path / --requests 1000 --concurrency 100
 ```
 
-线上（部署后）：
+线上（能正常解析域名时）：
 
 ```bash
 python scripts/loadtest.py --base https://你的域名 --path / --requests 10000 --concurrency 500
-python scripts/loadtest.py --base https://你的域名 --path /api/items --requests 2000 --concurrency 200
-python scripts/loadtest.py --base https://你的域名 --path /assets/app.js --requests 5000 --concurrency 500
 ```
+
+本机 DNS 解析不了域名时，直连 Cloudflare 边缘 IP：
+
+```bash
+python scripts/loadtest.py --base https://shiguangli.work --path / --requests 300 --concurrency 30 --connect-ip 104.21.15.101
+```
+
+Windows 一键：双击项目里的 `压测.bat`。
 
 输出示例：
 
