@@ -1380,6 +1380,38 @@ def vision_config():
     }
 
 
+def vision_moderate(image_b64, mime="image/jpeg"):
+    """专用于审核：把图中文字抄出来，并判断是否有违规内容"""
+    cfg = vision_config()
+    if not cfg["api_key"]:
+        return ""
+    endpoint = cfg["base_url"].rstrip("/") + "/chat/completions"
+    payload = {
+        "model": cfg["model"],
+        "temperature": 0,
+        "messages": [{"role": "user", "content": [
+            {"type": "text", "text": "你是内容审核助手。看这张图，只输出 JSON："
+                                     "{\"text\":\"图中所有文字，原样抄写，没有就空\","
+                                     "\"risk\":\"是否含代考代课、色情、诈骗、赌博、广告引流等违规内容，没有就写无\"}"},
+            {"type": "image_url", "image_url": {"url": "data:%s;base64,%s" % (mime, image_b64)}},
+        ]}],
+    }
+    try:
+        data = _post_chat(endpoint, payload, cfg["api_key"], timeout=35)
+        text = data["choices"][0]["message"]["content"] or ""
+        m = re.search(r"\{[\s\S]*\}", text)
+        obj = json.loads(m.group(0)) if m else {}
+        parts = []
+        if obj.get("text"):
+            parts.append("图中文字：" + str(obj.get("text"))[:200])
+        risk = str(obj.get("risk") or "").strip()
+        if risk and risk not in ("无", "没有", "none"):
+            parts.append("图片风险：" + risk[:100])
+        return "；".join(parts)[:300]
+    except Exception:
+        return ""
+
+
 def vision_analyze(image_b64, mime="image/jpeg"):
     cfg = vision_config()
     if not cfg["api_key"]:
@@ -2355,11 +2387,15 @@ class Handler(BaseHTTPRequestHandler):
             if item.get("photo") and cfg.get("enabled"):
                 try:
                     _raw = str(item["photo"]).split(",")[-1]
-                    _v = vision_analyze(_raw, "image/jpeg")
-                    if _v.get("ok"):
-                        item["visionDesc"] = "；".join(
-                            [str(x) for x in (_v.get("category"), _v.get("color"),
-                                              _v.get("features"), _v.get("desc")) if x])[:300]
+                    _vtext = vision_moderate(_raw, "image/jpeg")
+                    if _vtext:
+                        item["visionDesc"] = _vtext
+                    else:
+                        _v = vision_analyze(_raw, "image/jpeg")
+                        if _v.get("ok"):
+                            item["visionDesc"] = "；".join(
+                                [str(x) for x in (_v.get("category"), _v.get("color"),
+                                                  _v.get("features"), _v.get("desc")) if x])[:300]
                 except Exception:
                     pass
             check_id = body.get("checkId")
