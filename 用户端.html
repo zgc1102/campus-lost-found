@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>清华校园拾光里 v3.2 · 校园互助服务平台</title>
-<link rel="stylesheet" href="assets/styles.css?v=20261103">
+<link rel="stylesheet" href="assets/styles.css?v=20261104">
 </head>
 <body>
 <div id="aiBusy" class="ai-busy"><span class="ai-spin"></span><span id="aiBusyText">AI 正在识别图片…</span></div>
@@ -167,6 +167,7 @@
           <label>物品描述 <span class="req">*</span></label>
           <textarea name="desc" maxlength="300" placeholder="颜色、划痕、标记……越具体越容易核对"></textarea>
           <div class="tip-small"><span id="descCount">0</span>/300 · 超过 60 字建议让 AI 精简</div>
+          <div class="tip-small" id="descWarn" style="display:none;color:#a15c00;margin-top:4px">字数较多，可能影响阅读，建议点上方「AI 帮我整理成模板」精简一下</div>
           <button type="button" class="btn ghost" id="aiFormatBtn" style="width:100%;margin-top:8px">✨ AI 帮我整理成模板</button>
           <div class="errmsg"></div>
         </div>
@@ -503,7 +504,8 @@
   </div>
 </div>
 
-<script src="assets/app.js?v=20261103"></script>
+<script src="assets/app.js?v=20261104"></script>
+<div id="imgViewer" class="img-viewer"><img id="imgViewerImg" alt=""><div class="img-viewer-close">✕</div></div>
 <script>if(location.protocol==="file:"){var w=document.getElementById("fileWarn");if(w)w.style.display="block";}</script>
 </body>
 </html>

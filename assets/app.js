@@ -1526,12 +1526,41 @@ document.getElementById('pubTabLost').onclick = function(){ setPubType('lost'); 
 document.getElementById('pubTabFind').onclick = function(){ setPubType('found'); };
 
 document.querySelector('#publishForm textarea[name="desc"]').addEventListener('input', function(e){
-  document.getElementById('descCount').textContent = this.value.length;
+  const n = this.value.length;
+  document.getElementById('descCount').textContent = n;
+  const warn = document.getElementById('descWarn');
+  if(warn) warn.style.display = n > 150 ? 'block' : 'none';
   if(e && e.isTrusted){
     pendingFields = null;
     pendingSummary = '';
   }
 });
+
+/* ===== 图片放大查看 ===== */
+function openImageViewer(src){
+  const v = document.getElementById('imgViewer');
+  const img = document.getElementById('imgViewerImg');
+  if(!v || !img || !src) return;
+  img.src = src;
+  v.classList.add('show');
+}
+function closeImageViewer(){
+  const v = document.getElementById('imgViewer');
+  if(v) v.classList.remove('show');
+}
+document.addEventListener('click', function(e){
+  const img = e.target.closest('#isThumb img, .item .thumb img, #photoPreview img');
+  if(img && img.src){
+    e.preventDefault();
+    e.stopPropagation();
+    openImageViewer(img.src);
+  }
+}, true);
+document.addEventListener('DOMContentLoaded', function(){
+  const v = document.getElementById('imgViewer');
+  if(v) v.addEventListener('click', closeImageViewer);
+});
+document.addEventListener('keydown', function(e){ if(e.key === 'Escape') closeImageViewer(); });
 
 /* ===== AI 信息整理 ===== */
 async function runAiFormat(){
