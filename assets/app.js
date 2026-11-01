@@ -455,6 +455,20 @@ function renderHeat(){
   }
 }
 
+let activeLayer = null;
+const layerObserver = new MutationObserver(function(){
+  const open = document.querySelector('.sheet.show');
+  if(open){
+    activeLayer = function(){ open.classList.remove('show'); };
+  }else{
+    const v = document.getElementById('imgViewer');
+    if(!v || !v.classList.contains('show')) activeLayer = null;
+  }
+});
+document.querySelectorAll('.sheet').forEach(function(s){
+  layerObserver.observe(s, {attributes:true, attributeFilter:['class']});
+});
+
 function activate(name){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   const el=document.getElementById('screen-'+name);
@@ -474,6 +488,15 @@ function back(){
   history.back();
 }
 window.addEventListener('popstate', function(){
+  if(activeLayer){
+    const fn = activeLayer;
+    activeLayer = null;
+    try{ fn(); }catch(e){}
+    const cur = document.querySelector('.screen.active');
+    const hash = cur ? '#' + cur.id.replace('screen-','') : (location.hash || '#home');
+    try{ history.pushState({screen:(cur||{}).id}, '', hash); }catch(e){}
+    return;
+  }
   const name=(location.hash || '#home').replace('#','') || 'home';
   stack.length = 0;
   stack.push(name);
@@ -1543,10 +1566,12 @@ function openImageViewer(src){
   if(!v || !img || !src) return;
   img.src = src;
   v.classList.add('show');
+  activeLayer = closeImageViewer;
 }
 function closeImageViewer(){
   const v = document.getElementById('imgViewer');
   if(v) v.classList.remove('show');
+  if(activeLayer === closeImageViewer) activeLayer = null;
 }
 document.addEventListener('click', function(e){
   const img = e.target.closest('#isThumb img, .item .thumb img, #photoPreview img');
@@ -2344,7 +2369,9 @@ function showCertificate(info){
     '<div class="cert-acts"><button class="btn" id="certSave">保存证书</button>' +
     '<button class="btn ghost" id="certClose">关闭</button></div></div>';
   document.body.appendChild(mask);
-  document.getElementById('certClose').onclick = function(){ mask.remove(); };
+  const closeCert = function(){ mask.remove(); if(activeLayer === closeCert) activeLayer = null; };
+  activeLayer = closeCert;
+  document.getElementById('certClose').onclick = closeCert;
   document.getElementById('certSave').onclick = function(){ saveCertificate(info, dur, doneAt); };
 }
 

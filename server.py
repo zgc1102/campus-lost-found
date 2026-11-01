@@ -1871,6 +1871,11 @@ class Handler(BaseHTTPRequestHandler):
             if not self._need_admin():
                 return
             try:
+                subprocess.run(["git", "-C", "/opt/lostfound", "fetch", "--quiet"], timeout=25)
+                local = subprocess.check_output(["git", "-C", "/opt/lostfound", "rev-parse", "HEAD"]).decode().strip()
+                remote = subprocess.check_output(["git", "-C", "/opt/lostfound", "rev-parse", "origin/main"]).decode().strip()
+                if local == remote:
+                    return self._json({"ok": True, "hasUpdate": False, "msg": "暂无要更新的代码"})
                 script = "/tmp/sg_deploy.sh"
                 with open(script, "w", encoding="utf-8") as f:
                     f.write("#!/bin/bash\nsleep 3\ncd /opt/lostfound\ngit pull --ff-only\nsystemctl restart lostfound\n")
@@ -1881,7 +1886,39 @@ class Handler(BaseHTTPRequestHandler):
                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             except Exception as e:
                 return self._json({"error": str(e)[:120]}, 500)
-            return self._json({"ok": True, "msg": "已触发更新，约 10 秒后自动生效"})
+            return self._json({"ok": True, "hasUpdate": True,
+                               "msg": "发现新版本，正在更新，约 10 秒后自动刷新"})
+
+        if path == "/api/admin/recheck-images":
+            if not self._need_admin():
+                return
+            with LOCK:
+                items = load_items()
+            checked = 0
+            rejected = 0
+            for it in items:
+                if (it.get("status") in ("approved", "claimed") and it.get("photo")
+                        and not it.get("visionDesc") and checked < 20):
+                    try:
+                        raw = str(it["photo"]).split(",")[-1]
+                        v = vision_moderate(raw, "image/jpeg")
+                        if not v:
+                            a = vision_analyze(raw, "image/jpeg")
+                            if a.get("ok"):
+                                v = "；".join([str(x) for x in (a.get("category"), a.get("color"),
+                                                               a.get("features"), a.get("desc")) if x])[:300]
+                        it["visionDesc"] = v or ""
+                        cfg = load_ai_config()
+                        ai = review_item(it)
+                        it = apply_ai_decision(it, ai, cfg)
+                        checked += 1
+                        if it.get("status") == "rejected":
+                            rejected += 1
+                    except Exception:
+                        pass
+            with LOCK:
+                save_items(items)
+            return self._json({"ok": True, "checked": checked, "rejected": rejected})
 
         if path == "/api/admin/import":
             if not self._need_admin():
@@ -2384,18 +2421,21 @@ class Handler(BaseHTTPRequestHandler):
             except Exception:
                 reject_at = 80
             # 预检命中：直接判定，用户马上拿到结果
+            vision_ok = False
             if item.get("photo") and cfg.get("enabled"):
                 try:
                     _raw = str(item["photo"]).split(",")[-1]
                     _vtext = vision_moderate(_raw, "image/jpeg")
                     if _vtext:
                         item["visionDesc"] = _vtext
+                        vision_ok = True
                     else:
                         _v = vision_analyze(_raw, "image/jpeg")
-                        if _v.get("ok"):
+                        if _v.get("ok") and (_v.get("features") or _v.get("desc")):
                             item["visionDesc"] = "；".join(
                                 [str(x) for x in (_v.get("category"), _v.get("color"),
                                                   _v.get("features"), _v.get("desc")) if x])[:300]
+                            vision_ok = True
                 except Exception:
                     pass
             check_id = body.get("checkId")
@@ -2427,6 +2467,11 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 ai = guarded_review(item)
                 item = apply_ai_decision(item, ai, cfg)
+                if item.get("photo") and not vision_ok and item.get("status") == "approved":
+                    item["status"] = "pending"
+                    item["reviewedBy"] = "system"
+                    item["reviewedAt"] = now_ms()
+                    item["rejectReason"] = "图片审核未完成，转人工复核"
             except Exception:
                 ai = {"source": "fallback", "decision": "review", "score": 50,
                       "reason": "审核排队中，请稍后查看"}

@@ -1,0 +1,11 @@
+{
+ "enabled": false,
+ "base_url": "https://api.deepseek.com",
+ "api_key": "",
+ "model": "deepseek-flash",
+ "auto_review": true,
+ "auto_approve": true,
+ "approve_threshold": 20,
+ "auto_reject": true,
+ "reject_threshold": 80
+}

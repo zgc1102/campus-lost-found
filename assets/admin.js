@@ -266,6 +266,8 @@
       '</div>'+
       '<div class="meta">'+esc(it.place || '未填写地点')+' · '+fmt(it.createdAt)+'</div>'+
       '<div class="meta">'+esc(it.desc || '')+'</div>'+
+      (it.visionDesc ? '<div class="meta" style="color:#7a5aa8">🖼 AI 看图：'+esc(it.visionDesc)+'</div>' : '')+
+      (it.photo ? '<img class="admin-photo" src="'+esc(it.photo)+'" alt="发布图片">' : '')+
       (it.secret ? '<div class="secret">🔒 核验特征（仅管理员可见）：'+esc(it.secret)+'</div>' : '')+
       (phone ? '<div class="phone">📞 联系电话：'+esc(phone)+'</div>' : '')+
       (it.status === 'rejected' && it.rejectReason ? '<div class="meta">驳回理由：'+esc(it.rejectReason)+'</div>' : '')+
@@ -359,11 +361,27 @@
   $('btnDeploy').onclick = async () => {
     if(!confirm('从 GitHub 拉取最新代码并重启服务？约 10 秒生效。')) return;
     const btn = $('btnDeploy');
-    btn.disabled = true; btn.textContent = '更新中…';
+    btn.disabled = true; btn.textContent = '检查更新…';
     try{
       const r = await api('/api/admin/deploy', {method:'POST'});
-      alert((r && r.msg) || '已触发更新');
-    }catch(e){ alert(e.message); }
+      if(r && r.hasUpdate){
+        btn.textContent = '更新中…';
+        alert(r.msg || '发现新版本，正在更新');
+        let n = 12;
+        const tip = document.createElement('div');
+        tip.id = 'deployTip';
+        tip.style.cssText = 'position:fixed;right:18px;bottom:18px;background:#3b1d63;color:#fff;padding:12px 16px;border-radius:12px;font-size:13px;z-index:999;box-shadow:0 8px 24px rgba(0,0,0,.25)';
+        document.body.appendChild(tip);
+        const timer = setInterval(function(){
+          n--;
+          tip.textContent = '正在更新，' + n + ' 秒后自动刷新…';
+          if(n <= 0){ clearInterval(timer); location.reload(); }
+        }, 1000);
+        tip.textContent = '正在更新，' + n + ' 秒后自动刷新…';
+      }else{
+        alert((r && r.msg) || '暂无要更新的代码');
+      }
+    }catch(e){ alert('更新失败：' + e.message); }
     finally{ btn.disabled = false; btn.textContent = '更新代码'; }
   };
   $('btnAiAll').onclick = async () => {
