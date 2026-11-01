@@ -84,6 +84,18 @@
     }
   }
 
+  function countUp(el, target){
+    const dur = 520, t0 = performance.now();
+    function tick(t){
+      const p = Math.min(1, (t - t0) / dur);
+      const ease = 1 - Math.pow(1 - p, 3);
+      el.textContent = String(Math.round(target * ease));
+      if(p < 1) requestAnimationFrame(tick);
+      else el.textContent = String(target);
+    }
+    requestAnimationFrame(tick);
+  }
+
   function renderStats(){
     const s = statsData || {};
     const bs = s.byStatus || {};
@@ -92,6 +104,10 @@
       '<div class="s"><b>' + (bs.approved || 0) + '</b><span>已上架</span></div>' +
       '<div class="s"><b>' + (bs.pending || 0) + '</b><span>待审核</span></div>' +
       '<div class="s"><b>' + (bs.rejected || 0) + '</b><span>已驳回</span></div>';
+    [s.items, bs.approved, bs.pending, bs.rejected].forEach(function(v, i){
+      const el = document.querySelectorAll('#stats .s b')[i];
+      if(el) countUp(el, v || 0);
+    });
     const days = s.days || [];
     const max = Math.max.apply(null, [1].concat(days.map(function(d){ return d.count; })));
     const bars = days.map(function(d){

@@ -381,6 +381,20 @@ const PHONES = [
 
 /* ============ 导航 ============ */
 const stack = [];
+function burstConfetti(){
+  const host = document.getElementById('screen-success');
+  if(!host) return;
+  const colors = ['#8a5fd0', '#f0a6ca', '#ffd166', '#7bdff2', '#b8f2a8', '#f4978e'];
+  for(let i = 0; i < 26; i++){
+    const el = document.createElement('i');
+    el.className = 'confetti';
+    el.style.left = (6 + Math.random() * 88) + '%';
+    el.style.background = colors[i % colors.length];
+    el.style.animationDelay = (Math.random() * 0.3) + 's';
+    host.appendChild(el);
+    (function(node){ setTimeout(function(){ node.remove(); }, 2400); })(el);
+  }
+}
 function show(name){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   const el=document.getElementById('screen-'+name);
@@ -509,6 +523,20 @@ function renderMemorial(){
     const idx=Math.round(track.scrollLeft/track.clientWidth);
     document.querySelectorAll('#memDots i').forEach((d,i)=>d.classList.toggle('on',i===idx));
   };
+  startMemorialAuto();
+}
+let memTimer = null;
+function startMemorialAuto(){
+  if(memTimer) clearInterval(memTimer);
+  memTimer = setInterval(function(){
+    const track = document.getElementById('memTrack');
+    const home = document.getElementById('screen-home');
+    if(!track || !home || !home.classList.contains('active')) return;
+    if(!track.clientWidth || MEMORIAL_DATA.length < 2) return;
+    const idx = Math.round(track.scrollLeft / track.clientWidth);
+    const next = (idx + 1) % MEMORIAL_DATA.length;
+    track.scrollTo({left: next * track.clientWidth, behavior: 'smooth'});
+  }, 4800);
 }
 function renderMemorialDetail(idx){
   const m=MEMORIAL_DATA[idx];
@@ -1493,6 +1521,7 @@ function showSuccess(item, isEdit){
   if(hint2){ hint2.style.display = 'none'; hint2.innerHTML = ''; }
   if(stack[stack.length-1] === 'publish') stack.pop();
   show('success');
+  burstConfetti();
   renderMine();
 }
 
@@ -1947,6 +1976,10 @@ function bindPhoneHint(input, hint){
     } else {
       hint.textContent = '❌ ' + r.reason + '。如果是座机，请带区号，如 010-12345678';
       hint.style.color = '#a12f2f';
+      input.classList.remove('shake');
+      void input.offsetWidth;
+      input.classList.add('shake');
+      setTimeout(function(){ input.classList.remove('shake'); }, 420);
     }
     return r;
   };

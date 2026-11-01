@@ -291,6 +291,26 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .btn:active{transform:scale(.97);}
 .ask-chip{transition:transform .12s ease, background .12s ease;}
 .ask-chip:active{transform:scale(.96);background:#e9e1fb;}
+
+/* ===== 动态细节增强 ===== */
+.fn,.pub-cta,.mem-slide,.item{transition:transform .14s ease, box-shadow .18s ease;}
+.fn:active,.pub-cta:active{transform:scale(.96);}
+.item:active{transform:scale(.995);}
+.item:nth-child(2){animation-delay:.04s}
+.item:nth-child(3){animation-delay:.08s}
+.item:nth-child(4){animation-delay:.12s}
+.item:nth-child(5){animation-delay:.16s}
+.item:nth-child(6){animation-delay:.20s}
+.item:nth-child(7){animation-delay:.24s}
+.item:nth-child(8){animation-delay:.28s}
+.ai-format{animation:fadeUp .22s ease both;}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(5px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
+.shake{animation:shake .36s ease;}
+#screen-success{position:relative;overflow:hidden;}
+.confetti{position:absolute;top:-14px;width:7px;height:11px;border-radius:2px;pointer-events:none;z-index:6;animation:confettiFall 1.7s cubic-bezier(.2,.6,.4,1) forwards;}
+@keyframes confettiFall{0%{opacity:1;transform:translateY(0) rotate(0deg)}100%{opacity:0;transform:translateY(72vh) rotate(560deg)}}
+.skeleton{background:linear-gradient(90deg,#f2eef8 25%,#faf8fe 37%,#f2eef8 63%);background-size:400% 100%;animation:shimmer 1.3s ease infinite;border-radius:12px;height:78px;margin-bottom:10px;}
+@keyframes shimmer{0%{background-position:100% 0}100%{background-position:-100% 0}}
 @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
 
 /* ===== AI 整理 ===== */
