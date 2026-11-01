@@ -785,6 +785,47 @@ def phone_check(raw):
     return red("号码格式不正确")
 
 
+
+# ================= 发布侧稳定性 =================
+AI_SEM = threading.BoundedSemaphore(8)
+AI_STATS = {"reviews": 0, "fail": 0, "total_ms": 0}
+RATE = {}
+RATE_LOCK = threading.Lock()
+
+
+def rate_allow(owner):
+    """每设备 3 条/分钟、10 条/小时"""
+    now = time.time()
+    with RATE_LOCK:
+        arr = [t for t in RATE.get(owner, []) if now - t < 3600]
+        if sum(1 for t in arr if now - t < 60) >= 3:
+            return False, "发布太频繁了，歇 1 分钟再试"
+        if len(arr) >= 10:
+            return False, "1 小时内最多发布 10 条，明天再来吧"
+        arr.append(now)
+        RATE[owner] = arr
+    return True, ""
+
+
+def guarded_review(item):
+    """带并发上限、重试和计时的审核"""
+    t0 = time.time()
+    last = None
+    for attempt in range(2):
+        try:
+            with AI_SEM:
+                ai = review_item(item)
+            AI_STATS["reviews"] += 1
+            AI_STATS["total_ms"] += int((time.time() - t0) * 1000)
+            return ai
+        except Exception as e:
+            last = e
+            time.sleep(0.8 + attempt * 1.2)
+    AI_STATS["fail"] += 1
+    AI_STATS["total_ms"] += int((time.time() - t0) * 1000)
+    raise last if last else RuntimeError("review failed")
+
+
 def mask_contact(v):
     """未通过认领前，联系方式只给打码版本"""
     s = str(v or "")
@@ -1375,7 +1416,11 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/health":
             with LOCK:
                 n = len(load_items())
-            return self._json({"ok": True, "items": n, "ts": now_ms()})
+            avg = (AI_STATS["total_ms"] / AI_STATS["reviews"]) if AI_STATS["reviews"] else 0
+            return self._json({"ok": True, "items": n, "ts": now_ms(),
+                               "ai": {"reviews": AI_STATS["reviews"],
+                                      "fail": AI_STATS["fail"],
+                                      "avgMs": int(avg)}})
 
         if path == "/api/items":
             owner = self._owner()
@@ -2061,6 +2106,18 @@ class Handler(BaseHTTPRequestHandler):
             body = self._read_body()
             if not isinstance(body, dict) or not body.get("title"):
                 return self._json({"error": "title required"}, 400)
+            ok_rate, msg_rate = rate_allow(owner)
+            if not ok_rate:
+                return self._json({"error": msg_rate}, 429)
+            _t = str(body.get("title") or "").strip()
+            _d = str(body.get("desc") or "").strip()
+            with LOCK:
+                _recent = [x for x in load_items()
+                           if x.get("ownerToken") == owner
+                           and x.get("title") == _t and x.get("desc") == _d
+                           and (now_ms() - (x.get("createdAt") or 0)) < 600000]
+            if _recent:
+                return self._json({"error": "同样的内容刚发过，别重复提交"}, 409)
             item = self._clean(body)
             # 强制模板化：客户端没带摘要时用规则整理兜底，保证展示一致
             if not item.get("summary"):
@@ -2103,7 +2160,7 @@ class Handler(BaseHTTPRequestHandler):
                 ai = cached.get("ai") or review_item(item)
                 CHECK_CACHE.pop(check_id, None)
             else:
-                ai = review_item(item)
+                ai = guarded_review(item)
             item["ai"] = ai
             ai_trusted = ai.get("source") == "llm"
             scope_hits = scope_violation(item)
