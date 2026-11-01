@@ -1458,6 +1458,13 @@ class Handler(BaseHTTPRequestHandler):
                 if c.get("status") in ("accepted", "completed"):
                     out["ownerContact"] = (it.get("contact") or {}).get("phone") or ""
                     out["claimContact"] = c.get("contact") or ""
+                if c.get("status") == "accepted" and c.get("returnCode"):
+                    if c.get("returnCodeFor") == owner:
+                        out["returnCode"] = c.get("returnCode")
+                    if c.get("holder") == owner:
+                        out["canConfirm"] = True
+                if c.get("status") == "completed":
+                    out["completedAt"] = c.get("completedAt") or c.get("updatedAt") or 0
                 return out
 
             received = [pack(c, "received") for c in claims
@@ -1942,6 +1949,7 @@ class Handler(BaseHTTPRequestHandler):
 
         if path.startswith("/api/claims/") and path.endswith("/complete"):
             owner = self._owner()
+            body = self._read_body()
             claim_id = path[len("/api/claims/"):-len("/complete")]
             with LOCK:
                 claims = load_claims()
@@ -1950,10 +1958,20 @@ class Handler(BaseHTTPRequestHandler):
                 if not claim:
                     return self._json({"error": "not found"}, 404)
                 item = next((x for x in items if x.get("id") == claim.get("itemId")), None)
-                if not item or item.get("ownerToken") != owner:
+                if not item:
+                    return self._json({"error": "not found"}, 404)
+                code = str((body or {}).get("code") or "").strip()
+                if claim.get("returnCode"):
+                    holder = claim.get("holder")
+                    if holder and holder != owner:
+                        return self._json({"error": "只有持有物品的一方才能确认归还"}, 403)
+                    if code != claim.get("returnCode"):
+                        return self._json({"error": "取件码不对，让对方再看一眼"}, 400)
+                elif item.get("ownerToken") != owner:
                     return self._json({"error": "只有发布者能确认完成"}, 403)
                 claim["status"] = "completed"
                 claim["updatedAt"] = now_ms()
+                claim["completedAt"] = now_ms()
                 item["status"] = "closed"
                 item["updatedAt"] = now_ms()
                 save_claims(claims)
@@ -2264,6 +2282,12 @@ class Handler(BaseHTTPRequestHandler):
                 others = []
                 if status == "accepted":
                     item["status"] = "claimed"
+                    if not claim.get("returnCode") and item.get("type") in ("found", "lost"):
+                        claim["returnCode"] = "%06d" % random.randint(0, 999999)
+                        claim["returnCodeFor"] = (claim.get("from") if item.get("type") == "found"
+                                                  else item.get("ownerToken"))
+                        claim["holder"] = (item.get("ownerToken") if item.get("type") == "found"
+                                           else claim.get("from"))
                     # 同一个物品的其他待处理申请自动关闭，不能让它们一直挂着
                     for c2 in claims:
                         if (c2.get("itemId") == claim.get("itemId")

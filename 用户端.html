@@ -29,6 +29,8 @@
     <div class="scroll">
       <div class="search" id="searchEntry">🔍 搜索失物 / 寻物 / 工具（支持以图搜图）…</div>
       <div class="pub-cta" data-publish="lost">＋ 发布一条启事（寻物 / 招领）</div>
+      <button type="button" class="quick-photo" id="quickPhotoBtn">📷 拍照发布 · AI 自动填写</button>
+      <input type="file" id="quickPhotoInput" accept="image/*" capture="environment" style="display:none">
 
       <div class="ask-cta" data-nav="ask">
         <div class="ask-cta-icon">💬</div>
@@ -365,6 +367,7 @@
   <section class="screen" id="screen-map">
     <div class="topbar"><div class="back" data-back>‹</div><div class="t">清华大学全景地图</div></div>
     <div class="scroll">
+      <div id="heatPanel"></div>
       <div class="sectitle">点击地标查看简介与实景图（文旅图风格全图，非导航底图）</div>
       <div class="map-wrap" id="mapWrap"></div>
       <div class="foot" style="text-align:center;color:var(--sub);font-size:11px;padding:14px 0;">地标位置参考清华园实际布局与公开地图修订（腾讯 / 百度 / 高德）；示意全图，非真实导航底图</div>

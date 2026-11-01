@@ -217,7 +217,7 @@ const Net = {
   claim(id, body){ return this.call('/items/' + encodeURIComponent(id) + '/claims', {method:'POST', body: JSON.stringify(body || {})}); },
   claims(){ return this.call('/claims'); },
   claimAction(id, body){ return this.call('/claims/' + encodeURIComponent(id), {method:'PATCH', body: JSON.stringify(body)}); },
-  complete(id){ return this.call('/claims/' + encodeURIComponent(id) + '/complete', {method:'POST'}); },
+  complete(id, code){ return this.call('/claims/' + encodeURIComponent(id) + '/complete', {method:'POST', body: JSON.stringify({code: code || ''})}); },
   supplement(id, body){ return this.call('/claims/' + encodeURIComponent(id) + '/supplement', {method:'POST', body: JSON.stringify(body)}); },
   vision(image, mime){ return this.call('/vision/analyze', {method:'POST', body: JSON.stringify({image: image, mime: mime || 'image/jpeg'})}); },
   format(body){ return this.call('/format', {method:'POST', body: JSON.stringify(body)}); },
@@ -395,10 +395,69 @@ function burstConfetti(){
     (function(node){ setTimeout(function(){ node.remove(); }, 2400); })(el);
   }
 }
+/* ===== 失物热力 ===== */
+const HEAT_ZONES = [
+  {name:'图书馆', x:44, y:47, kw:['图书馆','李文正','北馆','老馆']},
+  {name:'食堂', x:39, y:38, kw:['食堂','餐厅','桃李','听涛','清芬','观畴','万人','紫荆园']},
+  {name:'教学楼', x:46, y:62, kw:['教学楼','六教','三教','四教','五教','一教','二教','新水','旧水','建筑馆','学堂']},
+  {name:'宿舍', x:25, y:78, kw:['宿舍','公寓','南区','北区']},
+  {name:'运动场', x:68, y:33, kw:['操场','体育','篮球','网球','游泳','综体','西体','东操','紫操']},
+  {name:'校门 / 路上', x:17, y:41, kw:['校门','门口','路上','路边']}
+];
+
+function renderHeat(){
+  const host = document.getElementById('heatPanel');
+  if(!host) return;
+  const items = Store.list({statuses:['approved','claimed','closed']});
+  const zones = HEAT_ZONES.map(function(z){ return {name:z.name, x:z.x, y:z.y, n:0}; });
+  const other = {name:'其他 / 未填写', x:50, y:50, n:0};
+  items.forEach(function(it){
+    const text = (it.place || '') + ' ' + (it.title || '');
+    let hit = null;
+    for(let i = 0; i < HEAT_ZONES.length && !hit; i++){
+      for(let j = 0; j < HEAT_ZONES[i].kw.length; j++){
+        if(text.indexOf(HEAT_ZONES[i].kw[j]) >= 0){ hit = zones[i]; break; }
+      }
+    }
+    (hit || other).n++;
+  });
+  const all = zones.concat([other]).sort(function(a,b){ return b.n - a.n; });
+  const total = all.reduce(function(s,z){ return s + z.n; }, 0);
+  const max = Math.max.apply(null, [1].concat(all.map(function(z){ return z.n; })));
+  const done = items.filter(function(x){ return x.status === 'closed' || x.status === 'claimed'; }).length;
+  const rate = total ? Math.round(done / total * 100) : 0;
+  const top = all.filter(function(z){ return z.name !== '其他 / 未填写'; }).slice(0, 2)
+    .map(function(z){ return z.name; }).join('和');
+  host.innerHTML = '<div class="heat-panel">' +
+    '<div class="heat-head">🔥 失物热力<span>共 ' + total + ' 条发布</span></div>' +
+    '<div class="heat-sub">' + (top || '图书馆') + '最容易丢东西；已闭环 ' + done + ' 条，闭环率 ' + rate + '%。</div>' +
+    all.map(function(z){
+      return '<div class="heat-row"><span class="heat-name">' + esc(z.name) + '</span>' +
+        '<span class="heat-bar"><i style="width:' + Math.round(z.n / max * 100) + '%"></i></span>' +
+        '<span class="heat-n">' + z.n + '</span></div>';
+    }).join('') + '</div>';
+
+  const wrap = document.getElementById('mapWrap');
+  if(wrap){
+    let layer = document.getElementById('heatDots');
+    if(!layer){
+      layer = document.createElement('div');
+      layer.id = 'heatDots';
+      layer.className = 'heat-dots';
+      wrap.appendChild(layer);
+    }
+    layer.innerHTML = zones.filter(function(z){ return z.n > 0; }).map(function(z){
+      const size = 20 + Math.min(24, z.n * 2.5);
+      return '<div class="heat-dot" style="left:' + z.x + '%;top:' + z.y + '%;width:' + size +
+        'px;height:' + size + 'px" title="' + esc(z.name) + ' ' + z.n + ' 条">' + z.n + '</div>';
+    }).join('');
+  }
+}
+
 function show(name){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   const el=document.getElementById('screen-'+name);
-  if(el){ el.classList.add('active'); if(stack[stack.length-1]!==name) stack.push(name); const sc=el.querySelector('.scroll'); if(sc) sc.scrollTop=0; }
+  if(el){ el.classList.add('active'); if(stack[stack.length-1]!==name) stack.push(name); const sc=el.querySelector('.scroll'); if(sc) sc.scrollTop=0; if(name==='map') renderHeat(); }
 }
 function back(){
   stack.pop();
@@ -759,8 +818,18 @@ function claimCard(c, side){
     acts = '<button class="btn" data-claim-view="'+esc(c.id)+'">查看并核对</button>' +
            '<button class="btn danger" data-claim-reject="'+esc(c.id)+'">不是这个</button>';
   }
-  if(side === 'received' && c.status === 'accepted'){
-    acts = '<button class="btn" data-claim-done="'+esc(c.id)+'">已完成归还</button>';
+  if(c.status === 'accepted'){
+    if(c.returnCode){
+      acts += '<div class="return-code"><span>取件码</span><b>' + esc(c.returnCode) + '</b>' +
+        '<div class="tip-small">把码给对方，对方确认后完成归还</div></div>';
+    }
+    if(c.canConfirm){
+      acts += '<div class="claimbox" style="display:block;margin-top:8px">' +
+        '<input id="rc_' + esc(c.id) + '" maxlength="6" inputmode="numeric" placeholder="输入对方的 6 位取件码">' +
+        '<button class="btn ok" data-claim-return="' + esc(c.id) + '" style="width:100%">确认归还</button></div>';
+    } else if(c.kind === 'help' && side === 'received'){
+      acts += '<button class="btn" data-claim-done="' + esc(c.id) + '">已完成帮忙</button>';
+    }
   }
   if(side === 'sent' && (c.status === 'need_more' || c.status === 'rejected')){
     acts = '<button class="btn" data-claim-supplement="'+esc(c.id)+'">补充信息</button>';
@@ -797,6 +866,7 @@ async function renderClaims(){
     if(!wrap) return;
     claimsMap = {};
     (r.received || []).forEach(function(c){ claimsMap[c.id] = c; });
+    (r.sent || []).forEach(function(c){ claimsMap[c.id] = c; });
     const parts = [];
     (r.received || []).forEach(function(c){ parts.push(claimCard(c, 'received')); });
     (r.sent || []).forEach(function(c){ parts.push(claimCard(c, 'sent')); });
@@ -1147,6 +1217,23 @@ document.addEventListener('click', e=>{
     }).catch(function(){ toast('操作失败，稍后再试'); });
     return;
   }
+  const retBtn = e.target.closest('[data-claim-return]');
+  if(retBtn){
+    const id = retBtn.getAttribute('data-claim-return');
+    const inp = document.getElementById('rc_' + id);
+    const code = inp ? inp.value.trim() : '';
+    if(!/^\d{6}$/.test(code)){ toast('请输入 6 位取件码'); return; }
+    retBtn.disabled = true;
+    Net.complete(id, code).then(function(){
+      const c = claimsMap[id] || {};
+      renderClaims(); netSync();
+      showCertificate({title: c.itemTitle, code: code, createdAt: c.createdAt, completedAt: Date.now()});
+    }).catch(function(err){
+      retBtn.disabled = false;
+      toast((err && err.message) || '取件码不对，让对方再看一眼');
+    });
+    return;
+  }
   if(e.target.closest('#loginBtn')){ renderMine(); show('mine'); return; }
   if(e.target.closest('#searchBtn')){ doSearch(document.getElementById('searchInput').value); return; }
   if(e.target.closest('#imgSearchBtn')){ const g=document.getElementById('imgSearchGrid'); const h=document.getElementById('imgHint');
@@ -1474,6 +1561,64 @@ document.querySelector('#publishForm textarea[name="desc"]').addEventListener('b
     runAiFormat();
   }
 });
+
+/* ===== 拍照即发布 ===== */
+function resetPublishForm(){
+  const f = document.getElementById('publishForm');
+  if(!f) return;
+  f.reset();
+  pendingPhoto = null; pendingFields = null; pendingSummary = '';
+  const pp = document.getElementById('photoPreview'); if(pp) pp.innerHTML = '';
+  const pi = document.getElementById('photoInput'); if(pi) pi.value = '';
+  const dc = document.getElementById('descCount'); if(dc) dc.textContent = '0';
+  const ap = document.getElementById('aiFormatPanel'); if(ap) ap.style.display = 'none';
+  const ph = document.getElementById('phoneHint'); if(ph) ph.textContent = '';
+  const cw = document.getElementById('phoneConfirmWrap'); if(cw) cw.style.display = 'none';
+  photoSeq++; photoBusy = false;
+  clearFormErrors();
+}
+
+document.getElementById('quickPhotoBtn').onclick = function(){
+  document.getElementById('quickPhotoInput').click();
+};
+
+document.getElementById('quickPhotoInput').onchange = async function(){
+  const file = this.files && this.files[0];
+  this.value = '';
+  if(!file) return;
+  resetPublishForm();
+  show('publish');
+  document.getElementById('pubTabFind').click();
+  toast('照片处理中…');
+  let data = null;
+  try{ data = await compressImage(file); }catch(e){ data = null; }
+  if(!data){ toast('图片读取失败，可以手动填写'); return; }
+  pendingPhoto = data;
+  document.getElementById('photoPreview').innerHTML =
+    '<img src="' + data + '" alt="预览" style="width:100%;max-height:170px;object-fit:cover;border-radius:10px;margin-top:8px">';
+  toast('AI 正在看这张图…');
+  try{
+    const raw = String(data).split(',')[1] || '';
+    const r = await Net.vision(raw, 'image/jpeg');
+    const f = document.getElementById('publishForm');
+    if(r && r.ok){
+      const color = r.color || '';
+      const catName = r.category || '';
+      const title = (color + catName).slice(0, 30);
+      if(title) f.elements['goodsName'].value = title;
+      let desc = String(r.desc || '').replace(/[。.!！]+$/, '');
+      if(color && desc.indexOf(color) < 0) desc = color + '，' + desc;
+      if(desc) f.elements['desc'].value = desc;
+      f.elements['category'].value = guessCategory(catName + ' ' + (r.desc || ''));
+      document.getElementById('descCount').textContent = f.elements['desc'].value.length;
+      toast('已根据照片填好，补个地点就能发');
+    } else {
+      toast('AI 没看清，照片已带上，手动补个名称');
+    }
+  }catch(e){
+    toast('AI 识别失败，照片已带上，手动补个名称');
+  }
+};
 
 document.getElementById('fillDemo').onclick = function(){
   const f = document.getElementById('publishForm');
@@ -2024,6 +2169,111 @@ bindPhoneHint(document.querySelector('#publishForm input[name="phone"]'), docume
               document.getElementById('phoneConfirmWrap'), document.getElementById('phoneConfirm'));
 bindPhoneHint(document.getElementById('claimPhone'), document.getElementById('claimPhoneHint'));
 bindPhoneHint(document.getElementById('helpPhone'), document.getElementById('helpPhoneHint'));
+
+/* ===== 归还证书 ===== */
+function fmtDuration(ms){
+  const m = Math.max(1, Math.round(ms / 60000));
+  if(m < 60) return m + ' 分钟';
+  const h = Math.floor(m / 60), mm = m % 60;
+  if(h < 24) return h + ' 小时' + (mm ? ' ' + mm + ' 分钟' : '');
+  return Math.floor(h / 24) + ' 天' + (h % 24 ? ' ' + (h % 24) + ' 小时' : '');
+}
+
+function roundRect(g, x, y, w, h, r){
+  g.beginPath();
+  g.moveTo(x + r, y);
+  g.arcTo(x + w, y, x + w, y + h, r);
+  g.arcTo(x + w, y + h, x, y + h, r);
+  g.arcTo(x, y + h, x, y, r);
+  g.arcTo(x, y, x + w, y, r);
+  g.closePath();
+}
+
+function wrapText(g, text, cx, y, maxW, lh){
+  const chars = String(text).split('');
+  let line = '', lines = [];
+  for(let i = 0; i < chars.length; i++){
+    const test = line + chars[i];
+    if(g.measureText(test).width > maxW && line){ lines.push(line); line = chars[i]; }
+    else line = test;
+  }
+  if(line) lines.push(line);
+  lines.forEach(function(l, i){ g.fillText(l, cx, y + i * lh); });
+}
+
+function certDate(ts){
+  const d = new Date(ts || Date.now());
+  return d.getFullYear() + '.' + (d.getMonth() + 1) + '.' + d.getDate();
+}
+
+function showCertificate(info){
+  const old = document.getElementById('certMask');
+  if(old) old.remove();
+  const doneAt = info.completedAt || Date.now();
+  const dur = fmtDuration(doneAt - (info.createdAt || doneAt));
+  const mask = document.createElement('div');
+  mask.className = 'cert-mask';
+  mask.id = 'certMask';
+  mask.innerHTML = '<div class="cert-card">' +
+    '<div class="cert-badge">🎉</div>' +
+    '<div class="cert-h">归还成功</div>' +
+    '<div class="cert-title">《' + esc(info.title || '物品') + '》</div>' +
+    '<div class="cert-sub">从发布到归还，用了 ' + esc(dur) + '</div>' +
+    '<div class="cert-code"><span>取件码</span><b>' + esc(info.code || '') + '</b></div>' +
+    '<div class="cert-brand">清华校园拾光里 · ' + certDate(doneAt) + '</div>' +
+    '<div class="cert-acts"><button class="btn" id="certSave">保存证书</button>' +
+    '<button class="btn ghost" id="certClose">关闭</button></div></div>';
+  document.body.appendChild(mask);
+  document.getElementById('certClose').onclick = function(){ mask.remove(); };
+  document.getElementById('certSave').onclick = function(){ saveCertificate(info, dur, doneAt); };
+}
+
+function saveCertificate(info, dur, doneAt){
+  const W = 720, H = 1000;
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const g = cv.getContext('2d');
+  const grad = g.createLinearGradient(0, 0, W, H);
+  grad.addColorStop(0, '#5b1f92');
+  grad.addColorStop(1, '#a06ad6');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, W, H);
+  g.fillStyle = 'rgba(255,255,255,.97)';
+  roundRect(g, 40, 120, W - 80, H - 240, 28);
+  g.fill();
+  g.textAlign = 'center';
+  g.fillStyle = '#62269c';
+  g.font = 'bold 34px sans-serif';
+  g.fillText('归 还 成 功', W / 2, 220);
+  g.fillStyle = '#2f2a3a';
+  g.font = 'bold 38px sans-serif';
+  wrapText(g, '《' + (info.title || '物品') + '》', W / 2, 300, W - 160, 50);
+  g.fillStyle = '#6b6480';
+  g.font = '26px sans-serif';
+  g.fillText('从发布到归还，用了 ' + dur, W / 2, 390);
+  g.fillStyle = '#f2eefc';
+  roundRect(g, W / 2 - 150, 430, 300, 110, 18);
+  g.fill();
+  g.fillStyle = '#7a7290';
+  g.font = '22px sans-serif';
+  g.fillText('取件码', W / 2, 472);
+  g.fillStyle = '#62269c';
+  g.font = 'bold 46px monospace';
+  g.fillText(info.code || '------', W / 2, 522);
+  g.fillStyle = '#3a3645';
+  g.font = '24px sans-serif';
+  wrapText(g, '每一件回到主人手里的东西，都让校园更温暖一点。', W / 2, 630, W - 170, 38);
+  g.fillStyle = '#8a8594';
+  g.font = '22px sans-serif';
+  g.fillText('清华校园拾光里 · ' + certDate(doneAt), W / 2, H - 220);
+  g.fillStyle = '#62269c';
+  g.font = '20px sans-serif';
+  g.fillText('AI 审核 · 智能匹配 · 双向核验', W / 2, H - 180);
+  const a = document.createElement('a');
+  a.download = '归还证书-' + certDate(doneAt) + '.png';
+  a.href = cv.toDataURL('image/png');
+  a.click();
+}
 
 /* ============ 初始化 ============ */
 function checkStorage(){
