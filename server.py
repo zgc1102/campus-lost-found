@@ -1832,6 +1832,22 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         path = unquote(urlparse(self.path).path)
 
+        if path == "/api/admin/deploy":
+            if not self._need_admin():
+                return
+            try:
+                script = "/tmp/sg_deploy.sh"
+                with open(script, "w", encoding="utf-8") as f:
+                    f.write("#!/bin/bash\nsleep 3\ncd /opt/lostfound\ngit pull --ff-only\nsystemctl restart lostfound\n")
+                os.chmod(script, 0o755)
+                subprocess.Popen(
+                    ["systemd-run", "--collect", "--unit=sg-deploy-%d" % int(time.time()),
+                     "--on-active=3", "/bin/bash", script],
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            except Exception as e:
+                return self._json({"error": str(e)[:120]}, 500)
+            return self._json({"ok": True, "msg": "已触发更新，约 10 秒后自动生效"})
+
         if path == "/api/admin/import":
             if not self._need_admin():
                 return

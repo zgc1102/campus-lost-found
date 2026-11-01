@@ -356,6 +356,16 @@
   $('pwd').onkeydown = e => { if(e.key === 'Enter') login(); };
   $('btnLogout').onclick = () => { if(confirm('确定退出登录？')) logout(false); };
   $('btnRefresh').onclick = load;
+  $('btnDeploy').onclick = async () => {
+    if(!confirm('从 GitHub 拉取最新代码并重启服务？约 10 秒生效。')) return;
+    const btn = $('btnDeploy');
+    btn.disabled = true; btn.textContent = '更新中…';
+    try{
+      const r = await api('/api/admin/deploy', {method:'POST'});
+      alert((r && r.msg) || '已触发更新');
+    }catch(e){ alert(e.message); }
+    finally{ btn.disabled = false; btn.textContent = '更新代码'; }
+  };
   $('btnAiAll').onclick = async () => {
     if(!confirm('对当前待审核内容跑一遍 AI 预审？')) return;
     try{ await api('/api/admin/ai/review-all', {method:'POST'}); await load(); }
