@@ -8,6 +8,7 @@
 """
 
 import hashlib
+import base64
 import json
 import math
 import os
@@ -1042,6 +1043,9 @@ def mask_contact(v):
     return s[:2] + "****" + s[-1:]
 
 
+ITEMS_CACHE = {"key": "", "at": 0.0, "raw": b"", "etag": ""}
+ITEMS_CACHE_LOCK = threading.Lock()
+
 CHECK_CACHE = {}
 
 
@@ -1072,6 +1076,9 @@ def public_item(it, owner=None):
         out["contact"] = {}
     # 告诉前端「这条是不是我自己发的」，避免让用户去认领自己的东西
     out["isMine"] = bool(owner and it.get("ownerToken") == owner)
+    if it.get("photo"):
+        out["photoUrl"] = "/api/photo/" + str(it.get("id"))
+    out.pop("photo", None)
     return out
 
 
@@ -1674,8 +1681,53 @@ class Handler(BaseHTTPRequestHandler):
                                "queue": st.get("state") or "", "position": pos,
                                "item": item if item.get("status") != "pending" else None})
 
+        if path.startswith("/api/photo/"):
+            item_id = path[len("/api/photo/"):]
+            with LOCK:
+                items = load_items()
+            it = next((x for x in items if x.get("id") == item_id), None)
+            if not it:
+                return self._send(404, b"not found", "text/plain; charset=utf-8")
+            if it.get("status") not in PUBLIC_STATUS and not self._is_admin():
+                return self._send(403, b"forbidden", "text/plain; charset=utf-8")
+            photo = str(it.get("photo") or "")
+            if not photo:
+                return self._send(404, b"no photo", "text/plain; charset=utf-8")
+            try:
+                raw = base64.b64decode(photo.split(",", 1)[-1])
+            except Exception:
+                return self._send(404, b"bad photo", "text/plain; charset=utf-8")
+            etag = '"' + hashlib.md5(raw).hexdigest() + '"'
+            if self.headers.get("If-None-Match") == etag:
+                self.send_response(304)
+                self.send_header("ETag", etag)
+                self.end_headers()
+                return
+            return self._send(200, raw, "image/jpeg",
+                              {"ETag": etag, "Cache-Control": "public, max-age=31536000"})
+
         if path == "/api/items":
             owner = self._owner()
+            try:
+                _qs0 = parse_qs(urlparse(self.path).query)
+                _limit0 = int((_qs0.get("limit") or ["0"])[0] or 0)
+            except Exception:
+                _limit0 = 0
+            _ckey = (owner or "") + "|" + str(_limit0)
+            with ITEMS_CACHE_LOCK:
+                _hit = (ITEMS_CACHE["key"] == _ckey and time.time() - ITEMS_CACHE["at"] < 3)
+                _craw, _cetag = ITEMS_CACHE["raw"], ITEMS_CACHE["etag"]
+            if _hit:
+                if self.headers.get("If-None-Match") == _cetag:
+                    self.send_response(304)
+                    self.send_header("ETag", _cetag)
+                    self.send_header("Cache-Control", "public, max-age=5")
+                    self.send_header("Vary", "X-Owner")
+                    self.end_headers()
+                    return
+                return self._send(200, _craw, "application/json; charset=utf-8",
+                                  {"ETag": _cetag, "Cache-Control": "public, max-age=5",
+                                   "Vary": "X-Owner"})
             with LOCK:
                 items = [public_item(x, owner) for x in load_items()
                          if x.get("status") in PUBLIC_STATUS]
@@ -1696,6 +1748,8 @@ class Handler(BaseHTTPRequestHandler):
                 pass
             raw = json.dumps(items, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
             etag = '"' + hashlib.md5(raw + (owner or "").encode("utf-8")).hexdigest() + '"'
+            with ITEMS_CACHE_LOCK:
+                ITEMS_CACHE.update({"key": _ckey, "at": time.time(), "raw": raw, "etag": etag})
             if self.headers.get("If-None-Match") == etag:
                 self.send_response(304)
                 self.send_header("ETag", etag)
@@ -1895,6 +1949,9 @@ class Handler(BaseHTTPRequestHandler):
                 x["phoneStatus"] = _c["status"]
                 x["phoneType"] = _c["type"]
                 x["phoneReason"] = _c["reason"]
+                if x.get("photo"):
+                    x["photoUrl"] = "/api/photo/" + str(x.get("id"))
+                    x["photo"] = None
             items.sort(key=lambda x: x.get("createdAt") or 0, reverse=True)
             return self._json(items)
 
