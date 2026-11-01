@@ -224,7 +224,8 @@
       '<div class="s"><b>'+counts.rejected+'</b><span>已驳回</span></div>';
 
     let list = items.slice();
-    if(tab === 'all'){ list = list.filter(x => x.status !== 'removed'); }
+    if(tab === 'phone'){ list = list.filter(x => x.phoneStatus === 'yellow' && !x.phoneVerified); }
+    else if(tab === 'all'){ list = list.filter(x => x.status !== 'removed'); }
     else { list = list.filter(x => x.status === tab); }
     if(keyword){
       const k = keyword.toLowerCase();
@@ -254,13 +255,17 @@
     } else if(it.status === 'removed'){
       acts = '<button class="btn ok" data-approve="'+esc(it.id)+'">恢复上架</button>';
     }
+    if(it.phoneStatus === 'yellow' && !it.phoneVerified){
+      acts = '<button class="btn ok" data-phone-approve="'+esc(it.id)+'">通过号码</button>' + acts;
+    }
     return '<div class="item">'+
       '<div class="row1">'+
         '<span class="tag '+(it.type === 'lost' ? '' : 'found')+'">'+typeName+'</span>'+
         '<span class="status st-'+esc(it.status)+'">'+esc(statusText(it.status))+'</span>'+
         (it.autoApproved ? '<span class="status" style="background:#e6f4ea;color:#2f7d46">AI 自动通过</span>' : '')+
         (it.autoRejected ? '<span class="status" style="background:#fdeaea;color:#a12f2f">AI 自动拦截</span>' : '')+
-        (it.phoneStatus === 'yellow' ? '<span class="status" style="background:#fff4d6;color:#a97a00" title="'+esc(it.phoneReason||'')+'">⚠️ 号码存疑</span>' : '')+
+        (it.phoneStatus === 'yellow' && !it.phoneVerified ? '<span class="status" style="background:#fff4d6;color:#a97a00" title="'+esc(it.phoneReason||'')+'">📞 号码待确认</span>' : '')+
+        (it.phoneStatus === 'yellow' && it.phoneVerified ? '<span class="status" style="background:#e6f4ea;color:#2f7d46">号码已人工确认</span>' : '')+
         (it.phoneStatus === 'red' ? '<span class="status" style="background:#fdeaea;color:#a12f2f" title="'+esc(it.phoneReason||'')+'">📵 号码无效</span>' : '')+
         '<div class="tt">'+esc(it.title)+'</div>'+
       '</div>'+
@@ -483,11 +488,20 @@
     if(tab === 'users'){ loadAccounts(); return; }
     if(tab === 'overview'){ loadStats(); return; }
     if(tab === 'announce'){ loadAnnouncements(); return; }
+    if(tab === 'phone'){ load(); return; }
     render();
   });
   $('search').addEventListener('input', e => { keyword = e.target.value.trim(); render(); });
 
   $('list').addEventListener('click', e => {
+    const pa = e.target.closest('[data-phone-approve]');
+    if(pa){
+      const id = pa.getAttribute('data-phone-approve');
+      if(!confirm('确认这个号码是真实可用的？')) return;
+      api('/api/admin/items/' + encodeURIComponent(id) + '/phone-approve', {method:'POST'})
+        .then(load).catch(function(err){ alert(err.message); });
+      return;
+    }
     const banBtn = e.target.closest('[data-ban]');
     if(banBtn){
       const id = banBtn.getAttribute('data-ban');

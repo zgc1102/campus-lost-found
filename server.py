@@ -1889,6 +1889,22 @@ class Handler(BaseHTTPRequestHandler):
             return self._json({"ok": True, "hasUpdate": True,
                                "msg": "发现新版本，正在更新，约 10 秒后自动刷新"})
 
+        if path.startswith("/api/admin/items/") and path.endswith("/phone-approve"):
+            if not self._need_admin():
+                return
+            item_id = path[len("/api/admin/items/"):-len("/phone-approve")]
+            with LOCK:
+                items = load_items()
+                it = next((x for x in items if x.get("id") == item_id), None)
+                if not it:
+                    return self._json({"error": "not found"}, 404)
+                it["phoneStatus"] = "green"
+                it["phoneVerified"] = True
+                it["phoneReviewRequested"] = False
+                it["updatedAt"] = now_ms()
+                save_items(items)
+            return self._json({"ok": True})
+
         if path == "/api/admin/recheck-images":
             if not self._need_admin():
                 return
@@ -2403,9 +2419,12 @@ class Handler(BaseHTTPRequestHandler):
                 if _chk["status"] == "red":
                     return self._json({"error": "电话号码不正确：" + _chk["reason"]}, 400)
                 if (_chk["status"] == "yellow" and not body.get("phoneConfirmed")
+                        and not body.get("phoneReviewRequested")
                         and item.get("type") != "help"):
                     return self._json({"error": "电话号码需要确认：" + _chk["reason"],
                                        "needConfirm": True}, 400)
+                if _chk["status"] == "yellow" and body.get("phoneReviewRequested"):
+                    item["phoneReviewRequested"] = True
                 item["contact"]["phone"] = _chk["normalized"] or _ph
                 item["phoneStatus"] = _chk["status"]
                 item["phoneType"] = _chk["type"]
@@ -2473,10 +2492,11 @@ class Handler(BaseHTTPRequestHandler):
                 ai = guarded_review(item)
                 item = apply_ai_decision(item, ai, cfg)
                 if item.get("photo") and not vision_ok and item.get("status") == "approved":
-                    item["status"] = "pending"
+                    item["status"] = "rejected"
+                    item["autoRejected"] = False
                     item["reviewedBy"] = "system"
                     item["reviewedAt"] = now_ms()
-                    item["rejectReason"] = "图片审核未完成，转人工复核"
+                    item["rejectReason"] = "图片审核未完成，请换一张更清晰的图重新提交一次"
             except Exception:
                 ai = {"source": "fallback", "decision": "review", "score": 50,
                       "reason": "审核排队中，请稍后查看"}

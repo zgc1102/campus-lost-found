@@ -1379,6 +1379,7 @@ document.querySelector('[data-close-sheet]').onclick=()=>document.getElementById
 /* ============ 发布启事（v3.0） ============ */
 let pendingPhoto = null;
 let pendingFields = null;
+let phoneManualRequest = false;
 let pendingSummary = '';
 let photoBusy = false;
 let photoSeq = 0;
@@ -1645,6 +1646,7 @@ function resetPublishForm(){
   if(!f) return;
   f.reset();
   pendingPhoto = null; pendingFields = null; pendingSummary = '';
+  phoneManualRequest = false;
   const pp = document.getElementById('photoPreview'); if(pp) pp.innerHTML = '';
   const pi = document.getElementById('photoInput'); if(pi) pi.value = '';
   const dc = document.getElementById('descCount'); if(dc) dc.textContent = '0';
@@ -1812,10 +1814,12 @@ document.getElementById('publishForm').onsubmit = async function(e){
     else if(pchk.status === 'yellow'){
       const cb = document.getElementById('phoneConfirm');
       if(!cb || !cb.checked){
-        if(confirm('这个号码 ' + phone + ' 有连续重复，确认是你本人的常用号码吗？')){
+        if(phoneManualRequest){
+          /* 已申请人工确认，允许提交 */
+        }else if(confirm('这个号码 ' + phone + ' 有连续重复，确认是你本人的常用号码吗？')){
           if(cb) cb.checked = true;
         } else {
-          setErr('phone', '请先确认这个号码是你本人的');
+          setErr('phone', '请先确认这个号码是你本人的，或点「申请人工确认」');
           bad++;
         }
       }
@@ -1862,6 +1866,7 @@ document.getElementById('publishForm').onsubmit = async function(e){
     fields: pendingFields || null,
     summary: pendingSummary || '',
     phoneConfirmed: !!(document.getElementById('phoneConfirm') || {}).checked,
+    phoneReviewRequested: !!phoneManualRequest,
     contact: { phone: phone },
     status: API_BASE ? 'pending' : 'approved',
     rejectReason: '',
@@ -2276,7 +2281,11 @@ function bindPhoneHint(input, hint, confirmWrap, confirmBox){
       input.style.borderColor = '#e8a0a0';
     }
     if(confirmWrap) confirmWrap.style.display = (r.status === 'yellow') ? 'block' : 'none';
-    if(confirmBox && r.status !== 'yellow') confirmBox.checked = false;
+    const ml = document.getElementById('phoneManualLine');
+    if(ml && input === document.querySelector('#publishForm input[name="phone"]')){
+      ml.style.display = (r.status === 'yellow') ? 'block' : 'none';
+    }
+    if(confirmBox && r.status !== 'yellow'){ confirmBox.checked = false; phoneManualRequest = false; }
     return r;
   };
   input.addEventListener('input', function(){
@@ -2294,6 +2303,13 @@ bindPhoneHint(document.querySelector('#publishForm input[name="phone"]'), docume
               document.getElementById('phoneConfirmWrap'), document.getElementById('phoneConfirm'));
 bindPhoneHint(document.getElementById('claimPhone'), document.getElementById('claimPhoneHint'));
 bindPhoneHint(document.getElementById('helpPhone'), document.getElementById('helpPhoneHint'));
+
+document.getElementById('phoneManual').onclick = function(){
+  phoneManualRequest = true;
+  const cb = document.getElementById('phoneConfirm');
+  if(cb) cb.checked = false;
+  toast('已申请人工确认，可以直接提交');
+};
 
 /* 黄色号码：离开输入框就弹确认，不用等提交 */
 (function(){
