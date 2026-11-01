@@ -1832,6 +1832,30 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         path = unquote(urlparse(self.path).path)
 
+        if path == "/api/admin/import":
+            if not self._need_admin():
+                return
+            body = self._read_body()
+            result = {}
+            with LOCK:
+                if isinstance(body.get("items"), list):
+                    save_items(body["items"])
+                    result["items"] = len(body["items"])
+                if isinstance(body.get("claims"), list):
+                    save_claims(body["claims"])
+                    result["claims"] = len(body["claims"])
+                if isinstance(body.get("notices"), list):
+                    save_notices(body["notices"])
+                    result["notices"] = len(body["notices"])
+                if isinstance(body.get("accounts"), list):
+                    save_accounts(body["accounts"])
+                    result["accounts"] = len(body["accounts"])
+                if isinstance(body.get("announcements"), list):
+                    save_announcements(body["announcements"])
+                    result["announcements"] = len(body["announcements"])
+            return self._json({"ok": True, "imported": result})
+
+
         if path == "/api/phone/check":
             body = self._read_body()
             return self._json(phone_check(body.get("phone")))
