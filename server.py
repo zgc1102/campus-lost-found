@@ -2367,6 +2367,12 @@ class Handler(BaseHTTPRequestHandler):
                     "createdAt": now_ms(),
                     "updatedAt": now_ms(),
                 }
+                try:
+                    _chk0 = claim_ai_check(target, claim)
+                    if _chk0:
+                        claim["aiCheck"] = _chk0
+                except Exception:
+                    pass
                 claims.append(claim)
                 save_claims(claims)
                 notices = load_notices()
