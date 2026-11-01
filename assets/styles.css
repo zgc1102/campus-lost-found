@@ -312,6 +312,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .cert-acts{display:flex;gap:8px;margin-top:16px;}
 .cert-acts .btn{flex:1;}
 
+/* ===== AI 识别中提示 ===== */
+.ai-busy{position:fixed;left:50%;top:14px;transform:translate(-50%,-90px);z-index:600;background:#3b1d63;color:#fff;padding:10px 16px;border-radius:99px;font-size:13px;display:flex;align-items:center;gap:8px;box-shadow:0 8px 24px rgba(60,30,90,.3);opacity:0;transition:transform .25s ease,opacity .25s ease;pointer-events:none;}
+.ai-busy.show{transform:translate(-50%,0);opacity:1;}
+.ai-spin{width:14px;height:14px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
 /* ===== 失物热力 ===== */
 .heat-panel{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px;}
 .heat-head{display:flex;justify-content:space-between;align-items:center;font-size:13.5px;font-weight:700;}

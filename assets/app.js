@@ -455,18 +455,37 @@ function renderHeat(){
   }
 }
 
-function show(name){
+function activate(name){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   const el=document.getElementById('screen-'+name);
-  if(el){ el.classList.add('active'); if(stack[stack.length-1]!==name) stack.push(name); const sc=el.querySelector('.scroll'); if(sc) sc.scrollTop=0; if(name==='map') renderHeat(); }
+  if(!el) return;
+  el.classList.add('active');
+  const sc=el.querySelector('.scroll'); if(sc) sc.scrollTop=0;
+  if(name==='map') renderHeat();
+}
+function show(name){
+  const cur=document.querySelector('.screen.active');
+  if(cur && cur.id==='screen-'+name) return;
+  activate(name);
+  if(stack[stack.length-1]!==name) stack.push(name);
+  try{ history.pushState({screen:name}, '', '#'+name); }catch(e){}
 }
 function back(){
-  stack.pop();
-  const prev = stack[stack.length-1] || 'home';
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById('screen-'+prev).classList.add('active');
+  history.back();
 }
+window.addEventListener('popstate', function(){
+  const name=(location.hash || '#home').replace('#','') || 'home';
+  stack.length = 0;
+  stack.push(name);
+  activate(name);
+});
 function toast(msg){const n=document.getElementById('note');n.textContent=msg;n.classList.add('show');setTimeout(()=>n.classList.remove('show'),1400);}
+function aiBusy(on, text){
+  const el = document.getElementById('aiBusy');
+  if(!el) return;
+  if(text){ const t = document.getElementById('aiBusyText'); if(t) t.textContent = text; }
+  el.classList.toggle('show', !!on);
+}
 
 /* ============ 渲染：列表 ============ */
 function itemHTML(it, srcLabel){
@@ -1468,7 +1487,9 @@ document.getElementById('photoInput').onchange = function(){
       hint.textContent = 'AI 正在识别图片…';
       box.appendChild(hint);
       const raw = String(d).split(',')[1] || '';
+      aiBusy(true, 'AI 正在识别图片，请稍候…');
       Net.vision(raw, 'image/jpeg').then(function(r){
+        aiBusy(false);
         if(seq !== photoSeq) return;
         const h = document.getElementById('visionHint');
         if(!r || !r.ok){
@@ -1489,6 +1510,7 @@ document.getElementById('photoInput').onchange = function(){
           h.textContent = 'AI 识别：' + [r.color, r.category, r.features].filter(Boolean).join(' · ') + '（可修改）';
         }
       }).catch(function(){
+        aiBusy(false);
         const h = document.getElementById('visionHint');
         if(h) h.textContent = 'AI 识别失败，可手动填写分类和描述';
       });
@@ -1597,7 +1619,7 @@ document.getElementById('quickPhotoInput').onchange = async function(){
   pendingPhoto = data;
   document.getElementById('photoPreview').innerHTML =
     '<img src="' + data + '" alt="预览" style="width:100%;max-height:170px;object-fit:cover;border-radius:10px;margin-top:8px">';
-  toast('AI 正在看这张图…');
+  aiBusy(true, 'AI 正在识别图片，请稍候…');
   try{
     const raw = String(data).split(',')[1] || '';
     const r = await Net.vision(raw, 'image/jpeg');
@@ -1618,6 +1640,8 @@ document.getElementById('quickPhotoInput').onchange = async function(){
     }
   }catch(e){
     toast('AI 识别失败，照片已带上，手动补个名称');
+  }finally{
+    aiBusy(false);
   }
 };
 
@@ -1733,7 +1757,14 @@ document.getElementById('publishForm').onsubmit = async function(e){
     if(pchk.status === 'red'){ setErr('phone', '电话号不正确：' + pchk.reason); bad++; }
     else if(pchk.status === 'yellow'){
       const cb = document.getElementById('phoneConfirm');
-      if(!cb || !cb.checked){ setErr('phone', '请先勾选「我确认这是本人常用号码」'); bad++; }
+      if(!cb || !cb.checked){
+        if(confirm('这个号码 ' + phone + ' 有连续重复，确认是你本人的常用号码吗？')){
+          if(cb) cb.checked = true;
+        } else {
+          setErr('phone', '请先确认这个号码是你本人的');
+          bad++;
+        }
+      }
     }
   }
 
@@ -2209,6 +2240,26 @@ bindPhoneHint(document.querySelector('#publishForm input[name="phone"]'), docume
               document.getElementById('phoneConfirmWrap'), document.getElementById('phoneConfirm'));
 bindPhoneHint(document.getElementById('claimPhone'), document.getElementById('claimPhoneHint'));
 bindPhoneHint(document.getElementById('helpPhone'), document.getElementById('helpPhoneHint'));
+
+/* 黄色号码：离开输入框就弹确认，不用等提交 */
+(function(){
+  const input = document.querySelector('#publishForm input[name="phone"]');
+  if(!input) return;
+  let asked = '';
+  input.addEventListener('blur', function(){
+    setTimeout(function(){
+      const v = input.value.trim();
+      if(!v || v === asked) return;
+      const r = phoneCheckLocal(v);
+      if(r.status !== 'yellow') return;
+      asked = v;
+      if(confirm('这个号码 ' + v + ' 有连续重复，确认是你本人的常用号码吗？')){
+        const cb = document.getElementById('phoneConfirm');
+        if(cb) cb.checked = true;
+      }
+    }, 350);
+  });
+})();
 
 /* ===== 归还证书 ===== */
 function fmtDuration(ms){

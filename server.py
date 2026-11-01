@@ -493,6 +493,8 @@ def ai_llm(it, cfg, timeout=25):
         it.get("title") or "", "寻物" if it.get("type") == "lost" else "招领",
         it.get("place") or "", it.get("desc") or "", it.get("secret") or "",
     )
+    if it.get("visionDesc"):
+        user_text += "\n图片识别：%s" % it.get("visionDesc")
     payload = {
         "model": cfg.get("model") or "deepseek-flash",
         "temperature": 0,
@@ -607,8 +609,9 @@ def ai_binary(it, cfg, timeout=12):
         "temperature": 0,
         "messages": [
             {"role": "system", "content": AI_BINARY_PROMPT},
-            {"role": "user", "content": "标题：%s\n描述：%s\n地点：%s" % (
-                it.get("title") or "", it.get("desc") or "", it.get("place") or "")},
+            {"role": "user", "content": "标题：%s\n描述：%s\n地点：%s%s" % (
+                it.get("title") or "", it.get("desc") or "", it.get("place") or "",
+                ("\n图片识别：" + it["visionDesc"]) if it.get("visionDesc") else "")},
         ],
     }
     data = None
@@ -2349,8 +2352,18 @@ class Handler(BaseHTTPRequestHandler):
             except Exception:
                 reject_at = 80
             # 预检命中：直接判定，用户马上拿到结果
+            if item.get("photo") and cfg.get("enabled"):
+                try:
+                    _raw = str(item["photo"]).split(",")[-1]
+                    _v = vision_analyze(_raw, "image/jpeg")
+                    if _v.get("ok"):
+                        item["visionDesc"] = "；".join(
+                            [str(x) for x in (_v.get("category"), _v.get("color"),
+                                              _v.get("features"), _v.get("desc")) if x])[:300]
+                except Exception:
+                    pass
             check_id = body.get("checkId")
-            cached = CHECK_CACHE.get(check_id) if check_id else None
+            cached = CHECK_CACHE.get(check_id) if (check_id and not item.get("visionDesc")) else None
             if cached and cached.get("owner") == owner and time.time() - cached.get("at", 0) < 600:
                 ai = cached.get("ai") or review_item(item)
                 CHECK_CACHE.pop(check_id, None)
