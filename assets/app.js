@@ -206,6 +206,7 @@ const Net = {
     const txt = await r.text();
     return txt ? JSON.parse(txt) : null;
   },
+  reviewStatus(id){ return this.call('/items/' + encodeURIComponent(id) + '/status'); },
   list(){ return this.call('/items'); },
   mine(){ return this.call('/mine'); },
   sync(){ return this.call('/sync'); },
@@ -1644,6 +1645,33 @@ document.getElementById('okMine').onclick = function(){
   show('mine');
 };
 
+function wait(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+
+async function showQueued(ticket){
+  document.getElementById('okTitle').textContent = '已收下，正在排队审核';
+  const note = document.getElementById('okNote');
+  if(note) note.textContent = '现在同时发布的人有点多，系统按顺序审核。你可以留在这里，审完会自动更新。';
+  const meta = document.getElementById('okMeta');
+  const setMeta = function(pos, eta){
+    meta.textContent = '前面还有 ' + (pos > 0 ? pos : 0) + ' 人 · 预计 ' + (eta || pos * 2 || 2) + ' 秒';
+  };
+  setMeta(ticket.position || 1, ticket.eta);
+  const hint2 = document.getElementById('okTypeHint');
+  if(hint2){ hint2.style.display = 'none'; hint2.innerHTML = ''; }
+  if(stack[stack.length-1] === 'publish') stack.pop();
+  show('success');
+  const deadline = Date.now() + 45000;
+  while(Date.now() < deadline){
+    await wait(1500);
+    try{
+      const st = await Net.reviewStatus(ticket.id);
+      if(st.queue === 'queued' || st.queue === 'reviewing') setMeta(st.position || 0, (st.position || 0) * 2);
+      if(st.status && st.status !== 'pending' && st.item){ showSuccess(st.item); return; }
+    }catch(e){}
+  }
+  meta.textContent = '审核还在进行，完成后会在「我的发布」里显示';
+}
+
 function showSuccess(item, isEdit){
   const approved = item && item.status === 'approved';
   const rejected = item && item.status === 'rejected';
@@ -1862,6 +1890,18 @@ async function finishSubmit(item, checkId, form){
     if(btn){ btn.disabled = true; btn.textContent = '发布中…'; }
     try{
       const fromServer = await Net.create(Object.assign({}, item, {checkId: checkId || ''}));
+      if(fromServer && fromServer.queued){
+        if(btn){ btn.disabled = false; btn.textContent = '提交发布（提交后进入审核）'; }
+        if(retypeOldId){ Net.remove(retypeOldId).catch(function(){}); retypeOldId = null; }
+        if(form) form.reset();
+        pendingPhoto = null;
+        document.getElementById('photoPreview').innerHTML = '';
+        document.getElementById('descCount').textContent = '0';
+        Store.remove(item.id);
+        netSync().catch(function(){});
+        showQueued(fromServer);
+        return;
+      }
       if(fromServer && fromServer.id) saved = fromServer;
       await netSync();
     }catch(err){

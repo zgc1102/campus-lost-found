@@ -11,6 +11,8 @@ import hashlib
 import json
 import math
 import os
+import collections
+import queue
 import random
 import re
 import socket
@@ -789,6 +791,29 @@ def phone_check(raw):
 # ================= 发布侧稳定性 =================
 AI_SEM = threading.BoundedSemaphore(8)
 AI_STATS = {"reviews": 0, "fail": 0, "total_ms": 0}
+INFLIGHT = {"n": 0}
+INFLIGHT_LOCK = threading.Lock()
+ARRIVALS = collections.deque()
+ARRIVALS_LOCK = threading.Lock()
+
+
+def note_arrival():
+    now = time.time()
+    with ARRIVALS_LOCK:
+        ARRIVALS.append(now)
+        while ARRIVALS and now - ARRIVALS[0] > 10:
+            ARRIVALS.popleft()
+        return len(ARRIVALS)
+
+
+def should_queue():
+    with QUEUE_LOCK:
+        qlen = sum(1 for v in QUEUE_STATE.values() if v.get("state") in ("queued", "reviewing"))
+    with INFLIGHT_LOCK:
+        busy = INFLIGHT["n"]
+    with ARRIVALS_LOCK:
+        recent = len(ARRIVALS)
+    return qlen >= 3 or busy >= 6 or recent >= 6
 RATE = {}
 RATE_LOCK = threading.Lock()
 
@@ -798,10 +823,10 @@ def rate_allow(owner):
     now = time.time()
     with RATE_LOCK:
         arr = [t for t in RATE.get(owner, []) if now - t < 3600]
-        if sum(1 for t in arr if now - t < 60) >= 3:
-            return False, "发布太频繁了，歇 1 分钟再试"
-        if len(arr) >= 10:
-            return False, "1 小时内最多发布 10 条，明天再来吧"
+        if sum(1 for t in arr if now - t < 60) >= 20:
+            return False, "你发得有点快，歇 1 分钟再试"
+        if len(arr) >= 60:
+            return False, "今天发得有点多，明天再来吧"
         arr.append(now)
         RATE[owner] = arr
     return True, ""
@@ -810,20 +835,135 @@ def rate_allow(owner):
 def guarded_review(item):
     """带并发上限、重试和计时的审核"""
     t0 = time.time()
+    with INFLIGHT_LOCK:
+        INFLIGHT["n"] += 1
     last = None
-    for attempt in range(2):
+    try:
+        for attempt in range(2):
+            try:
+                with AI_SEM:
+                    ai = review_item(item)
+                AI_STATS["reviews"] += 1
+                AI_STATS["total_ms"] += int((time.time() - t0) * 1000)
+                return ai
+            except Exception as e:
+                last = e
+                time.sleep(0.8 + attempt * 1.2)
+        AI_STATS["fail"] += 1
+        AI_STATS["total_ms"] += int((time.time() - t0) * 1000)
+        raise last if last else RuntimeError("review failed")
+    finally:
+        with INFLIGHT_LOCK:
+            INFLIGHT["n"] -= 1
+
+
+
+# ================= 审核队列 =================
+REVIEW_QUEUE = queue.Queue()
+QUEUE_STATE = {}
+QUEUE_LOCK = threading.Lock()
+
+
+def queue_add(item_id):
+    with QUEUE_LOCK:
+        QUEUE_STATE[item_id] = {"state": "queued", "at": time.time()}
+    REVIEW_QUEUE.put(item_id)
+
+
+def queue_position(item_id):
+    with QUEUE_LOCK:
+        order = list(QUEUE_STATE.keys())
+        if item_id not in order:
+            return 0
+        idx = order.index(item_id)
+        ahead = sum(1 for k in order[:idx]
+                    if QUEUE_STATE.get(k, {}).get("state") in ("queued", "reviewing"))
+    return ahead + 1
+
+
+def apply_ai_decision(item, ai, cfg):
+    try:
+        approve_at = int(cfg.get("approve_threshold") or 0)
+    except Exception:
+        approve_at = 20
+    try:
+        reject_at = int(cfg.get("reject_threshold") or 80)
+    except Exception:
+        reject_at = 80
+    item["ai"] = ai
+    ai_trusted = ai.get("source") == "llm"
+    scope_hits = scope_violation(item)
+    if (ai_trusted and item.get("type") in ("lost", "found")
+            and ai.get("guessType") and ai["guessType"] != item.get("type")):
+        item["typeSuggestion"] = ai["guessType"]
+    if scope_hits:
+        item["status"] = "rejected"
+        item["autoRejected"] = True
+        item["rejectReason"] = "标题含交友/招嫖暗示（%s），不属于失物招领范围" % "、".join(scope_hits)
+        item["ai"]["decision"] = "reject"
+        item["ai"]["score"] = max(int(item["ai"].get("score") or 0), 85)
+        item["ai"]["reason"] = ((item["ai"].get("reason") or "") + "；标题范围检查命中：" + "、".join(scope_hits)).strip("；")
+        item["reviewedBy"] = "AI"
+        item["reviewedAt"] = now_ms()
+    elif (ai_trusted and cfg.get("auto_approve") and ai.get("decision") == "approve"
+            and int(ai.get("score") or 0) <= approve_at):
+        item["status"] = "approved"
+        item["autoApproved"] = True
+        item["reviewedBy"] = "AI"
+        item["reviewedAt"] = now_ms()
+    elif (ai_trusted and cfg.get("auto_reject") and ai.get("decision") == "reject"
+            and int(ai.get("score") or 0) >= reject_at):
+        item["status"] = "rejected"
+        item["autoRejected"] = True
+        item["rejectReason"] = "AI 自动拦截：" + (ai.get("reason") or "疑似违规内容")
+        item["reviewedBy"] = "AI"
+        item["reviewedAt"] = now_ms()
+    elif not ai_trusted:
+        item["status"] = "rejected"
+        item["rejectReason"] = "审核系统暂时不可用，内容没有公开，请稍后重新提交"
+        item["ai"]["fallback"] = True
+        item["reviewedBy"] = "system"
+        item["reviewedAt"] = now_ms()
+    return item
+
+
+def review_worker():
+    while True:
+        item_id = REVIEW_QUEUE.get()
         try:
-            with AI_SEM:
-                ai = review_item(item)
-            AI_STATS["reviews"] += 1
-            AI_STATS["total_ms"] += int((time.time() - t0) * 1000)
-            return ai
-        except Exception as e:
-            last = e
-            time.sleep(0.8 + attempt * 1.2)
-    AI_STATS["fail"] += 1
-    AI_STATS["total_ms"] += int((time.time() - t0) * 1000)
-    raise last if last else RuntimeError("review failed")
+            with QUEUE_LOCK:
+                if item_id in QUEUE_STATE:
+                    QUEUE_STATE[item_id]["state"] = "reviewing"
+            with LOCK:
+                items = load_items()
+                item = next((x for x in items if x.get("id") == item_id), None)
+            if not item:
+                continue
+            cfg = load_ai_config()
+            ai = guarded_review(item)
+            item = apply_ai_decision(item, ai, cfg)
+            with LOCK:
+                items = load_items()
+                for i, x in enumerate(items):
+                    if x.get("id") == item_id:
+                        items[i] = item
+                        break
+                save_items(items)
+            try:
+                run_matching()
+            except Exception:
+                pass
+        except Exception:
+            pass
+        finally:
+            with QUEUE_LOCK:
+                QUEUE_STATE[item_id] = {"state": "done", "at": time.time()}
+            REVIEW_QUEUE.task_done()
+
+
+def start_review_workers(n=2):
+    for _ in range(n):
+        threading.Thread(target=review_worker, daemon=True).start()
 
 
 def mask_contact(v):
@@ -1421,6 +1561,21 @@ class Handler(BaseHTTPRequestHandler):
                                "ai": {"reviews": AI_STATS["reviews"],
                                       "fail": AI_STATS["fail"],
                                       "avgMs": int(avg)}})
+
+        if path.startswith("/api/items/") and path.endswith("/status"):
+            owner = self._owner()
+            item_id = path[len("/api/items/"):-len("/status")]
+            with LOCK:
+                items = load_items()
+                item = next((x for x in items if x.get("id") == item_id), None)
+            if not item or (item.get("ownerToken") != owner):
+                return self._json({"error": "not found"}, 404)
+            with QUEUE_LOCK:
+                st = dict(QUEUE_STATE.get(item_id) or {})
+            pos = queue_position(item_id) if st.get("state") in ("queued", "reviewing") else 0
+            return self._json({"id": item_id, "status": item.get("status"),
+                               "queue": st.get("state") or "", "position": pos,
+                               "item": item if item.get("status") != "pending" else None})
 
         if path == "/api/items":
             owner = self._owner()
@@ -2153,53 +2308,45 @@ class Handler(BaseHTTPRequestHandler):
                 reject_at = int(cfg.get("reject_threshold") or 80)
             except Exception:
                 reject_at = 80
-            # 前端先做过预检就把结果直接用掉，没做过就现算
+            # 预检命中：直接判定，用户马上拿到结果
             check_id = body.get("checkId")
             cached = CHECK_CACHE.get(check_id) if check_id else None
             if cached and cached.get("owner") == owner and time.time() - cached.get("at", 0) < 600:
                 ai = cached.get("ai") or review_item(item)
                 CHECK_CACHE.pop(check_id, None)
-            else:
+                item = apply_ai_decision(item, ai, cfg)
+                with LOCK:
+                    items_all = load_items()
+                    items_all.append(item)
+                    save_items(items_all)
+                try:
+                    run_matching()
+                except Exception:
+                    pass
+                return self._json(item, 201)
+            # 没预检：根据当前压力决定排队还是立即审
+            note_arrival()
+            if should_queue():
+                with LOCK:
+                    items_all = load_items()
+                    items_all.append(item)
+                    save_items(items_all)
+                queue_add(item["id"])
+                pos = queue_position(item["id"])
+                return self._json({"id": item["id"], "status": "pending", "queued": True,
+                                   "position": pos, "eta": pos * 2}, 202)
+            try:
                 ai = guarded_review(item)
-            item["ai"] = ai
-            ai_trusted = ai.get("source") == "llm"
-            scope_hits = scope_violation(item)
-            # 用户可能把「丢了」和「捡到」写反，AI 看出来就提示（仍按用户选的类型发布）
-            if (ai_trusted and item["type"] in ("lost", "found")
-                    and ai.get("guessType") and ai["guessType"] != item["type"]):
-                item["typeSuggestion"] = ai["guessType"]
-            if scope_hits:
-                item["status"] = "rejected"
-                item["autoRejected"] = True
-                item["rejectReason"] = "标题含交友/招嫖暗示（%s），不属于失物招领范围" % "、".join(scope_hits)
-                item["ai"]["decision"] = "reject"
-                item["ai"]["score"] = max(int(item["ai"].get("score") or 0), 85)
-                item["ai"]["reason"] = ((item["ai"].get("reason") or "") + "；标题范围检查命中：" + "、".join(scope_hits)).strip("；")
-                item["reviewedBy"] = "AI"
-                item["reviewedAt"] = now_ms()
-            elif (ai_trusted and cfg.get("auto_approve") and ai.get("decision") == "approve"
-                    and int(ai.get("score") or 0) <= approve_at):
-                item["status"] = "approved"
-                item["autoApproved"] = True
-                item["reviewedBy"] = "AI"
-                item["reviewedAt"] = now_ms()
-            elif (ai_trusted and cfg.get("auto_reject") and ai.get("decision") == "reject"
-                    and int(ai.get("score") or 0) >= reject_at):
-                item["status"] = "rejected"
-                item["autoRejected"] = True
-                item["rejectReason"] = "AI 自动拦截：" + (ai.get("reason") or "疑似违规内容")
-                item["reviewedBy"] = "AI"
-                item["reviewedAt"] = now_ms()
-            elif not ai_trusted:
-                item["status"] = "rejected"
-                item["rejectReason"] = "审核系统暂时不可用，内容没有公开，请稍后重新提交"
-                item["ai"]["fallback"] = True
-                item["reviewedBy"] = "system"
-                item["reviewedAt"] = now_ms()
+                item = apply_ai_decision(item, ai, cfg)
+            except Exception:
+                ai = {"source": "fallback", "decision": "review", "score": 50,
+                      "reason": "审核排队中，请稍后查看"}
+                item["ai"] = ai
+                item["status"] = "pending"
             with LOCK:
-                items = load_items()
-                items.append(item)
-                save_items(items)
+                items_all = load_items()
+                items_all.append(item)
+                save_items(items_all)
             try:
                 run_matching()
             except Exception:
@@ -2814,6 +2961,7 @@ def main():
         print("端口都被占用了，请关掉其他程序后重试。")
         return
 
+    start_review_workers(2)
     pwd = ensure_admin_password()
     ips = lan_ips()
     primary = "http://%s:%d/" % (ips[0], port) if ips else None
