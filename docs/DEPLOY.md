@@ -99,7 +99,37 @@ curl https://你的域名/api/ping
 
 ---
 
-## 六、监控与备份
+## 六、加 CDN（Cloudflare，免费，10 分钟）
+
+目的：1 万人同时打开时，静态资源走 CDN，源站压力降到 1/10。
+
+1. 注册 <https://dash.cloudflare.com> → Add a site → 输入域名 → 选 Free
+2. Cloudflare 会给两个 NS 地址，去域名商后台把 NS 改成这两个
+3. 等生效（几分钟到几小时），状态变 Active
+4. SSL/TLS → Overview → 选 **Full (strict)**
+5. Rules → Cache Rules，加三条：
+
+| 路径 | 规则 |
+|---|---|
+| `/assets/*` | Cache everything，Edge TTL 1 年 |
+| `/`、`/admin`、`/*.html` | Bypass cache |
+| `/api/*` | Bypass cache（接口自己带 ETag） |
+
+6. 再跑一次压测对比：
+
+```bash
+python scripts/loadtest.py --base https://你的域名 --path / --requests 10000 --concurrency 500
+```
+
+## 七、压测
+
+```bash
+python scripts/loadtest.py --base https://你的域名 --path / --requests 10000 --concurrency 500
+```
+
+结果填进 `docs/LOADTEST.md` 的表格，答辩时直接展示。
+
+## 八、监控与备份
 
 **监控**：<https://uptimerobot.com/> → Add New Monitor → HTTP(s) → `https://你的域名/api/ping` → 5 分钟。
 
@@ -114,7 +144,7 @@ systemctl restart lostfound
 
 ---
 
-## 七、常见问题
+## 九、常见问题
 
 | 现象 | 原因 | 解决 |
 |---|---|---|
@@ -126,7 +156,7 @@ systemctl restart lostfound
 
 ---
 
-## 八、更新代码
+## 十、更新代码
 
 ```bash
 cd /opt/lostfound

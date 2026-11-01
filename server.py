@@ -21,7 +21,7 @@ import threading
 import time
 import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import unquote, urlparse
+from urllib.parse import unquote, urlparse, parse_qs
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -1372,6 +1372,11 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"ok": True, "items": len(load_items()),
                                    "uptime": int(time.time() - START_TS)})
 
+        if path == "/api/health":
+            with LOCK:
+                n = len(load_items())
+            return self._json({"ok": True, "items": n, "ts": now_ms()})
+
         if path == "/api/items":
             owner = self._owner()
             with LOCK:
@@ -1385,7 +1390,25 @@ class Handler(BaseHTTPRequestHandler):
                     _x["myClaim"] = _c.get("status")
                     _x["myClaimId"] = _c.get("id")
             items.sort(key=lambda x: x.get("createdAt") or 0, reverse=True)
-            return self._json(items)
+            try:
+                qs = parse_qs(urlparse(self.path).query)
+                limit = int((qs.get("limit") or ["0"])[0] or 0)
+                if 0 < limit < len(items):
+                    items = items[:limit]
+            except Exception:
+                pass
+            raw = json.dumps(items, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+            etag = '"' + hashlib.md5(raw + (owner or "").encode("utf-8")).hexdigest() + '"'
+            if self.headers.get("If-None-Match") == etag:
+                self.send_response(304)
+                self.send_header("ETag", etag)
+                self.send_header("Cache-Control", "public, max-age=5")
+                self.send_header("Vary", "X-Owner")
+                self.end_headers()
+                return
+            return self._send(200, raw, "application/json; charset=utf-8",
+                              {"ETag": etag, "Cache-Control": "public, max-age=5",
+                               "Vary": "X-Owner"})
 
         if path == "/api/sync":
             # 一次请求同时拿公开列表 + 我的发布，省掉一个往返（跨国线路很值钱）

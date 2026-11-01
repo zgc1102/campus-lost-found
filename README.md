@@ -96,9 +96,15 @@ campus-lost-found/
 │  └─ admin.js          # 管理端逻辑
 ├─ data/kb/             # RAG 知识库
 ├─ 公网启动器.py         # 本机启动 + 公网隧道
+├─ scripts/
+│  ├─ deploy.sh         # 云服务器一键部署
+│  └─ loadtest.py       # 并发压测
 ├─ docs/
 │  ├─ PROGRESS.md       # 开发日志
-│  └─ ARCHITECTURE.md   # 架构说明（待补）
+│  ├─ DEPLOY.md         # 部署与 CDN
+│  ├─ LOADTEST.md       # 压测与容量
+│  ├─ DEFENSE.md        # 答辩口径
+│  └─ TRIAL.md          # 试点方案
 └─ 使用说明.md
 ```
 

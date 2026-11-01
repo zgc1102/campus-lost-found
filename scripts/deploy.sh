@@ -54,13 +54,29 @@ systemctl daemon-reload
 systemctl enable lostfound
 systemctl restart lostfound
 
-echo "== 4/6 Caddy 反向代理 =="
+echo "== 4/6 Caddy：静态直出 + API 反代 =="
 cat > /etc/caddy/Caddyfile <<EOF
-$DOMAIN {
-    reverse_proxy 127.0.0.1:8000
-}
-www.$DOMAIN {
-    reverse_proxy 127.0.0.1:8000
+$DOMAIN, www.$DOMAIN {
+    encode gzip zstd
+    root * $APP_DIR
+
+    # 接口走 Python
+    @api path /api/*
+    handle @api {
+        reverse_proxy 127.0.0.1:8000
+    }
+
+    # 静态资源长缓存（文件名不变时一年）
+    @assets path /assets/*
+    header @assets Cache-Control "public, max-age=31536000, immutable"
+
+    # 页面不缓存，保证更新立即生效
+    @pages path / /用户端.html /管理端.html /admin
+    header @pages Cache-Control "no-cache"
+
+    rewrite / /用户端.html
+    rewrite /admin /管理端.html
+    file_server
 }
 EOF
 systemctl restart caddy
