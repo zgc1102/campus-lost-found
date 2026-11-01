@@ -690,6 +690,8 @@ def phone_check(raw):
     if not s0:
         return {"status": "none", "type": "none", "normalized": "", "reason": ""}
     if re.search(r"[A-Za-z]", s0):
+        if re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]{5,19}", s0):
+            return {"status": "green", "type": "wechat", "normalized": s0, "reason": ""}
         return red("包含字母")
     if re.search(r"[^\d+\-]", s0):
         return red("包含无法识别的字符")
@@ -728,7 +730,7 @@ def phone_check(raw):
         if len(set(digits)) == 1:
             return red("全部数字相同，不是有效号码")
         run = _phone_max_run(digits)
-        if run >= 6:
+        if run >= 8:
             return red("连续 %d 位数字相同，不是有效号码" % run)
         if _phone_max_seq(digits) >= 9:
             return red("连续递增/递减，不是有效号码")
@@ -742,7 +744,9 @@ def phone_check(raw):
             return red("这是常见的测试号码")
 
         yellow = ""
-        if run in (4, 5):
+        if run in (6, 7):
+            yellow = "连续 %d 位数字相同，请确认是本人常用号码" % run
+        elif run in (4, 5):
             yellow = "连续 %d 位相同，确认是本人常用号吗？" % run
         elif len(set(digits[-4:])) == 1:
             yellow = "尾号 4 位相同，确认是本人常用号吗？"
@@ -2012,6 +2016,10 @@ class Handler(BaseHTTPRequestHandler):
                 _chk = phone_check(_ph)
                 if _chk["status"] == "red":
                     return self._json({"error": "电话号码不正确：" + _chk["reason"]}, 400)
+                if (_chk["status"] == "yellow" and not body.get("phoneConfirmed")
+                        and item.get("type") != "help"):
+                    return self._json({"error": "电话号码需要确认：" + _chk["reason"],
+                                       "needConfirm": True}, 400)
                 item["contact"]["phone"] = _chk["normalized"] or _ph
                 item["phoneStatus"] = _chk["status"]
                 item["phoneType"] = _chk["type"]
@@ -2346,6 +2354,7 @@ class Handler(BaseHTTPRequestHandler):
                             _chk = phone_check(_ph)
                             if _chk["status"] == "red":
                                 return self._json({"error": "电话号码不正确：" + _chk["reason"]}, 400)
+
                             it["contact"]["phone"] = _chk["normalized"] or _ph
                             it["phoneStatus"] = _chk["status"]
                             it["phoneType"] = _chk["type"]

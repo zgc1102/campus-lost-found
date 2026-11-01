@@ -1558,6 +1558,10 @@ document.getElementById('publishForm').onsubmit = async function(e){
   if(phone){
     const pchk = phoneCheckLocal(phone);
     if(pchk.status === 'red'){ setErr('phone', '电话号不正确：' + pchk.reason); bad++; }
+    else if(pchk.status === 'yellow'){
+      const cb = document.getElementById('phoneConfirm');
+      if(!cb || !cb.checked){ setErr('phone', '请先勾选「我确认这是本人常用号码」'); bad++; }
+    }
   }
 
   if(bad){
@@ -1599,6 +1603,7 @@ document.getElementById('publishForm').onsubmit = async function(e){
     photo: pendingPhoto,
     fields: pendingFields || null,
     summary: pendingSummary || '',
+    phoneConfirmed: !!(document.getElementById('phoneConfirm') || {}).checked,
     contact: { phone: phone },
     status: API_BASE ? 'pending' : 'approved',
     rejectReason: '',
@@ -1913,7 +1918,12 @@ function phoneCheckLocal(raw){
   s = s.replace(/幺/g, '1').replace(/[〇零]/g, '0');
   s = s.replace(/[\s()（）.．]/g, '').replace(/[－—]/g, '-');
   if(!s) return {status:'none', type:'none', reason:'', normalized:''};
-  if(/[A-Za-z]/.test(s)) return {status:'red', type:'invalid', reason:'包含字母', normalized:''};
+  if(/[A-Za-z]/.test(s)){
+    if(/^[A-Za-z][A-Za-z0-9_-]{5,19}$/.test(s)){
+      return {status:'green', type:'wechat', reason:'', normalized:s};
+    }
+    return {status:'red', type:'invalid', reason:'包含字母', normalized:''};
+  }
   if(/[^\d+\-]/.test(s)) return {status:'red', type:'invalid', reason:'包含无法识别的字符', normalized:''};
 
   let work = s;
@@ -1943,13 +1953,14 @@ function phoneCheckLocal(raw){
   if(digits.length === 11 && digits[0] === '1'){
     if(new Set(digits).size === 1) return {status:'red', type:'mobile', reason:'全部数字相同，不是有效号码', normalized:''};
     const run = maxRun(digits);
-    if(run >= 6) return {status:'red', type:'mobile', reason:'连续 ' + run + ' 位数字相同，不是有效号码', normalized:''};
+    if(run >= 8) return {status:'red', type:'mobile', reason:'连续 ' + run + ' 位数字相同，不是有效号码', normalized:''};
     if(maxSeq(digits) >= 9) return {status:'red', type:'mobile', reason:'连续递增/递减，不是有效号码', normalized:''};
     if(['13800138000','12345678901','11111111111'].indexOf(digits) >= 0) return {status:'red', type:'mobile', reason:'这是常见的测试号码', normalized:''};
     if(periodic(digits) && digits.length >= 10) return {status:'red', type:'mobile', reason:'数字循环重复，不是有效号码', normalized:''};
     if(!/^1[3-9]\d{9}$/.test(digits)) return {status:'red', type:'mobile', reason:'手机号应以 13–19 开头', normalized:''};
     let warn = '';
-    if(run === 4 || run === 5) warn = '连续 ' + run + ' 位数字相同，确认是本人常用号吗？';
+    if(run === 6 || run === 7) warn = '连续 ' + run + ' 位数字相同，请确认是本人常用号码';
+    else if(run === 4 || run === 5) warn = '连续 ' + run + ' 位数字相同，确认是本人常用号吗？';
     else if(new Set(digits.slice(-4)).size === 1) warn = '尾号 4 位相同，确认是本人常用号吗？';
     else if(/^1(70|71|62|65|67)/.test(digits)) warn = '虚拟号段，建议留常用号码';
     else if(digits.indexOf('123456') >= 0 || digits.indexOf('654321') >= 0) warn = '号码含连续数字，确认无误吗？';
@@ -1962,32 +1973,45 @@ function phoneCheckLocal(raw){
   return {status:'red', type:'invalid', reason:'号码应为 11 位手机号，或带区号的座机', normalized:''};
 }
 
-function bindPhoneHint(input, hint){
+function bindPhoneHint(input, hint, confirmWrap, confirmBox){
   if(!input || !hint) return;
-  const run = function(){
+  let timer = null;
+  const apply = function(){
     const r = phoneCheckLocal(input.value.trim());
-    if(r.status === 'none'){ hint.textContent = ''; return r; }
-    if(r.status === 'green'){
-      hint.textContent = '✅ 号码格式正常' + (r.type === 'landline' ? '（座机）' : '');
+    input.style.borderColor = '';
+    if(r.status === 'none'){
+      hint.textContent = '';
+    } else if(r.status === 'green'){
+      hint.textContent = '✅ ' + (r.type === 'wechat' ? '将作为微信号展示' :
+        (r.type === 'landline' ? '座机号码正常' : (r.type === 'international' ? '国际号码正常' : '号码格式正常')));
       hint.style.color = '#2f7d46';
+      input.style.borderColor = '#b8e0c2';
     } else if(r.status === 'yellow'){
       hint.textContent = '⚠️ ' + r.reason;
       hint.style.color = '#a15c00';
+      input.style.borderColor = '#f0c36d';
     } else {
-      hint.textContent = '❌ ' + r.reason + '。如果是座机，请带区号，如 010-12345678';
+      hint.textContent = '❌ ' + r.reason + (r.type === 'landline' ? '' : '。如果是座机，请带区号，如 010-12345678');
       hint.style.color = '#a12f2f';
-      input.classList.remove('shake');
-      void input.offsetWidth;
-      input.classList.add('shake');
-      setTimeout(function(){ input.classList.remove('shake'); }, 420);
+      input.style.borderColor = '#e8a0a0';
     }
+    if(confirmWrap) confirmWrap.style.display = (r.status === 'yellow') ? 'block' : 'none';
+    if(confirmBox && r.status !== 'yellow') confirmBox.checked = false;
     return r;
   };
-  input.addEventListener('input', run);
-  input.addEventListener('blur', run);
+  input.addEventListener('input', function(){
+    if(timer) clearTimeout(timer);
+    timer = setTimeout(apply, 300);
+  });
+  input.addEventListener('blur', function(){
+    if(timer) clearTimeout(timer);
+    apply();
+  });
+  return apply;
 }
 
-bindPhoneHint(document.querySelector('#publishForm input[name="phone"]'), document.getElementById('phoneHint'));
+bindPhoneHint(document.querySelector('#publishForm input[name="phone"]'), document.getElementById('phoneHint'),
+              document.getElementById('phoneConfirmWrap'), document.getElementById('phoneConfirm'));
 bindPhoneHint(document.getElementById('claimPhone'), document.getElementById('claimPhoneHint'));
 bindPhoneHint(document.getElementById('helpPhone'), document.getElementById('helpPhoneHint'));
 
