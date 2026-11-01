@@ -1715,18 +1715,18 @@ class Handler(BaseHTTPRequestHandler):
                 _limit0 = 0
             _ckey = (owner or "") + "|" + str(_limit0)
             with ITEMS_CACHE_LOCK:
-                _hit = (ITEMS_CACHE["key"] == _ckey and time.time() - ITEMS_CACHE["at"] < 3)
+                _hit = (ITEMS_CACHE["key"] == _ckey and time.time() - ITEMS_CACHE["at"] < 10)
                 _craw, _cetag = ITEMS_CACHE["raw"], ITEMS_CACHE["etag"]
             if _hit:
                 if self.headers.get("If-None-Match") == _cetag:
                     self.send_response(304)
                     self.send_header("ETag", _cetag)
-                    self.send_header("Cache-Control", "public, max-age=5")
+                    self.send_header("Cache-Control", "private, max-age=3")
                     self.send_header("Vary", "X-Owner")
                     self.end_headers()
                     return
                 return self._send(200, _craw, "application/json; charset=utf-8",
-                                  {"ETag": _cetag, "Cache-Control": "public, max-age=5",
+                                  {"ETag": _cetag, "Cache-Control": "private, max-age=3",
                                    "Vary": "X-Owner"})
             with LOCK:
                 items = [public_item(x, owner) for x in load_items()
@@ -1758,7 +1758,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.end_headers()
                 return
             return self._send(200, raw, "application/json; charset=utf-8",
-                              {"ETag": etag, "Cache-Control": "public, max-age=5",
+                              {"ETag": etag, "Cache-Control": "private, max-age=3",
                                "Vary": "X-Owner"})
 
         if path == "/api/sync":
