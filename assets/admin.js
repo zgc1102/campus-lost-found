@@ -59,6 +59,7 @@
       items = await api('/api/admin/items') || [];
       if(tab === 'users'){ await loadAccounts(); return; }
       if(tab === 'announce'){ await loadAnnouncements(); return; }
+      if(tab === 'overview'){ await loadStats(); return; }
       render();
     }catch(e){ $('list').innerHTML = '<div class="empty">' + e.message + '</div>'; }
   }
@@ -73,6 +74,42 @@
     }
   }
 
+  let statsData = null;
+  async function loadStats(){
+    try{
+      statsData = await api('/api/admin/stats');
+      renderStats();
+    }catch(e){
+      $('list').innerHTML = '<div class="empty">' + e.message + '</div>';
+    }
+  }
+
+  function renderStats(){
+    const s = statsData || {};
+    const bs = s.byStatus || {};
+    $('stats').innerHTML =
+      '<div class="s"><b>' + (s.items || 0) + '</b><span>总发布</span></div>' +
+      '<div class="s"><b>' + (bs.approved || 0) + '</b><span>已上架</span></div>' +
+      '<div class="s"><b>' + (bs.pending || 0) + '</b><span>待审核</span></div>' +
+      '<div class="s"><b>' + (bs.rejected || 0) + '</b><span>已驳回</span></div>';
+    const days = s.days || [];
+    const max = Math.max.apply(null, [1].concat(days.map(function(d){ return d.count; })));
+    const bars = days.map(function(d){
+      const h = Math.round(d.count / max * 88) + 4;
+      return '<div style="flex:1;text-align:center;font-size:10px;color:#7a7290">' +
+        '<div style="height:92px;display:flex;align-items:flex-end;justify-content:center">' +
+        '<div style="width:18px;height:' + h + 'px;background:#8a5fd0;border-radius:4px 4px 0 0" title="' + d.count + '"></div></div>' +
+        '<div style="margin-top:4px">' + d.day + '</div></div>';
+    }).join('');
+    $('list').innerHTML =
+      '<div class="item"><div class="tt">最近 7 天发布</div>' +
+      '<div style="display:flex;gap:6px;margin-top:12px;align-items:flex-end">' + bars + '</div></div>' +
+      '<div class="item"><div class="tt">数据分布</div>' +
+      '<div class="meta">寻物 ' + (s.lost || 0) + ' · 招领 ' + (s.found || 0) + ' · 爱心求助 ' + (s.help || 0) + '</div>' +
+      '<div class="meta">注册用户 ' + (s.accounts || 0) + '（停用 ' + (s.banned || 0) + '） · 已发布公告 ' + (s.announcements || 0) + '</div>' +
+      '<div class="meta">认领申请 ' + (s.claims || 0) + '（完成 ' + ((s.claimsByStatus || {}).completed || 0) + '）</div></div>';
+  }
+
   function renderUsers(){
     $('stats').innerHTML = '<div class="s"><b>' + accounts.length + '</b><span>注册用户</span></div>';
     if(!accounts.length){
@@ -81,10 +118,14 @@
     }
     $('list').innerHTML = accounts.map(function(a){
       return '<div class="item"><div class="row1"><span class="tag">账号</span>' +
+        (a.banned ? '<span class="status" style="background:#fdeaea;color:#a12f2f">已停用</span>' : '') +
         '<div class="tt">' + esc(a.phone) + '</div></div>' +
         '<div class="meta">注册时间：' + fmt(a.createdAt) + '</div>' +
         '<div class="meta">最近登录：' + (a.lastLoginAt ? fmt(a.lastLoginAt) : '—') +
-        '　发布 ' + a.posts + ' 条</div></div>';
+        '　发布 ' + a.posts + ' 条</div>' +
+        '<div class="acts"><button class="btn ' + (a.banned ? 'ok' : 'danger') +
+        '" data-ban="' + a.id + '" data-banned="' + (a.banned ? '1' : '0') + '">' +
+        (a.banned ? '恢复账号' : '停用账号') + '</button></div></div>';
     }).join('');
   }
 
@@ -376,12 +417,23 @@
     Array.prototype.forEach.call($('tabs').children, x => x.classList.remove('on'));
     b.classList.add('on');
     if(tab === 'users'){ loadAccounts(); return; }
+    if(tab === 'overview'){ loadStats(); return; }
     if(tab === 'announce'){ loadAnnouncements(); return; }
     render();
   });
   $('search').addEventListener('input', e => { keyword = e.target.value.trim(); render(); });
 
   $('list').addEventListener('click', e => {
+    const banBtn = e.target.closest('[data-ban]');
+    if(banBtn){
+      const id = banBtn.getAttribute('data-ban');
+      const banned = banBtn.getAttribute('data-banned') === '1';
+      if(!confirm(banned ? '恢复这个账号？' : '停用这个账号？其发布内容会全部下架')) return;
+      api('/api/admin/accounts/' + encodeURIComponent(id) + '/ban', {
+        method: 'POST', body: JSON.stringify({banned: !banned})
+      }).then(loadAccounts).catch(function(err){ alert(err.message); });
+      return;
+    }
     const annSave = e.target.closest('[data-ann-save]');
     if(annSave){ saveAnnounce(false); return; }
     const annPub = e.target.closest('[data-ann-pub]');

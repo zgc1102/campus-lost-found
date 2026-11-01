@@ -1354,6 +1354,7 @@ class Handler(BaseHTTPRequestHandler):
                 out.append({"id": a.get("id"), "phone": a.get("phone") or "",
                             "createdAt": a.get("createdAt") or 0,
                             "lastLoginAt": a.get("lastLoginAt") or 0,
+                            "banned": bool(a.get("banned")),
                             "posts": counts.get(a.get("id"), 0)})
             out.sort(key=lambda x: x.get("createdAt") or 0, reverse=True)
             return self._json(out)
@@ -1366,6 +1367,43 @@ class Handler(BaseHTTPRequestHandler):
             return self._json([{"id": a.get("id"), "title": a.get("title"),
                                 "body": a.get("body"), "pinned": bool(a.get("pinned")),
                                 "publishedAt": a.get("publishedAt") or 0} for a in pub])
+
+        if path == "/api/admin/stats":
+            if not self._need_admin():
+                return
+            with LOCK:
+                items = load_items()
+                accounts = load_accounts()
+                claims = load_claims()
+                anns = load_announcements()
+            by_status = {}
+            for x in items:
+                st = x.get("status") or "unknown"
+                by_status[st] = by_status.get(st, 0) + 1
+            now = time.time()
+            days = []
+            for i in range(6, -1, -1):
+                day = time.strftime("%m-%d", time.localtime(now - i * 86400))
+                start = (int(now) // 86400 - i) * 86400 * 1000
+                end = start + 86400 * 1000
+                n = sum(1 for x in items if start <= (x.get("createdAt") or 0) < end)
+                days.append({"day": day, "count": n})
+            c_status = {}
+            for c in claims:
+                c_status[c.get("status") or "pending"] = c_status.get(c.get("status") or "pending", 0) + 1
+            return self._json({
+                "items": len(items),
+                "byStatus": by_status,
+                "lost": sum(1 for x in items if x.get("type") == "lost"),
+                "found": sum(1 for x in items if x.get("type") == "found"),
+                "help": sum(1 for x in items if x.get("type") == "help"),
+                "accounts": len(accounts),
+                "banned": sum(1 for a in accounts if a.get("banned")),
+                "announcements": len([a for a in anns if a.get("status") == "published"]),
+                "claims": len(claims),
+                "claimsByStatus": c_status,
+                "days": days,
+            })
 
         if path == "/api/admin/announcements":
             if not self._need_admin():
@@ -1420,6 +1458,30 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         path = unquote(urlparse(self.path).path)
+        if path.startswith("/api/admin/accounts/") and path.endswith("/ban"):
+            if not self._need_admin():
+                return
+            aid = path[len("/api/admin/accounts/"):-len("/ban")]
+            body = self._read_body()
+            banned = bool(body.get("banned"))
+            with LOCK:
+                accs = load_accounts()
+                acc = next((a for a in accs if a.get("id") == aid), None)
+                if not acc:
+                    return self._json({"error": "not found"}, 404)
+                acc["banned"] = banned
+                save_accounts(accs)
+                items = load_items()
+                changed = 0
+                for x in items:
+                    if x.get("ownerToken") == aid:
+                        x["status"] = "hidden" if banned else "approved"
+                        x["updatedAt"] = now_ms()
+                        changed += 1
+                if changed:
+                    save_items(items)
+            return self._json({"ok": True, "banned": banned, "items": changed})
+
         if path == "/api/admin/announcements":
             if not self._need_admin():
                 return
@@ -1544,6 +1606,8 @@ class Handler(BaseHTTPRequestHandler):
                     save_accounts(accs)
                     created = True
                 else:
+                    if acc.get("banned"):
+                        return self._json({"error": "账号已被停用，请联系管理员"}, 403)
                     if hashlib.pbkdf2_hmac("sha256", pwd.encode("utf-8"),
                                            (acc.get("salt") or "").encode("utf-8"), 120000).hex() != acc.get("hash"):
                         return self._json({"error": "密码不对"}, 401)
