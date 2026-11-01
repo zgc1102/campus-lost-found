@@ -678,10 +678,40 @@ def _phone_periodic(d):
     return 0
 
 
+def _phone_pattern(d):
+    """对一段数字做豹子/顺子/循环判断，返回 (红色理由, 黄色理由)"""
+    if len(set(d)) == 1:
+        return ("全部数字相同，不是有效号码", "")
+    run = _phone_max_run(d)
+    if run >= 8:
+        return ("连续 %d 位数字相同，不是有效号码" % run, "")
+    seq = _phone_max_seq(d)
+    if seq >= 8:
+        return ("连续 %d 位数字递增/递减，不是有效号码" % seq, "")
+    per = _phone_periodic(d)
+    if (per == 2 and len(d) >= 8) or (per == 3 and len(d) >= 9):
+        return ("数字循环重复，不是有效号码", "")
+    if 6 <= run <= 7:
+        return ("", "连续 %d 位数字相同，请确认是本人常用号码" % run)
+    if 6 <= seq <= 7:
+        return ("", "连续 %d 位数字递增/递减，请确认是本人常用号码" % seq)
+    if per == 2 and len(d) >= 6:
+        return ("", "数字循环重复，请确认是本人常用号码")
+    if 4 <= run <= 5:
+        return ("", "连续 %d 位相同，确认是本人常用号吗？" % run)
+    if 4 <= seq <= 5:
+        return ("", "连续 %d 位递增/递减，确认是本人常用号吗？" % seq)
+    return ("", "")
+
+
 def phone_check(raw):
     s0 = str(raw or "").strip()
     table = str.maketrans("０１２３４５６７８９", "0123456789")
-    s0 = s0.translate(table).replace("幺", "1").replace("〇", "0").replace("零", "0")
+    s0 = s0.translate(table)
+    s0 = (s0.replace("幺", "1").replace("〇", "0").replace("零", "0")
+             .replace("一", "1").replace("二", "2").replace("三", "3")
+             .replace("四", "4").replace("五", "5").replace("六", "6")
+             .replace("七", "7").replace("八", "8").replace("九", "9"))
     s0 = re.sub(r"[\s()（）.．]", "", s0).replace("－", "-").replace("—", "-")
 
     def red(reason):
@@ -708,62 +738,48 @@ def phone_check(raw):
     if not digits:
         return red("没有数字")
 
-    # 企业/服务号
     if re.match(r"^(400|800)", digits) or re.match(r"^(95|96)\d{3,5}$", digits):
         return {"status": "red", "type": "service", "normalized": digits,
                 "reason": "这是企业或服务号码，请留个人号码"}
-    # 国际号码（非 +86）
+
     if s0.startswith("+") and not s0.startswith("+86") and 8 <= len(digits) <= 15:
         return {"status": "green", "type": "international", "normalized": "+" + digits, "reason": ""}
 
-    # 座机：0 + 2-3 位区号 + 7-8 位，可带分机
-    landline = re.match(r"^0\d{2,3}-?\d{7,8}(-\d{1,6})?$", work)
-    if landline:
-        d = re.sub(r"\D", "", work)
-        if len(set(d)) == 1 or _phone_max_run(d) >= 7:
-            return {"status": "red", "type": "landline", "normalized": work,
-                    "reason": "座机号码不真实（数字重复过多）"}
+    # 座机：区号 + 本地号，本地号做豹子/顺子判断
+    m = re.match(r"^(0\d{2,3})-?(\d{7,8})(?:-(\d{1,6}))?$", work)
+    if m:
+        local = m.group(2)
+        bad, warn = _phone_pattern(local)
+        if bad:
+            return {"status": "red", "type": "landline", "normalized": work, "reason": "座机号码不真实（%s）" % bad}
+        if warn:
+            return {"status": "yellow", "type": "landline", "normalized": work, "reason": warn}
         return {"status": "green", "type": "landline", "normalized": work, "reason": ""}
 
     # 手机号
     if len(digits) == 11 and digits.startswith("1"):
-        if len(set(digits)) == 1:
-            return red("全部数字相同，不是有效号码")
-        run = _phone_max_run(digits)
-        if run >= 8:
-            return red("连续 %d 位数字相同，不是有效号码" % run)
-        if _phone_max_seq(digits) >= 9:
-            return red("连续递增/递减，不是有效号码")
+        bad, warn = _phone_pattern(digits)
+        if bad:
+            return red(bad)
         if digits in PHONE_PLACEHOLDERS:
             return red("这是常见的测试号码")
-        if _phone_periodic(digits) >= 2 and len(digits) >= 10:
-            return red("数字循环重复，不是有效号码")
         if not re.match(r"^1[3-9]\d{9}$", digits):
             return red("手机号应以 13–19 开头")
-        if digits in PHONE_PLACEHOLDERS:
-            return red("这是常见的测试号码")
-
-        yellow = ""
-        if run in (6, 7):
-            yellow = "连续 %d 位数字相同，请确认是本人常用号码" % run
-        elif run in (4, 5):
-            yellow = "连续 %d 位相同，确认是本人常用号吗？" % run
-        elif len(set(digits[-4:])) == 1:
-            yellow = "尾号 4 位相同，确认是本人常用号吗？"
-        elif re.match(r"^1(70|71|62|65|67)", digits):
-            yellow = "这是虚拟号段，建议留常用号码"
-        elif "123456" in digits or "654321" in digits:
-            yellow = "号码含连续数字，确认无误吗？"
-        if yellow:
-            return {"status": "yellow", "type": "mobile", "normalized": digits, "reason": yellow}
+        if warn:
+            return {"status": "yellow", "type": "mobile", "normalized": digits, "reason": warn}
+        if re.match(r"^1(70|71|62|65|67)", digits):
+            return {"status": "yellow", "type": "mobile", "normalized": digits,
+                    "reason": "这是虚拟号段，建议留常用号码"}
         return {"status": "green", "type": "mobile", "normalized": digits, "reason": ""}
 
-    # 没区号的 7-8 位，可能是座机
     if re.match(r"^\d{7,8}$", digits):
+        bad, warn = _phone_pattern(digits)
+        if bad:
+            return red(bad)
         return {"status": "yellow", "type": "landline", "normalized": digits,
-                "reason": "座机请带区号，例如 010-12345678"}
+                "reason": "座机请带区号，例如 010-62785566"}
 
-    if len(digits) not in (11,):
+    if len(digits) != 11:
         return red("号码应为 11 位手机号，或带区号的座机")
 
     return red("号码格式不正确")

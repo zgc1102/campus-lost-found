@@ -1912,16 +1912,34 @@ document.getElementById('helpGoSubmit').onclick = async function(){
 };
 
 /* ============ 电话号码校验（前端即时提示，服务端再校验） ============ */
+function maxRun(d){ let b = 1, c = 1; for(let i = 1; i < d.length; i++){ c = d[i] === d[i-1] ? c + 1 : 1; b = Math.max(b, c); } return b; }
+function maxSeq(d){ let u = 1, dn = 1, b = 1; for(let i = 1; i < d.length; i++){ const x = +d[i-1], y = +d[i]; u = y === x + 1 ? u + 1 : 1; dn = y === x - 1 ? dn + 1 : 1; b = Math.max(b, u, dn); } return b; }
+function periodic(d){ for(const p of [2,3]){ if(d.length >= p * 4){ let ok = true; for(let i = 0; i < d.length; i++){ if(d[i] !== d[i % p]){ ok = false; break; } } if(ok) return p; } } return 0; }
+
+function phonePattern(d){
+  if(new Set(d).size === 1) return {red:'全部数字相同，不是有效号码'};
+  const run = maxRun(d), seq = maxSeq(d), per = periodic(d);
+  if(run >= 8) return {red:'连续 ' + run + ' 位数字相同，不是有效号码'};
+  if(seq >= 8) return {red:'连续 ' + seq + ' 位数字递增/递减，不是有效号码'};
+  if((per === 2 && d.length >= 8) || (per === 3 && d.length >= 9)) return {red:'数字循环重复，不是有效号码'};
+  if(run >= 6) return {yellow:'连续 ' + run + ' 位数字相同，请确认是本人常用号码'};
+  if(seq >= 6) return {yellow:'连续 ' + seq + ' 位数字递增/递减，请确认是本人常用号码'};
+  if(per === 2 && d.length >= 6) return {yellow:'数字循环重复，请确认是本人常用号码'};
+  if(run >= 4) return {yellow:'连续 ' + run + ' 位相同，确认是本人常用号吗？'};
+  if(seq >= 4) return {yellow:'连续 ' + seq + ' 位递增/递减，确认是本人常用号吗？'};
+  return {};
+}
+
 function phoneCheckLocal(raw){
   let s = String(raw || '').trim();
   s = s.replace(/[０-９]/g, function(ch){ return String.fromCharCode(ch.charCodeAt(0) - 65248); });
-  s = s.replace(/幺/g, '1').replace(/[〇零]/g, '0');
+  s = s.replace(/幺/g, '1').replace(/[〇零]/g, '0')
+       .replace(/一/g, '1').replace(/二/g, '2').replace(/三/g, '3').replace(/四/g, '4')
+       .replace(/五/g, '5').replace(/六/g, '6').replace(/七/g, '7').replace(/八/g, '8').replace(/九/g, '9');
   s = s.replace(/[\s()（）.．]/g, '').replace(/[－—]/g, '-');
   if(!s) return {status:'none', type:'none', reason:'', normalized:''};
   if(/[A-Za-z]/.test(s)){
-    if(/^[A-Za-z][A-Za-z0-9_-]{5,19}$/.test(s)){
-      return {status:'green', type:'wechat', reason:'', normalized:s};
-    }
+    if(/^[A-Za-z][A-Za-z0-9_-]{5,19}$/.test(s)) return {status:'green', type:'wechat', reason:'', normalized:s};
     return {status:'red', type:'invalid', reason:'包含字母', normalized:''};
   }
   if(/[^\d+\-]/.test(s)) return {status:'red', type:'invalid', reason:'包含无法识别的字符', normalized:''};
@@ -1938,38 +1956,30 @@ function phoneCheckLocal(raw){
     return {status:'green', type:'international', reason:'', normalized:'+' + digits};
   }
 
-  function maxRun(d){ let b = 1, c = 1; for(let i = 1; i < d.length; i++){ c = d[i] === d[i-1] ? c + 1 : 1; b = Math.max(b, c); } return b; }
-  function maxSeq(d){ let u = 1, dn = 1, b = 1; for(let i = 1; i < d.length; i++){ const x = +d[i-1], y = +d[i]; u = y === x + 1 ? u + 1 : 1; dn = y === x - 1 ? dn + 1 : 1; b = Math.max(b, u, dn); } return b; }
-  function periodic(d){ for(const p of [2,3]){ if(d.length >= p * 4){ let ok = true; for(let i = 0; i < d.length; i++){ if(d[i] !== d[i % p]){ ok = false; break; } } if(ok) return p; } } return 0; }
-
-  if(/^0\d{2,3}-?\d{7,8}(-\d{1,6})?$/.test(work)){
-    const d = work.replace(/\D/g, '');
-    if(new Set(d).size === 1 || maxRun(d) >= 7){
-      return {status:'red', type:'landline', reason:'座机号码不真实（数字重复过多）', normalized:work};
-    }
+  const lm = work.match(/^(0\d{2,3})-?(\d{7,8})(?:-(\d{1,6}))?$/);
+  if(lm){
+    const pat = phonePattern(lm[2]);
+    if(pat.red) return {status:'red', type:'landline', reason:'座机号码不真实（' + pat.red + '）', normalized:work};
+    if(pat.yellow) return {status:'yellow', type:'landline', reason:pat.yellow, normalized:work};
     return {status:'green', type:'landline', reason:'', normalized:work};
   }
 
   if(digits.length === 11 && digits[0] === '1'){
-    if(new Set(digits).size === 1) return {status:'red', type:'mobile', reason:'全部数字相同，不是有效号码', normalized:''};
-    const run = maxRun(digits);
-    if(run >= 8) return {status:'red', type:'mobile', reason:'连续 ' + run + ' 位数字相同，不是有效号码', normalized:''};
-    if(maxSeq(digits) >= 9) return {status:'red', type:'mobile', reason:'连续递增/递减，不是有效号码', normalized:''};
+    const pat = phonePattern(digits);
+    if(pat.red) return {status:'red', type:'mobile', reason:pat.red, normalized:''};
     if(['13800138000','12345678901','11111111111'].indexOf(digits) >= 0) return {status:'red', type:'mobile', reason:'这是常见的测试号码', normalized:''};
-    if(periodic(digits) && digits.length >= 10) return {status:'red', type:'mobile', reason:'数字循环重复，不是有效号码', normalized:''};
     if(!/^1[3-9]\d{9}$/.test(digits)) return {status:'red', type:'mobile', reason:'手机号应以 13–19 开头', normalized:''};
-    let warn = '';
-    if(run === 6 || run === 7) warn = '连续 ' + run + ' 位数字相同，请确认是本人常用号码';
-    else if(run === 4 || run === 5) warn = '连续 ' + run + ' 位数字相同，确认是本人常用号吗？';
-    else if(new Set(digits.slice(-4)).size === 1) warn = '尾号 4 位相同，确认是本人常用号吗？';
-    else if(/^1(70|71|62|65|67)/.test(digits)) warn = '虚拟号段，建议留常用号码';
-    else if(digits.indexOf('123456') >= 0 || digits.indexOf('654321') >= 0) warn = '号码含连续数字，确认无误吗？';
-    return warn
-      ? {status:'yellow', type:'mobile', reason:warn, normalized:digits}
-      : {status:'green', type:'mobile', reason:'', normalized:digits};
+    if(pat.yellow) return {status:'yellow', type:'mobile', reason:pat.yellow, normalized:digits};
+    if(/^1(70|71|62|65|67)/.test(digits)) return {status:'yellow', type:'mobile', reason:'虚拟号段，建议留常用号码', normalized:digits};
+    return {status:'green', type:'mobile', reason:'', normalized:digits};
   }
 
-  if(/^\d{7,8}$/.test(digits)) return {status:'yellow', type:'landline', reason:'座机请带区号，例如 010-12345678', normalized:digits};
+  if(/^\d{7,8}$/.test(digits)){
+    const pat = phonePattern(digits);
+    if(pat.red) return {status:'red', type:'landline', reason:pat.red, normalized:''};
+    return {status:'yellow', type:'landline', reason:'座机请带区号，例如 010-62785566', normalized:digits};
+  }
+
   return {status:'red', type:'invalid', reason:'号码应为 11 位手机号，或带区号的座机', normalized:''};
 }
 
@@ -1991,7 +2001,7 @@ function bindPhoneHint(input, hint, confirmWrap, confirmBox){
       hint.style.color = '#a15c00';
       input.style.borderColor = '#f0c36d';
     } else {
-      hint.textContent = '❌ ' + r.reason + (r.type === 'landline' ? '' : '。如果是座机，请带区号，如 010-12345678');
+      hint.textContent = '❌ ' + r.reason + (r.type === 'landline' ? '' : '。如果是座机，请带区号，如 010-62785566');
       hint.style.color = '#a12f2f';
       input.style.borderColor = '#e8a0a0';
     }
