@@ -492,8 +492,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .pb-ico.primary{background:linear-gradient(135deg,#62269c,#8a52c7);color:#fff;border:0;font-size:20px;}
 .pb-ico:active{transform:scale(.94);}
 .cs-box.scanning{position:relative;overflow:hidden;}
-.cs-box.scanning::after{content:'';position:absolute;left:0;right:0;height:36px;top:-30%;background:linear-gradient(180deg,transparent,rgba(120,200,255,.38),transparent);animation:csScan 1.2s ease-in-out 2;}
-@keyframes csScan{0%{top:-20%}100%{top:110%}}
+.cs-box.scanning::after{content:'';position:absolute;left:0;right:0;height:46px;top:-30%;background:linear-gradient(180deg,transparent,rgba(160,107,224,.42),transparent);animation:csScan 2.4s ease-in-out 2;}
+@keyframes csScan{0%{top:-20%}100%{top:112%}}
 
 /* 性能：减少持续动画 */
 @media (prefers-reduced-motion: reduce){
@@ -551,3 +551,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .guide-quick span,
 .guide-banner,
 .tour-banner{animation:none!important;}
+
+/* 认领扫描：主题紫 + 慢速 */
+.cs-scan-h{color:#4a2a78;}
+.cs-scan-dot{background:#8a52c7;}
+.cs-scan-row i{background:#62269c;}
+.cs-scan-conf{color:#4a2a78;}
+.cs-scan-conf span{background:linear-gradient(90deg,#62269c,#a06be0);}

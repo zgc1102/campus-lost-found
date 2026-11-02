@@ -1082,8 +1082,8 @@ function runClaimScan(c){
   const box = document.getElementById('csScan');
   const target = document.getElementById('csClaim');
   if(!box || !target) return;
-  box.style.display = 'none';
-  box.innerHTML = '';
+  box.style.display = 'block';
+  box.innerHTML = '<div class="cs-scan-h"><span class="cs-scan-dot"></span>AI 正在逐条比对…</div>';
   target.classList.remove('scanning');
   void target.offsetWidth;
   target.classList.add('scanning');
@@ -1107,7 +1107,7 @@ function runClaimScan(c){
       }).join('') +
       '<div class="cs-scan-conf"><b>疑似正确率 ' + conf + '%</b><span style="width:' + Math.max(4, Math.min(100, conf)) + '%"></span></div>';
     box.style.display = 'block';
-  }, 1900);
+  }, 5000);
 }
 
 function openClaimReview(id){
