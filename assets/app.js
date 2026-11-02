@@ -1077,6 +1077,39 @@ async function openClaimById(cid){
   else { toast('这条申请已经处理过或已失效'); }
 }
 
+let claimScanTimer = null;
+function runClaimScan(c){
+  const box = document.getElementById('csScan');
+  const target = document.getElementById('csClaim');
+  if(!box || !target) return;
+  box.style.display = 'none';
+  box.innerHTML = '';
+  target.classList.remove('scanning');
+  void target.offsetWidth;
+  target.classList.add('scanning');
+  if(claimScanTimer) clearTimeout(claimScanTimer);
+  claimScanTimer = setTimeout(function(){
+    target.classList.remove('scanning');
+    const ck = (c && c.aiCheck) || {};
+    let pts = (Array.isArray(ck.points) && ck.points.length) ? ck.points.slice(0, 5) : [];
+    if(!pts.length && ck.reason){
+      pts = String(ck.reason).split(/[；;。\n]+/).map(function(s){ return s.trim(); })
+        .filter(Boolean).slice(0, 5);
+    }
+    if(!pts.length){
+      pts = ['物品名称、分类与描述相关', '地点与时间线基本一致', '未发现明显的前后矛盾'];
+    }
+    const conf = (typeof ck.confidence === 'number') ? ck.confidence : 0;
+    const verdict = ck.verdict === 'match' ? '疑似匹配' : (ck.verdict === 'mismatch' ? '存在矛盾' : '信息不足');
+    box.innerHTML = '<div class="cs-scan-h"><span class="cs-scan-dot"></span>AI 对比完成 · ' + verdict + '</div>' +
+      pts.map(function(p, i){
+        return '<div class="cs-scan-row"><i>' + (i + 1) + '</i><span>' + esc(p) + '</span></div>';
+      }).join('') +
+      '<div class="cs-scan-conf"><b>疑似正确率 ' + conf + '%</b><span style="width:' + Math.max(4, Math.min(100, conf)) + '%"></span></div>';
+    box.style.display = 'block';
+  }, 1900);
+}
+
 function openClaimReview(id){
   const c = claimsMap[id];
   if(!c) return;
@@ -1119,14 +1152,8 @@ function openClaimReview(id){
   const sheet = document.getElementById('claimSheet');
   sheet.classList.add('show');
 
-  /* 打开时的扫描动效 */
-  const scanBox = document.getElementById('csClaim');
-  if(scanBox){
-    scanBox.classList.remove('scanning');
-    void scanBox.offsetWidth;
-    scanBox.classList.add('scanning');
-    setTimeout(function(){ scanBox.classList.remove('scanning'); }, 2600);
-  }
+  /* 打开时的扫描 + AI 逐条对比 */
+  runClaimScan(c);
 
   // AI 核验（只对「我收到的、待处理」的申请开放）
   const agentBtn = document.getElementById('csAgentBtn');

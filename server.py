@@ -527,7 +527,9 @@ def claim_ai_check(item, claim):
     prompt = ("你是校园失物招领的核验助手。发布者描述：\n标题：%s\n描述：%s\n独有特征（申请人看不到）：%s\n"
               "申请人先后说：\n%s\n"
               "判断申请人说的与物品是否一致，是否有前后矛盾或明显编造。"
-              '只输出 JSON：{"verdict":"match|unclear|mismatch","confidence":0-100,"reason":"30字以内"}'
+              '只输出 JSON：{"verdict":"match|unclear|mismatch","confidence":0-100,'
+              '"reason":"30字以内","points":["逐条比对1","逐条比对2"]}；'
+              "points 给 3 到 5 条逐条比对结果，每条 12 字以内，例如“颜色描述一致”“地点吻合”“第2次和第1次矛盾”。"
               % (item.get("title") or "", item.get("desc") or "", item.get("secret") or "", said))
     try:
         data = _post_chat(cfg.get("base_url").rstrip("/") + "/chat/completions",
@@ -542,8 +544,12 @@ def claim_ai_check(item, claim):
             conf = max(0, min(100, int(obj.get("confidence") or 0)))
         except Exception:
             conf = 0
+        _pts = obj.get("points") or []
+        if not isinstance(_pts, list):
+            _pts = []
+        _pts = [str(x).strip()[:24] for x in _pts if str(x).strip()][:5]
         return {"verdict": verdict, "confidence": conf,
-                "reason": str(obj.get("reason") or "")[:60], "at": now_ms()}
+                "reason": str(obj.get("reason") or "")[:60], "points": _pts, "at": now_ms()}
     except Exception:
         return None
 

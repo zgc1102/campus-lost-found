@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>清华校园拾光里 v3.2 · 校园互助服务平台</title>
-<link rel="stylesheet" href="assets/styles.css?v=20261120">
+<link rel="stylesheet" href="assets/styles.css?v=20261121">
 </head>
 <body>
 <div id="bootGuard" style="position:fixed;inset:0;z-index:3000;background:#1b0b2e;color:#fff;display:flex;align-items:center;justify-content:center;flex-direction:column;font:14px/1.9 'Microsoft YaHei',system-ui,sans-serif;text-align:center;padding:24px">
@@ -63,12 +63,6 @@ setTimeout(function(){
     <div class="scroll">
       <button type="button" id="quickPhotoBtn" style="display:none"></button>
       <input type="file" id="quickPhotoInput" accept="image/*" capture="environment" style="display:none">
-
-      <div class="ai-lite">
-        <span class="ai-dot"></span>
-        <span class="ai-lite-t">AI 正在为校园失物把关</span>
-        <span class="ai-scan"></span>
-      </div>
 
       <!-- 中央宣传窗 -->
       <div class="mem-win">
@@ -534,6 +528,7 @@ setTimeout(function(){
     <div class="cs-box" id="csItem"></div>
     <div class="sectitle" id="csClaimTitle">对方提供的特征</div>
     <div class="cs-box hl" id="csClaim"></div>
+    <div class="cs-scan" id="csScan" style="display:none"></div>
     <div class="cs-tip" id="csTip">只有细节真的对得上，才点「通过」。通过后双方才会看到联系方式。</div>
     <div id="csAgentWrap" style="margin:10px 0 12px">
       <button class="btn ghost" id="csAgentBtn" style="width:100%">🔍 让 AI 帮我核验一下</button>
@@ -596,7 +591,7 @@ setTimeout(function(){
 <script>
 try{ if(localStorage.getItem('sg:tour:v2') === '1'){ var _tm = document.getElementById('tourMask'); if(_tm) _tm.classList.remove('show'); } }catch(e){}
 </script>
-<script src="assets/app.js?v=20261124"></script>
+<script src="assets/app.js?v=20261125"></script>
 <div id="imgViewer" class="img-viewer"><img id="imgViewerImg" alt=""><div class="img-viewer-close">✕</div></div>
 <script>if(location.protocol==="file:"){var w=document.getElementById("fileWarn");if(w)w.style.display="block";}</script>
 </body>
