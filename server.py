@@ -1260,9 +1260,36 @@ def _ask_llm(question, hits):
         return ""
 
 
+def _ask_general(question):
+    """知识库没命中时，用大模型做通用校园向导，并强制加免责说明"""
+    cfg = load_ai_config()
+    if not (cfg.get("enabled") and cfg.get("api_key") and cfg.get("base_url")):
+        return ""
+    payload = {
+        "model": cfg.get("model") or "deepseek-chat",
+        "temperature": 0.3,
+        "messages": [
+            {"role": "system", "content":
+                "你是清华校园向导，面向游客、新生和家长回答进校、交通、食堂、校园卡、参观、"
+                "丢东西等常见问题。用 3 到 5 句话回答，口语化、可执行。"
+                "不确定的政策、电话、价格、开放时间不要编造，要提醒“以学校最新公告为准”。"
+                "不要回答与校园无关的闲聊。"},
+            {"role": "user", "content": str(question)[:200]},
+        ],
+    }
+    try:
+        data = _post_chat(cfg.get("base_url").rstrip("/") + "/chat/completions", payload,
+                          cfg.get("api_key"), timeout=25)
+        return (data["choices"][0]["message"]["content"] or "").strip()
+    except Exception:
+        return ""
+
+
 def ask_kb(question):
     hits = kb_search(question, 4)
     answer = _ask_llm(question, hits) if hits else ""
+    if not answer and not hits:
+        answer = _ask_general(question)
     if not answer:
         if not hits:
             answer = "知识库里暂时没有找到相关内容，可以换个说法，或直接发布一条启事。"
