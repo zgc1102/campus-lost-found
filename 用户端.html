@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>清华校园拾光里 v3.2 · 校园互助服务平台</title>
-<link rel="stylesheet" href="assets/styles.css?v=20261108">
+<link rel="stylesheet" href="assets/styles.css?v=20261109">
 </head>
 <body>
 <div id="aiBusy" class="ai-busy"><span class="ai-spin"></span><span id="aiBusyText">AI 正在识别图片…</span></div>
@@ -27,6 +27,11 @@
     <div class="topbar"><div class="t">清华校园拾光里</div><button type="button" class="help-btn" id="tourBtn" title="使用引导">?</button><div class="bell" id="bellBtn" title="通知">🔔<i id="bellDot" style="display:none">0</i></div><div class="login" id="loginBtn" title="我的发布">
       <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" width="18" height="18"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
     </div></div>
+    <div class="tour-banner" id="tourBanner" style="display:none">
+      <div class="tb-ico">👋</div>
+      <div class="tb-txt">第一次来？<b>30 秒带你逛完</b></div>
+      <div class="tb-go">开始 ›</div>
+    </div>
     <div class="scroll">
       <div class="hero-search">
         <div class="hs-main" id="searchEntry">🔍 搜索失物 / 寻物 / 工具…</div>
@@ -102,6 +107,7 @@
     </div>
     <div class="scroll">
       <div class="tip-box">⚠️ 认领提示：认领物品前，请务必核对物品独有特征，请勿仅凭照片认领，谨防冒领。<br>交接请选择公共场所，不要前往偏僻地点，谨慎公开手机号、微信等私人联系方式。</div>
+      <div class="sub-search"><span>🔍</span><input data-filter="lost" placeholder="在失物招领中搜索标题 / 地点"></div>
       <div id="lostWrap"></div>
     </div>
   </section>
@@ -114,6 +120,7 @@
     </div>
     <div class="scroll">
       <div class="tip-box">⚠️ 防骗提示：主动联系你并提供“验证码 / 转账 / 付费解锁”的，基本都是骗子。<br>真实认领请当面核对物品细节，平台不会收取任何费用。</div>
+      <div class="sub-search"><span>🔍</span><input data-filter="found" placeholder="在寻物启事中搜索标题 / 地点"></div>
       <div id="foundWrap"></div>
     </div>
   </section>
@@ -230,6 +237,7 @@
     </div>
     <div class="scroll">
       <div class="hintline" id="helpHint">同学之间互相搭把手：借个东西、帮取快递、闲置送人、找人帮忙。</div>
+      <div class="sub-search"><span>🔍</span><input data-filter="help" placeholder="在爱心求助中搜索"></div>
       <div id="helpList"></div>
     </div>
   </section>
@@ -525,7 +533,7 @@
     </div>
   </div>
 </div>
-<script src="assets/app.js?v=20261111"></script>
+<script src="assets/app.js?v=20261112"></script>
 <div id="imgViewer" class="img-viewer"><img id="imgViewerImg" alt=""><div class="img-viewer-close">✕</div></div>
 <script>if(location.protocol==="file:"){var w=document.getElementById("fileWarn");if(w)w.style.display="block";}</script>
 </body>

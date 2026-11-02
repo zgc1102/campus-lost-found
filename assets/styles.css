@@ -453,3 +453,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .sim-t{font-size:12.5px;font-weight:600;color:#3a3645;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .sim-s{font-size:10.5px;color:#8a8298;margin-top:2px;}
 .sim-arrow{color:#8a52c7;font-size:18px;}
+
+/* 子页面搜索 + 引导横幅 */
+.sub-search{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px 12px;margin:0 0 10px;}
+.sub-search span{font-size:14px;opacity:.55;}
+.sub-search input{flex:1;min-width:0;border:0;outline:none;background:transparent;font-family:inherit;font-size:13px;color:var(--ink);}
+.sub-search input::placeholder{color:#a9a2b8;}
+.tour-banner{display:none;align-items:center;gap:10px;margin:8px 10px 0;padding:9px 12px;border-radius:12px;background:linear-gradient(135deg,#f3ebff,#eaf4ff);border:1px solid #e2d6f7;color:#4a3d75;font-size:12.5px;cursor:pointer;flex:0 0 auto;}
+.tour-banner .tb-ico{font-size:18px;}
+.tour-banner .tb-txt{flex:1;line-height:1.4;}
+.tour-banner .tb-txt b{color:#62269c;}
+.tour-banner .tb-go{font-weight:700;color:#62269c;font-size:12px;white-space:nowrap;}
+.tour-banner:active{opacity:.85;}

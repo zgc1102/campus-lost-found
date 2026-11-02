@@ -544,8 +544,26 @@ function renderList(wrap, arr, srcLabel){
   wrap.innerHTML = arr.map(it=>itemHTML(it,srcLabel)).join('') ||
     '<div class="empty">暂无内容</div>';
 }
-function renderLost(){ renderList(document.getElementById('lostWrap'), Store.list({type:'found', statuses:['approved','claimed','closed']}), '招领'); }
-function renderFound(){ renderList(document.getElementById('foundWrap'), Store.list({type:'lost', statuses:['approved','claimed','closed']}), '寻物'); }
+function renderLost(){ renderList(document.getElementById('lostWrap'), Store.list({type:'found', statuses:['approved','claimed','closed']}), '招领'); applyFilter('lost'); }
+function renderFound(){ renderList(document.getElementById('foundWrap'), Store.list({type:'lost', statuses:['approved','claimed','closed']}), '寻物'); applyFilter('found'); }
+
+/* 子页面搜索过滤 */
+const filterQueries = {};
+function applyFilter(kind){
+  const map = {lost:'lostWrap', found:'foundWrap', help:'helpList'};
+  const wrap = document.getElementById(map[kind]);
+  if(!wrap) return;
+  const q = (filterQueries[kind] || '').trim().toLowerCase();
+  wrap.querySelectorAll('.item').forEach(function(el){
+    el.style.display = (!q || el.textContent.toLowerCase().indexOf(q) >= 0) ? '' : 'none';
+  });
+}
+document.querySelectorAll('[data-filter]').forEach(function(inp){
+  inp.addEventListener('input', function(){
+    filterQueries[inp.getAttribute('data-filter')] = inp.value;
+    applyFilter(inp.getAttribute('data-filter'));
+  });
+});
 
 /* ============ 渲染：我的发布 ============ */
 function renderMine(){
@@ -2209,6 +2227,7 @@ function renderHelp(){
       '<button class="btn" data-help-go="' + esc(it.id) + '">我来帮忙</button></div>' +
       '</div></div>';
   }).join('');
+  applyFilter('help');
 }
 
 document.getElementById('helpPublishBtn').onclick = function(){
@@ -2612,6 +2631,8 @@ function renderTour(){
 function closeTour(save){
   const mask = document.getElementById('tourMask');
   if(mask) mask.classList.remove('show');
+  const banner = document.getElementById('tourBanner');
+  if(banner) banner.style.display = 'none';
   if(save !== false){ try{ localStorage.setItem(TOUR_KEY, '1'); }catch(e){} }
 }
 function openTour(){
@@ -2637,9 +2658,14 @@ window.openTour = openTour;
   if(replay) replay.onclick = function(e){ e.preventDefault(); openTour(); };
   let seen = false;
   try{ seen = localStorage.getItem(TOUR_KEY) === '1'; }catch(e){ seen = false; }
+  const banner = document.getElementById('tourBanner');
+  if(banner){
+    banner.style.display = seen ? 'none' : 'flex';
+    banner.onclick = function(){ openTour(); };
+  }
   if(!seen){
     renderTour();
-    setTimeout(function(){ mask.classList.add('show'); }, 1200);
+    setTimeout(function(){ mask.classList.add('show'); }, 500);
   }
 })();
 
