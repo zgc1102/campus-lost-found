@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>清华校园拾光里 v3.2 · 校园互助服务平台</title>
-<link rel="stylesheet" href="assets/styles.css?v=20261109">
+<link rel="stylesheet" href="assets/styles.css?v=20261113">
 </head>
 <body>
 <div id="aiBusy" class="ai-busy"><span class="ai-spin"></span><span id="aiBusyText">AI 正在识别图片…</span></div>
@@ -33,18 +33,21 @@
       <div class="tb-go">开始 ›</div>
     </div>
     <div class="scroll">
-      <div class="hero-search">
-        <div class="hs-main" id="searchEntry">🔍 搜索失物 / 寻物 / 工具…</div>
-        <button type="button" class="s-act primary" data-publish="lost" title="发布启事">＋</button>
-        <button type="button" class="s-act" id="quickPhotoBtn" title="拍照发布 · AI 自动填写">📷</button>
-        <button type="button" class="s-act" data-nav="ask" title="问一问">💬</button>
+      <div class="ai-hero">
+        <div class="ai-orbit"><i></i><i></i><b>AI</b></div>
+        <div class="ai-hero-txt">
+          <div class="ah-t">AI 正在为校园失物把关</div>
+          <div class="ah-s">发布即审核 · 图片识别 · 认领核验</div>
+        </div>
+        <div class="ai-scanline"></div>
       </div>
+      <button type="button" id="quickPhotoBtn" style="display:none"></button>
       <input type="file" id="quickPhotoInput" accept="image/*" capture="environment" style="display:none">
       <div class="ai-strip">
-        <div class="ai-chip">🤖 AI 双层审核</div>
-        <div class="ai-chip">📷 拍照识别</div>
-        <div class="ai-chip">🧠 智能匹配</div>
-        <div class="ai-chip">💬 AI 问答</div>
+        <div class="ai-chip">AI 双层审核</div>
+        <div class="ai-chip">拍照识别</div>
+        <div class="ai-chip">智能匹配</div>
+        <div class="ai-chip">AI 问答</div>
       </div>
 
       <!-- 中央宣传窗 -->
@@ -91,6 +94,7 @@
         <div class="ver">v3.2 · 2026-10-26 · 本机 / 同 Wi-Fi / 公网 三种模式自动切换</div>
       </div>
     </div>
+    <button class="fab-pub" data-publish="lost" aria-label="发布启事">＋</button>
   </section>
 
   <!-- ============ 中央宣传窗详情 ============ -->
@@ -107,7 +111,12 @@
     </div>
     <div class="scroll">
       <div class="tip-box">⚠️ 认领提示：认领物品前，请务必核对物品独有特征，请勿仅凭照片认领，谨防冒领。<br>交接请选择公共场所，不要前往偏僻地点，谨慎公开手机号、微信等私人联系方式。</div>
-      <div class="sub-search"><span>🔍</span><input data-filter="lost" placeholder="在失物招领中搜索标题 / 地点"></div>
+      <div class="page-bar">
+        <div class="pb-search"><svg class="pb-mag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></svg><input data-filter="lost" placeholder="搜索失物招领"></div>
+        <button type="button" class="pb-ico primary" data-publish="lost" title="发布启事">＋</button>
+        <button type="button" class="pb-ico js-quick-photo" title="拍照发布"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7h4l1.6-2h6.8L17 7h4v12H3z"/><circle cx="12" cy="13" r="3.4"/></svg></button>
+        <button type="button" class="pb-ico" data-nav="ask" title="问一问"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12a8 8 0 0 1-8 8H7l-4 3v-6a8 8 0 1 1 18-5z"/></svg></button>
+      </div>
       <div id="lostWrap"></div>
     </div>
   </section>
@@ -120,7 +129,12 @@
     </div>
     <div class="scroll">
       <div class="tip-box">⚠️ 防骗提示：主动联系你并提供“验证码 / 转账 / 付费解锁”的，基本都是骗子。<br>真实认领请当面核对物品细节，平台不会收取任何费用。</div>
-      <div class="sub-search"><span>🔍</span><input data-filter="found" placeholder="在寻物启事中搜索标题 / 地点"></div>
+      <div class="page-bar">
+        <div class="pb-search"><svg class="pb-mag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></svg><input data-filter="found" placeholder="搜索寻物启事"></div>
+        <button type="button" class="pb-ico primary" data-publish="found" title="发布启事">＋</button>
+        <button type="button" class="pb-ico js-quick-photo" title="拍照发布"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7h4l1.6-2h6.8L17 7h4v12H3z"/><circle cx="12" cy="13" r="3.4"/></svg></button>
+        <button type="button" class="pb-ico" data-nav="ask" title="问一问"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12a8 8 0 0 1-8 8H7l-4 3v-6a8 8 0 1 1 18-5z"/></svg></button>
+      </div>
       <div id="foundWrap"></div>
     </div>
   </section>
@@ -237,7 +251,12 @@
     </div>
     <div class="scroll">
       <div class="hintline" id="helpHint">同学之间互相搭把手：借个东西、帮取快递、闲置送人、找人帮忙。</div>
-      <div class="sub-search"><span>🔍</span><input data-filter="help" placeholder="在爱心求助中搜索"></div>
+      <div class="page-bar">
+        <div class="pb-search"><svg class="pb-mag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></svg><input data-filter="help" placeholder="搜索爱心求助"></div>
+        <button type="button" class="pb-ico primary" id="pageHelpPub" title="发布求助">＋</button>
+        <button type="button" class="pb-ico js-quick-photo" title="拍照发布"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7h4l1.6-2h6.8L17 7h4v12H3z"/><circle cx="12" cy="13" r="3.4"/></svg></button>
+        <button type="button" class="pb-ico" data-nav="ask" title="问一问"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12a8 8 0 0 1-8 8H7l-4 3v-6a8 8 0 1 1 18-5z"/></svg></button>
+      </div>
       <div id="helpList"></div>
     </div>
   </section>
@@ -533,7 +552,7 @@
     </div>
   </div>
 </div>
-<script src="assets/app.js?v=20261112"></script>
+<script src="assets/app.js?v=20261114"></script>
 <div id="imgViewer" class="img-viewer"><img id="imgViewerImg" alt=""><div class="img-viewer-close">✕</div></div>
 <script>if(location.protocol==="file:"){var w=document.getElementById("fileWarn");if(w)w.style.display="block";}</script>
 </body>

@@ -640,7 +640,8 @@ let memTouchX = 0, memTouchY = 0;
 function applyMem(){
   const track = document.getElementById('memTrack');
   if(!track) return;
-  track.style.transform = 'translateX(-' + (memIdx * 100) + '%)';
+  const w = track.clientWidth || 1;
+  try{ track.scrollTo({left: memIdx * w, behavior: 'smooth'}); }catch(e){ track.scrollLeft = memIdx * w; }
   document.querySelectorAll('#memDots i').forEach(function(d, i){
     d.classList.toggle('on', i === memIdx);
   });
@@ -679,14 +680,15 @@ function renderMemorial(){
     memWheelAt = now;
     goMem(memIdx + ((e.deltaY || e.deltaX) > 0 ? 1 : -1));
   };
-  track.ontouchstart = function(e){
-    memTouchX = e.touches[0].clientX;
-    memTouchY = e.touches[0].clientY;
-  };
-  track.ontouchend = function(e){
-    const dx = e.changedTouches[0].clientX - memTouchX;
-    const dy = e.changedTouches[0].clientY - memTouchY;
-    if(Math.abs(dx) > 30 && Math.abs(dx) > Math.abs(dy)) goMem(memIdx + (dx < 0 ? 1 : -1));
+  track.onscroll = function(){
+    const w = track.clientWidth || 1;
+    const idx = Math.round(track.scrollLeft / w);
+    if(idx !== memIdx && idx >= 0 && idx < MEMORIAL_DATA.length){
+      memIdx = idx;
+      document.querySelectorAll('#memDots i').forEach(function(d, i){
+        d.classList.toggle('on', i === memIdx);
+      });
+    }
   };
   startMemorialAuto();
 }
@@ -1103,6 +1105,15 @@ function openClaimReview(id){
 
   const sheet = document.getElementById('claimSheet');
   sheet.classList.add('show');
+
+  /* 打开时的扫描动效 */
+  const scanBox = document.getElementById('csClaim');
+  if(scanBox){
+    scanBox.classList.remove('scanning');
+    void scanBox.offsetWidth;
+    scanBox.classList.add('scanning');
+    setTimeout(function(){ scanBox.classList.remove('scanning'); }, 2600);
+  }
 
   // AI 核验（只对「我收到的、待处理」的申请开放）
   const agentBtn = document.getElementById('csAgentBtn');
@@ -1775,6 +1786,11 @@ function resetPublishForm(){
 document.getElementById('quickPhotoBtn').onclick = function(){
   document.getElementById('quickPhotoInput').click();
 };
+document.querySelectorAll('.js-quick-photo').forEach(function(b){
+  b.onclick = function(){ document.getElementById('quickPhotoInput').click(); };
+});
+const pageHelpPub = document.getElementById('pageHelpPub');
+if(pageHelpPub) pageHelpPub.onclick = function(){ document.getElementById('helpPublishBtn').click(); };
 
 document.getElementById('quickPhotoInput').onchange = async function(){
   const file = this.files && this.files[0];
@@ -2603,7 +2619,7 @@ const TOUR_SLIDES = [
   {e:'👋', t:'欢迎来到清华校园拾光里',
    b:'一个 AI 全程把关的校园失物招领与爱心互助平台。\n先花 30 秒，带你逛一圈。'},
   {e:'🔎', t:'失物 · 寻物',
-   b:'丢了东西点「寻物启事」，捡到东西点「失物招领」。\n搜索栏右边的 ＋ 就能发布，类型选错 AI 会自动纠正。'},
+   b:'丢了东西点「寻物启事」，捡到东西点「失物招领」。\n点右下角 ＋ 就能发布，类型选错 AI 会自动纠正。'},
   {e:'🤝', t:'爱心 · 求助',
    b:'借用工具、代办跑腿、爱心捐赠、志愿帮忙。\n点「我来帮忙」就能对接，全程 AI 审核。'},
   {e:'🤖', t:'AI 都在做什么',
