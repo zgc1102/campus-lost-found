@@ -317,7 +317,7 @@
       '<div class="meta">'+esc(it.place || '未填写地点')+' · '+fmt(it.createdAt)+'</div>'+
       '<div class="meta">'+esc(it.desc || '')+'</div>'+
       (it.visionDesc ? '<div class="meta" style="color:#7a5aa8">🖼 AI 看图：'+esc(it.visionDesc)+'</div>' : '')+
-      ((it.photo || it.photoUrl) ? '<img class="admin-photo" src="'+esc(it.photo || it.photoUrl)+'" alt="发布图片">' : '')+
+      (it.photoUrl ? '<img class="admin-photo" src="' + esc(it.photoUrl) + (token ? (it.photoUrl.indexOf('?') >= 0 ? '&' : '?') + 'token=' + encodeURIComponent(token) : '') + '" alt="发布图片">' : '')+
       (it.secret ? '<div class="secret">🔒 核验特征（仅管理员可见）：'+esc(it.secret)+'</div>' : '')+
       (phone ? '<div class="phone">📞 联系电话：'+esc(phone)+'</div>' : '')+
       (it.status === 'rejected' && it.rejectReason ? '<div class="meta">驳回理由：'+esc(it.rejectReason)+'</div>' : '')+

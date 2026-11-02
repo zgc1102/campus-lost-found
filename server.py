@@ -1689,7 +1689,10 @@ class Handler(BaseHTTPRequestHandler):
             if not it:
                 return self._send(404, b"not found", "text/plain; charset=utf-8")
             if it.get("status") not in PUBLIC_STATUS and not self._is_admin():
-                return self._send(403, b"forbidden", "text/plain; charset=utf-8")
+                _tok = (parse_qs(urlparse(self.path).query).get("token") or [""])[0]
+                _exp = TOKENS.get(_tok) if _tok else None
+                if not _exp or _exp < time.time():
+                    return self._send(403, b"forbidden", "text/plain; charset=utf-8")
             photo = str(it.get("photo") or "")
             if not photo:
                 return self._send(404, b"no photo", "text/plain; charset=utf-8")
