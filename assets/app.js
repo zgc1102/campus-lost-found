@@ -2675,6 +2675,10 @@ window.openTour = openTour;
   let seen = false;
   try{ seen = localStorage.getItem(TOUR_KEY) === '1'; }catch(e){ seen = false; }
   const banner = document.getElementById('tourBanner');
+  if(location.search.indexOf('tour=off') >= 0){
+    if(banner) banner.style.display = 'none';
+    return;
+  }
   if(banner){
     banner.style.display = seen ? 'none' : 'flex';
     banner.onclick = function(){ openTour(); };
