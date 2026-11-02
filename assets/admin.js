@@ -133,17 +133,20 @@
       $('list').innerHTML = '<div class="empty">还没有人注册账号</div>';
       return;
     }
-    $('list').innerHTML = accounts.map(function(a){
-      return '<div class="item"><div class="row1"><span class="tag">账号</span>' +
-        (a.banned ? '<span class="status" style="background:#fdeaea;color:#a12f2f">已停用</span>' : '') +
-        '<div class="tt">' + esc(a.phone) + '</div></div>' +
-        '<div class="meta">注册时间：' + fmt(a.createdAt) + '</div>' +
-        '<div class="meta">最近登录：' + (a.lastLoginAt ? fmt(a.lastLoginAt) : '—') +
-        '　发布 ' + a.posts + ' 条</div>' +
-        '<div class="acts"><button class="btn ' + (a.banned ? 'ok' : 'danger') +
-        '" data-ban="' + a.id + '" data-banned="' + (a.banned ? '1' : '0') + '">' +
-        (a.banned ? '恢复账号' : '停用账号') + '</button></div></div>';
-    }).join('');
+    $('list').innerHTML = '<div class="table-wrap"><table class="utable"><thead><tr>' +
+      '<th>手机号</th><th>注册时间</th><th>最近登录</th><th>发布</th><th>状态</th><th>操作</th>' +
+      '</tr></thead><tbody>' + accounts.map(function(a){
+        return '<tr>' +
+          '<td class="num">' + esc(a.phone) + '</td>' +
+          '<td>' + fmt(a.createdAt) + '</td>' +
+          '<td>' + (a.lastLoginAt ? fmt(a.lastLoginAt) : '—') + '</td>' +
+          '<td class="num">' + (a.posts || 0) + '</td>' +
+          '<td class="' + (a.banned ? 'bad' : 'ok') + '">' + (a.banned ? '已停用' : '正常') + '</td>' +
+          '<td><button class="btn ' + (a.banned ? 'ok' : 'danger') +
+          '" data-ban="' + a.id + '" data-banned="' + (a.banned ? '1' : '0') + '">' +
+          (a.banned ? '恢复' : '停用') + '</button></td>' +
+          '</tr>';
+      }).join('') + '</tbody></table></div>';
   }
 
   let announcements = [];
