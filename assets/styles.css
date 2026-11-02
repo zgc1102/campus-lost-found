@@ -499,3 +499,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{animation:none!important;transition:none!important;}
 }
+
+/* 首页左上角搜索 */
+.topbar .top-search{width:28px;height:28px;flex:0 0 28px;border:0;background:transparent;color:#fff;font-size:15px;line-height:1;padding:0;cursor:pointer;font-family:inherit;}
+.topbar .top-search:active{opacity:.7;}

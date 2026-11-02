@@ -1502,6 +1502,8 @@ document.querySelector('[data-close-sheet]').onclick=()=>document.getElementById
 
 /* ============ 发布启事（v3.0） ============ */
 let pendingPhoto = null;
+let pendingHelpPhoto = null;
+let photoContext = '';
 let pendingFields = null;
 let phoneManualRequest = false;
 let pendingSummary = '';
@@ -1800,18 +1802,32 @@ document.getElementById('quickPhotoBtn').onclick = function(){
   document.getElementById('quickPhotoInput').click();
 };
 document.querySelectorAll('.js-quick-photo').forEach(function(b){
-  b.onclick = function(){ document.getElementById('quickPhotoInput').click(); };
+  b.onclick = function(){
+    photoContext = b.getAttribute('data-photo-context') || '';
+    document.getElementById('quickPhotoInput').click();
+  };
 });
+const helpPhotoBtn = document.getElementById('helpPhotoBtn');
+if(helpPhotoBtn) helpPhotoBtn.onclick = function(){
+  photoContext = 'donate';
+  document.getElementById('quickPhotoInput').click();
+};
 const pageHelpPub = document.getElementById('pageHelpPub');
 if(pageHelpPub) pageHelpPub.onclick = function(){ document.getElementById('helpPublishBtn').click(); };
+const homeSearchBtn = document.getElementById('homeSearchBtn');
+if(homeSearchBtn) homeSearchBtn.onclick = function(){ show('search'); };
 
 document.getElementById('quickPhotoInput').onchange = async function(){
   const file = this.files && this.files[0];
   this.value = '';
   if(!file) return;
+  const ctx = photoContext || '';
+  photoContext = '';
+  if(ctx === 'donate'){ await handleDonatePhoto(file); return; }
   resetPublishForm();
   show('publish');
-  document.getElementById('pubTabFind').click();
+  const tab = document.getElementById(ctx === 'lost' ? 'pubTabLost' : 'pubTabFind');
+  if(tab) tab.click();
   toast('照片处理中…');
   let data = null;
   try{ data = await compressImage(file); }catch(e){ data = null; }
@@ -1844,6 +1860,37 @@ document.getElementById('quickPhotoInput').onchange = async function(){
     aiBusy(false);
   }
 };
+
+async function handleDonatePhoto(file){
+  let data = null;
+  try{ data = await compressImage(file); }catch(e){ data = null; }
+  if(!data){ toast('图片读取失败，可以手动填写'); return; }
+  pendingHelpPhoto = data;
+  const hp = document.getElementById('helpPhotoPreview');
+  if(hp) hp.innerHTML = '<img src="' + data + '" alt="预览" style="width:100%;max-height:170px;object-fit:cover;border-radius:10px;margin-top:8px">';
+  document.getElementById('helpCatSel').value = 'help_donate';
+  document.getElementById('helpSheet').classList.add('show');
+  toast('照片处理中…');
+  aiBusy(true, 'AI 正在识别捐赠物品…');
+  try{
+    const r = await Net.vision(String(data).split(',')[1] || '', 'image/jpeg');
+    if(r && r.ok){
+      const color = r.color || '', catName = r.category || '';
+      const title = (color + catName).slice(0, 30);
+      if(title) document.getElementById('helpTitleInput').value = title;
+      let desc = String(r.desc || '').replace(/[。.!！]+$/, '');
+      if(color && desc.indexOf(color) < 0) desc = color + '，' + desc;
+      if(desc) document.getElementById('helpDesc').value = desc + '，可自取或我送过去';
+      toast('已根据照片填好，补个地点就能发');
+    } else {
+      toast('AI 没看清，照片已带上，手动写一下');
+    }
+  }catch(e){
+    toast('AI 识别失败，照片已带上，手动写一下');
+  }finally{
+    aiBusy(false);
+  }
+}
 
 document.getElementById('fillDemo').onclick = function(){
   const f = document.getElementById('publishForm');
@@ -2229,6 +2276,8 @@ let helpGoId = '';
 function openHelp(cat){
   currentHelpCat = cat || '';
   document.getElementById('helpTitle').textContent = cat ? (HELP_NAMES[cat] || '爱心求助') : '爱心求助';
+  const hpBtn = document.getElementById('helpPhotoBtn');
+  if(hpBtn) hpBtn.style.display = cat === 'help_donate' ? 'flex' : 'none';
   renderHelp();
   show('help');
 }
@@ -2248,7 +2297,9 @@ function renderHelp(){
   wrap.innerHTML = arr.map(function(it){
     const m = catInfo(it.cat);
     return '<div class="item" data-help-item="' + esc(it.id) + '">' +
-      '<div class="thumb" style="background:linear-gradient(135deg,' + m.c + ',' + shade(m.c) + ')">' + m.e + '</div>' +
+      (it.photoUrl
+        ? '<div class="thumb" style="padding:0;overflow:hidden;background:#eee"><img loading="lazy" decoding="async" src="' + esc(it.photoUrl) + '" alt="" style="width:100%;height:100%;object-fit:cover;display:block"></div>'
+        : '<div class="thumb" style="background:linear-gradient(135deg,' + m.c + ',' + shade(m.c) + ')">' + m.e + '</div>') +
       '<div class="body">' +
       '<div class="tt">' + esc(it.title) + statusChip(it.status) + '</div>' +
       '<div class="dd">' + esc(it.desc || '') + '</div>' +
@@ -2265,6 +2316,10 @@ document.getElementById('helpPublishBtn').onclick = function(){
 };
 document.getElementById('helpSheetClose').onclick = function(){
   document.getElementById('helpSheet').classList.remove('show');
+  pendingHelpPhoto = null;
+  const hp = document.getElementById('helpPhotoPreview');
+  if(hp) hp.innerHTML = '';
+  document.getElementById('helpSubmit').textContent = '发布求助';
 };
 document.getElementById('helpSubmit').onclick = async function(){
   const title = document.getElementById('helpTitleInput').value.trim();
@@ -2282,7 +2337,7 @@ document.getElementById('helpSubmit').onclick = async function(){
   this.textContent = '发布中…';
   try{
     const payload = {type:'help', cat:cat, helpCat:cat, title:title, desc:desc,
-                     place: place || '未填写地点', eventTime:'', secret:'', photo:null,
+                     place: place || '未填写地点', eventTime:'', secret:'', photo: pendingHelpPhoto || null,
                      contact:{phone: phone}};
     if(API_BASE){ await Net.create(payload); await netSync(); }
     else {
@@ -2290,6 +2345,9 @@ document.getElementById('helpSubmit').onclick = async function(){
                                createdAt:Date.now(), updatedAt:Date.now()}, payload));
     }
     document.getElementById('helpSheet').classList.remove('show');
+    pendingHelpPhoto = null;
+    const _hpp = document.getElementById('helpPhotoPreview');
+    if(_hpp) _hpp.innerHTML = '';
     document.getElementById('helpTitleInput').value = '';
     document.getElementById('helpDesc').value = '';
     document.getElementById('helpPlace').value = '';
