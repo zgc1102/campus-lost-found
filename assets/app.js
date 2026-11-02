@@ -194,7 +194,19 @@ const Store = {
 const Net = {
   async call(path, opts){
     const headers = {'Content-Type':'application/json', 'X-Owner': myId()};
-    const r = await fetch(API_BASE + path, Object.assign({headers: headers}, opts || {}));
+    const o = Object.assign({headers: headers}, opts || {});
+    const isWrite = (o.method && o.method !== 'GET');
+    const ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    if(ctrl) o.signal = ctrl.signal;
+    const timer = ctrl ? setTimeout(function(){ ctrl.abort(); }, isWrite ? 90000 : 12000) : null;
+    let r;
+    try{
+      r = await fetch(API_BASE + path, o);
+    }catch(e){
+      throw new Error('网络超时，请稍后重试');
+    }finally{
+      if(timer) clearTimeout(timer);
+    }
     if(!r.ok){
       let msg = 'HTTP ' + r.status;
       try{
@@ -2592,6 +2604,9 @@ try{
   renderLost(); renderFound(); renderLend('lend'); renderBorrow('borrow');
   renderMine();
   setNetBadge();
+  window.__SG_READY = true;
+  var _bg = document.getElementById('bootGuard');
+  if(_bg) _bg.style.display = 'none';
   if(API_BASE){
     netSync();
     renderClaims();

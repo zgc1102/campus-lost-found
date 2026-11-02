@@ -7,6 +7,23 @@
 <link rel="stylesheet" href="assets/styles.css?v=20261115">
 </head>
 <body>
+<div id="bootGuard" style="position:fixed;inset:0;z-index:3000;background:#1b0b2e;color:#fff;display:flex;align-items:center;justify-content:center;flex-direction:column;font:14px/1.9 'Microsoft YaHei',system-ui,sans-serif;text-align:center;padding:24px">
+  <div style="width:34px;height:34px;border:3px solid rgba(255,255,255,.25);border-top-color:#c9a7f0;border-radius:50%;animation:bgSpin .9s linear infinite;margin-bottom:14px"></div>
+  <div id="bootText">正在打开拾光里…</div>
+</div>
+<style>@keyframes bgSpin{to{transform:rotate(360deg)}}</style>
+<script>
+window.__SG_READY = false;
+setTimeout(function(){
+  var g = document.getElementById('bootGuard');
+  if(!g) return;
+  if(window.__SG_READY){ g.style.display='none'; return; }
+  var t = document.getElementById('bootText');
+  if(t) t.innerHTML = '网络有点慢，还没加载出来<br><a href="javascript:location.reload()" style="color:#c9a7f0;text-decoration:underline">点这里重试</a>';
+  var sp = g.querySelector('div');
+  if(sp) sp.style.display = 'none';
+}, 9000);
+</script>
 <div id="aiBusy" class="ai-busy"><span class="ai-spin"></span><span id="aiBusyText">AI 正在识别图片…</span></div>
 <div id="fileWarn" style="display:none;position:fixed;inset:0;z-index:9999;background:#f6f4fb;padding:28px 22px;font-family:system-ui,-apple-system,'Microsoft YaHei',sans-serif;color:#2f2a3a;overflow:auto">
   <h2 style="margin:0 0 12px;font-size:20px">这是本地文件，不能联机使用</h2>
@@ -548,7 +565,7 @@
 <script>
 try{ if(localStorage.getItem('sg:tour:v2') === '1'){ var _tm = document.getElementById('tourMask'); if(_tm) _tm.classList.remove('show'); } }catch(e){}
 </script>
-<script src="assets/app.js?v=20261118"></script>
+<script src="assets/app.js?v=20261119"></script>
 <div id="imgViewer" class="img-viewer"><img id="imgViewerImg" alt=""><div class="img-viewer-close">✕</div></div>
 <script>if(location.protocol==="file:"){var w=document.getElementById("fileWarn");if(w)w.style.display="block";}</script>
 </body>
