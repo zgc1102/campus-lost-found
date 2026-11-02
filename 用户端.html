@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>清华校园拾光里 v3.2 · 校园互助服务平台</title>
-<link rel="stylesheet" href="assets/styles.css?v=20261116">
+<link rel="stylesheet" href="assets/styles.css?v=20261117">
 </head>
 <body>
 <div id="bootGuard" style="position:fixed;inset:0;z-index:3000;background:#1b0b2e;color:#fff;display:flex;align-items:center;justify-content:center;flex-direction:column;font:14px/1.9 'Microsoft YaHei',system-ui,sans-serif;text-align:center;padding:24px">
@@ -14,15 +14,26 @@
 <style>@keyframes bgSpin{to{transform:rotate(360deg)}}</style>
 <script>
 window.__SG_READY = false;
-setTimeout(function(){
+window.__sgEnter = function(){
+  var g = document.getElementById('bootGuard');
+  if(g) g.style.display = 'none';
+};
+function __sgBootFail(msg){
   var g = document.getElementById('bootGuard');
   if(!g) return;
-  if(window.__SG_READY){ g.style.display='none'; return; }
   var t = document.getElementById('bootText');
-  if(t) t.innerHTML = '网络有点慢，还没加载出来<br><a href="javascript:location.reload()" style="color:#c9a7f0;text-decoration:underline">点这里重试</a>';
+  if(t) t.innerHTML = (msg || '加载遇到问题') +
+    '<br><a href="javascript:location.reload()" style="color:#c9a7f0;text-decoration:underline">重试</a>' +
+    '　<a href="javascript:window.__sgEnter()" style="color:#c9a7f0;text-decoration:underline">仍然进入</a>';
   var sp = g.querySelector('div');
   if(sp) sp.style.display = 'none';
-}, 9000);
+}
+window.addEventListener('error', function(e){
+  if(!window.__SG_READY) __sgBootFail('脚本出错：' + (e.message || '未知错误'));
+});
+setTimeout(function(){
+  if(!window.__SG_READY) __sgBootFail('加载有点慢');
+}, 6000);
 </script>
 <div id="aiBusy" class="ai-busy"><span class="ai-spin"></span><span id="aiBusyText">AI 正在识别图片…</span></div>
 <div id="fileWarn" style="display:none;position:fixed;inset:0;z-index:9999;background:#f6f4fb;padding:28px 22px;font-family:system-ui,-apple-system,'Microsoft YaHei',sans-serif;color:#2f2a3a;overflow:auto">
@@ -565,7 +576,7 @@ setTimeout(function(){
 <script>
 try{ if(localStorage.getItem('sg:tour:v2') === '1'){ var _tm = document.getElementById('tourMask'); if(_tm) _tm.classList.remove('show'); } }catch(e){}
 </script>
-<script src="assets/app.js?v=20261120"></script>
+<script src="assets/app.js?v=20261121"></script>
 <div id="imgViewer" class="img-viewer"><img id="imgViewerImg" alt=""><div class="img-viewer-close">✕</div></div>
 <script>if(location.protocol==="file:"){var w=document.getElementById("fileWarn");if(w)w.style.display="block";}</script>
 </body>

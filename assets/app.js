@@ -2596,18 +2596,23 @@ function checkStorage(){
     localStorage.removeItem(k);
   }catch(e){ warnStorage(); }
 }
+function bootStep(name, fn){
+  try{ fn(); }catch(e){ if(window.console) console.error('boot fail: ' + name, e); }
+}
 try{
-  checkStorage();
-  renderMemorial();
-  loadAnnouncements();
-  renderImgSearch();
-  setNetBadge();
+  bootStep('storage', checkStorage);
+  bootStep('memorial', renderMemorial);
+  bootStep('announce', loadAnnouncements);
+  bootStep('imgsearch', renderImgSearch);
+  bootStep('badge', setNetBadge);
   window.__SG_READY = true;
   var _bg = document.getElementById('bootGuard');
   if(_bg) _bg.style.display = 'none';
   setTimeout(function(){
-    renderLost(); renderFound(); renderLend('lend'); renderBorrow('borrow');
-    renderMine();
+    bootStep('lost', renderLost); bootStep('found', renderFound);
+    bootStep('lend', function(){ renderLend('lend'); });
+    bootStep('borrow', function(){ renderBorrow('borrow'); });
+    bootStep('mine', renderMine);
     if(API_BASE){ netSync(); renderClaims(); renderAccBox(); renderAskChips(); }
   }, 80);
   if(API_BASE){
@@ -2624,6 +2629,8 @@ try{
   if(_sm){ setTimeout(function(){ show(_sm[1]); }, 700); }
   console.log('清华校园拾光里 v3.2 已就绪 · 模式=' + (API_BASE ? '共享' : '本机') + ' · 存储键 ' + STORE_KEY);
 }catch(err){
+  window.__SG_READY = true;
+  if(window.__sgEnter) window.__sgEnter();
   const b = document.getElementById('errTop');
   if(b){ b.textContent = '⚠️ 页面初始化失败：' + err.message; b.classList.add('show'); }
   if(window.console) console.error(err);
