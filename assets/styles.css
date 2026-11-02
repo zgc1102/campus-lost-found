@@ -422,7 +422,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 /* 首次访问引导 */
 .tour{position:fixed;inset:0;background:rgba(20,10,35,.55);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);z-index:1200;display:none;align-items:center;justify-content:center;padding:18px;}
 .tour.show{display:flex;animation:tourFade .25s ease;}
-.tour-card{width:100%;max-width:360px;background:linear-gradient(160deg,#fff,#faf7ff);border-radius:22px;padding:22px 20px 18px;box-shadow:0 24px 60px rgba(40,10,80,.35);border:1px solid rgba(255,255,255,.65);position:relative;overflow:hidden;}
+.tour-card{width:100%;max-width:360px;max-height:90vh;overflow-x:hidden;overflow-y:auto;background:linear-gradient(160deg,#fff,#faf7ff);border-radius:22px;padding:22px 20px 18px;box-shadow:0 24px 60px rgba(40,10,80,.35);border:1px solid rgba(255,255,255,.65);position:relative;}
 .tour-card::before{content:'';position:absolute;left:-30%;right:-30%;top:-90px;height:190px;background:radial-gradient(circle,#e9d8ff,transparent 70%);opacity:.75;pointer-events:none;}
 .tour-step{position:relative;font-size:11px;color:#8a7aa8;letter-spacing:.08em;}
 .tour-emoji{position:relative;font-size:44px;margin:12px 0 4px;animation:tourFloat 2.6s ease-in-out infinite;}

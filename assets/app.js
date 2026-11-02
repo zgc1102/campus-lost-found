@@ -2683,6 +2683,13 @@ window.openTour = openTour;
     renderTour();
     setTimeout(function(){ mask.classList.add('show'); }, 500);
   }
+  /* 点背景也能关，防止卡片没渲染出来时挡住整页 */
+  mask.addEventListener('click', function(e){
+    if(e.target === mask) closeTour();
+  });
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape' && mask.classList.contains('show')) closeTour();
+  });
 })();
 
 /* 相似物品点击 */
