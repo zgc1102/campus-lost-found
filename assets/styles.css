@@ -425,7 +425,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .tour-card{width:100%;max-width:360px;max-height:90vh;overflow-x:hidden;overflow-y:auto;background:linear-gradient(160deg,#fff,#faf7ff);border-radius:22px;padding:22px 20px 18px;box-shadow:0 24px 60px rgba(40,10,80,.35);border:1px solid rgba(255,255,255,.65);position:relative;}
 .tour-card::before{content:'';position:absolute;left:-30%;right:-30%;top:-90px;height:190px;background:radial-gradient(circle,#e9d8ff,transparent 70%);opacity:.75;pointer-events:none;}
 .tour-step{position:relative;font-size:11px;color:#8a7aa8;letter-spacing:.08em;}
-.tour-emoji{position:relative;font-size:44px;margin:12px 0 4px;animation:tourFloat 2.6s ease-in-out infinite;}
+.tour-emoji{position:relative;font-size:44px;margin:12px 0 4px;}
 .tour-title{position:relative;font-size:19px;font-weight:800;color:#3b1d63;line-height:1.35;}
 .tour-body{position:relative;font-size:13px;line-height:1.75;color:#5a5268;margin:10px 0 14px;white-space:pre-line;}
 .tour-dots{position:relative;display:flex;gap:6px;margin-bottom:14px;}
@@ -441,7 +441,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .topbar .help-btn:active{background:rgba(255,255,255,.28);}
 .tour-progress{position:relative;height:3px;background:#eee6f7;border-radius:99px;overflow:hidden;margin:0 0 14px;}
 .tour-progress i{display:block;height:100%;width:20%;background:linear-gradient(90deg,#62269c,#a06be0);border-radius:99px;transition:width .28s cubic-bezier(.22,.61,.36,1);}
-.tour.show .tour-card{transform:translateY(6px) scale(.98);animation:tourIn .32s cubic-bezier(.22,.61,.36,1) forwards;}
+.tour.show .tour-card{transform:none;}
 @keyframes tourIn{to{transform:translateY(0) scale(1)}}
 
 /* AI 相似物品推荐 */

@@ -531,7 +531,7 @@ function itemHTML(it, srcLabel){
     ? '<span class="src-tag" style="background:#2f7d46">我的</span>'
     : '<span class="src-tag">'+esc(srcLabel)+'</span>';
   const thumb = (it.photo || it.photoUrl)
-    ? '<div class="thumb" style="padding:0;overflow:hidden;background:#eee"><img src="'+esc(it.photo || it.photoUrl)+'" alt="" style="width:100%;height:100%;object-fit:cover;display:block"></div>'
+    ? '<div class="thumb" style="padding:0;overflow:hidden;background:#eee"><img loading="lazy" decoding="async" src="'+esc(it.photo || it.photoUrl)+'" alt="" style="width:100%;height:100%;object-fit:cover;display:block"></div>'
     : thumbHTML(it.cat);
   let btnHTML;
   if(mine){ btnHTML = '<button class="btn ghost">查看</button>'; }
@@ -2601,17 +2601,16 @@ try{
   renderMemorial();
   loadAnnouncements();
   renderImgSearch();
-  renderLost(); renderFound(); renderLend('lend'); renderBorrow('borrow');
-  renderMine();
   setNetBadge();
   window.__SG_READY = true;
   var _bg = document.getElementById('bootGuard');
   if(_bg) _bg.style.display = 'none';
+  setTimeout(function(){
+    renderLost(); renderFound(); renderLend('lend'); renderBorrow('borrow');
+    renderMine();
+    if(API_BASE){ netSync(); renderClaims(); renderAccBox(); renderAskChips(); }
+  }, 80);
   if(API_BASE){
-    netSync();
-    renderClaims();
-    renderAccBox();
-    renderAskChips();
     setInterval(function(){ if(!document.hidden){ netSync(); loadAnnouncements(); } }, 30000);
     document.addEventListener('visibilitychange', function(){
       if(!document.hidden){ netSync(); loadAnnouncements(); }
