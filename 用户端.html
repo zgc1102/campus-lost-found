@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>清华校园拾光里 v3.2 · 校园互助服务平台</title>
-<link rel="stylesheet" href="assets/styles.css?v=20261114">
+<link rel="stylesheet" href="assets/styles.css?v=20261115">
 </head>
 <body>
 <div id="aiBusy" class="ai-busy"><span class="ai-spin"></span><span id="aiBusyText">AI 正在识别图片…</span></div>
@@ -33,14 +33,6 @@
       <div class="tb-go">开始 ›</div>
     </div>
     <div class="scroll">
-      <div class="ai-hero">
-        <div class="ai-orbit"><i></i><i></i><b>AI</b></div>
-        <div class="ai-hero-txt">
-          <div class="ah-t">AI 正在为校园失物把关</div>
-          <div class="ah-s">发布即审核 · 图片识别 · 认领核验</div>
-        </div>
-        <div class="ai-scanline"></div>
-      </div>
       <button type="button" id="quickPhotoBtn" style="display:none"></button>
       <input type="file" id="quickPhotoInput" accept="image/*" capture="environment" style="display:none">
       <div class="ai-strip">
@@ -538,21 +530,25 @@
   </div>
 </div>
 
-<div class="tour" id="tourMask">
+<div class="tour show" id="tourMask">
   <div class="tour-card">
     <div class="tour-step" id="tourStep">1 / 5</div>
-    <div class="tour-emoji" id="tourEmoji">✨</div>
+    <div class="tour-emoji" id="tourEmoji">👋</div>
     <div class="tour-title" id="tourTitle">欢迎来到清华校园拾光里</div>
-    <div class="tour-body" id="tourBody"></div>
-    <div class="tour-dots" id="tourDots"></div>
-    <div class="tour-progress"><i id="tourBar"></i></div>
+    <div class="tour-body" id="tourBody">一个 AI 全程把关的校园失物招领与爱心互助平台。
+先花 30 秒，带你逛一圈。</div>
+    <div class="tour-dots" id="tourDots"><i class="on"></i><i></i><i></i><i></i><i></i></div>
+    <div class="tour-progress"><i id="tourBar" style="width:20%"></i></div>
     <div class="tour-acts">
       <button type="button" class="btn ghost" id="tourSkip">跳过</button>
       <button type="button" class="btn" id="tourNext">下一步</button>
     </div>
   </div>
 </div>
-<script src="assets/app.js?v=20261117"></script>
+<script>
+try{ if(localStorage.getItem('sg:tour:v2') === '1'){ var _tm = document.getElementById('tourMask'); if(_tm) _tm.classList.remove('show'); } }catch(e){}
+</script>
+<script src="assets/app.js?v=20261118"></script>
 <div id="imgViewer" class="img-viewer"><img id="imgViewerImg" alt=""><div class="img-viewer-close">✕</div></div>
 <script>if(location.protocol==="file:"){var w=document.getElementById("fileWarn");if(w)w.style.display="block";}</script>
 </body>

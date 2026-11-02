@@ -696,11 +696,12 @@ let memTimer = null;
 function startMemorialAuto(){
   if(memTimer) clearInterval(memTimer);
   memTimer = setInterval(function(){
+    if(document.hidden) return;
     const home = document.getElementById('screen-home');
     if(!home || !home.classList.contains('active')) return;
     if(MEMORIAL_DATA.length < 2) return;
     goMem(memIdx + 1);
-  }, 5200);
+  }, 6500);
 }
 function renderMemorialDetail(idx){
   const m=MEMORIAL_DATA[idx];
@@ -2687,7 +2688,7 @@ window.openTour = openTour;
   }
   if(!seen){
     renderTour();
-    setTimeout(function(){ mask.classList.add('show'); }, 500);
+    mask.classList.add('show');
   }
   /* 点背景也能关，防止卡片没渲染出来时挡住整页 */
   mask.addEventListener('click', function(e){
