@@ -443,7 +443,18 @@
         const timer = setInterval(function(){
           n--;
           tip.textContent = '正在更新，' + n + ' 秒后自动刷新…';
-          if(n <= 0){ clearInterval(timer); location.reload(); }
+          if(n <= 0){
+            clearInterval(timer);
+            api('/api/admin/deploy-log').then(function(lg){
+              const t = (lg && lg.log) || '';
+              if(/fatal|error|could not|failed/i.test(t)){
+                tip.style.background = '#a12f2f';
+                alert('更新失败，服务器日志：\n\n' + t);
+              }else{
+                location.reload();
+              }
+            }).catch(function(){ location.reload(); });
+          }
         }, 1000);
         tip.textContent = '正在更新，' + n + ' 秒后自动刷新…';
       }else{

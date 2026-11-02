@@ -1924,6 +1924,16 @@ class Handler(BaseHTTPRequestHandler):
                 return
             return self._json(load_special_numbers())
 
+        if path == "/api/admin/deploy-log":
+            if not self._need_admin():
+                return
+            try:
+                with open("/opt/lostfound/deploy.log", "r", encoding="utf-8", errors="ignore") as f:
+                    text = f.read()[-1200:]
+            except Exception:
+                text = ""
+            return self._json({"ok": True, "log": text})
+
         if path == "/api/admin/stats":
             if not self._need_admin():
                 return
@@ -2028,14 +2038,22 @@ class Handler(BaseHTTPRequestHandler):
             if not self._need_admin():
                 return
             try:
-                subprocess.run(["git", "-C", "/opt/lostfound", "fetch", "--quiet"], timeout=25)
+                subprocess.run(["git", "-C", "/opt/lostfound", "fetch", "origin", "main", "--quiet"], timeout=25)
                 local = subprocess.check_output(["git", "-C", "/opt/lostfound", "rev-parse", "HEAD"]).decode().strip()
                 remote = subprocess.check_output(["git", "-C", "/opt/lostfound", "rev-parse", "origin/main"]).decode().strip()
                 if local == remote:
                     return self._json({"ok": True, "hasUpdate": False, "msg": "暂无要更新的代码"})
                 script = "/tmp/sg_deploy.sh"
                 with open(script, "w", encoding="utf-8") as f:
-                    f.write("#!/bin/bash\nsleep 3\ncd /opt/lostfound\ngit pull --ff-only\nsystemctl restart lostfound\n")
+                    f.write("#!/bin/bash\nsleep 2\ncd /opt/lostfound\n"
+                            "{\n"
+                            "echo \"[$(date '+%F %T')] deploy start\"\n"
+                            "git fetch origin main\n"
+                            "git reset --hard origin/main\n"
+                            "git log --oneline -1\n"
+                            "systemctl restart lostfound\n"
+                            "echo \"[$(date '+%F %T')] done\"\n"
+                            "} > /opt/lostfound/deploy.log 2>&1\n")
                 os.chmod(script, 0o755)
                 subprocess.Popen(
                     ["systemd-run", "--collect", "--unit=sg-deploy-%d" % int(time.time()),
