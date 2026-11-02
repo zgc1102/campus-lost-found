@@ -18,5 +18,15 @@
   "createdAt": 1793520389557,
   "updatedAt": 1793520389557,
   "publishedAt": 1793520389557
+ },
+ {
+  "id": "a_7a87944e13",
+  "title": "公告刷新测试1793588217",
+  "body": "这是一条测试公告，用来验证首页轮播能否刷新。",
+  "pinned": false,
+  "status": "published",
+  "createdAt": 1793588217011,
+  "updatedAt": 1793588217011,
+  "publishedAt": 1793588217011
  }
 ]

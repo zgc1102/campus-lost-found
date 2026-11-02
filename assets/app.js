@@ -610,6 +610,23 @@ async function loadAnnouncements(){
   }catch(e){}
 }
 
+let memIdx = 0;
+let memWheelAt = 0;
+let memTouchX = 0, memTouchY = 0;
+
+function applyMem(){
+  const track = document.getElementById('memTrack');
+  if(!track) return;
+  track.style.transform = 'translateX(-' + (memIdx * 100) + '%)';
+  document.querySelectorAll('#memDots i').forEach(function(d, i){
+    d.classList.toggle('on', i === memIdx);
+  });
+}
+function goMem(i){
+  const n = MEMORIAL_DATA.length || 1;
+  memIdx = ((i % n) + n) % n;
+  applyMem();
+}
 function renderMemorial(){
   const track=document.getElementById('memTrack');
   track.innerHTML = MEMORIAL_DATA.map((m,i)=>
@@ -621,9 +638,32 @@ function renderMemorial(){
   if(dots){
     dots.innerHTML = MEMORIAL_DATA.map(function(_,i){ return '<i class="'+(i===0?'on':'')+'"></i>'; }).join('');
   }
-  track.onscroll=()=>{
-    const idx=Math.round(track.scrollLeft/track.clientWidth);
-    document.querySelectorAll('#memDots i').forEach((d,i)=>d.classList.toggle('on',i===idx));
+  memIdx = 0;
+  applyMem();
+  if(dots) dots.onclick = function(e){
+    const i = Array.prototype.indexOf.call(dots.children, e.target);
+    if(i >= 0) goMem(i);
+  };
+  const prev = document.getElementById('memPrev');
+  const next = document.getElementById('memNext');
+  if(prev) prev.onclick = function(){ goMem(memIdx - 1); };
+  if(next) next.onclick = function(){ goMem(memIdx + 1); };
+  track.onwheel = function(e){
+    if(Math.abs(e.deltaY) < 8 && Math.abs(e.deltaX) < 8) return;
+    e.preventDefault();
+    const now = Date.now();
+    if(now - memWheelAt < 420) return;
+    memWheelAt = now;
+    goMem(memIdx + ((e.deltaY || e.deltaX) > 0 ? 1 : -1));
+  };
+  track.ontouchstart = function(e){
+    memTouchX = e.touches[0].clientX;
+    memTouchY = e.touches[0].clientY;
+  };
+  track.ontouchend = function(e){
+    const dx = e.changedTouches[0].clientX - memTouchX;
+    const dy = e.changedTouches[0].clientY - memTouchY;
+    if(Math.abs(dx) > 30 && Math.abs(dx) > Math.abs(dy)) goMem(memIdx + (dx < 0 ? 1 : -1));
   };
   startMemorialAuto();
 }
@@ -631,14 +671,11 @@ let memTimer = null;
 function startMemorialAuto(){
   if(memTimer) clearInterval(memTimer);
   memTimer = setInterval(function(){
-    const track = document.getElementById('memTrack');
     const home = document.getElementById('screen-home');
-    if(!track || !home || !home.classList.contains('active')) return;
-    if(!track.clientWidth || MEMORIAL_DATA.length < 2) return;
-    const idx = Math.round(track.scrollLeft / track.clientWidth);
-    const next = (idx + 1) % MEMORIAL_DATA.length;
-    track.scrollTo({left: next * track.clientWidth, behavior: 'smooth'});
-  }, 4800);
+    if(!home || !home.classList.contains('active')) return;
+    if(MEMORIAL_DATA.length < 2) return;
+    goMem(memIdx + 1);
+  }, 5200);
 }
 function renderMemorialDetail(idx){
   const m=MEMORIAL_DATA[idx];
@@ -1436,6 +1473,21 @@ function openPublish(type){
 function openEdit(id){
   const it = Store.get(id);
   if(!it) return;
+  if(it.type === 'help'){
+    /* 求助帖走求助弹层，避免被当成失物/招领改类型 */
+    document.getElementById('helpCatSel').value = it.cat || 'help_borrow';
+    document.getElementById('helpTitleInput').value = it.title || '';
+    document.getElementById('helpDesc').value = it.desc || '';
+    document.getElementById('helpPlace').value = it.place || '';
+    document.getElementById('helpPhone').value = (it.contact && it.contact.phone) || '';
+    document.getElementById('helpSubmit').textContent = '重新发布求助';
+    document.getElementById('helpSheet').classList.add('show');
+    document.getElementById('helpSheetClose').onclick = function(){
+      document.getElementById('helpSheet').classList.remove('show');
+      document.getElementById('helpSubmit').textContent = '发布求助';
+    };
+    return;
+  }
   editingItem = it;
   setPubType(it.type);
   const f = document.getElementById('publishForm');
@@ -2484,7 +2536,10 @@ try{
     renderClaims();
     renderAccBox();
     renderAskChips();
-    setInterval(function(){ if(!document.hidden) netSync(); }, 30000);
+    setInterval(function(){ if(!document.hidden){ netSync(); loadAnnouncements(); } }, 30000);
+    document.addEventListener('visibilitychange', function(){
+      if(!document.hidden){ netSync(); loadAnnouncements(); }
+    });
   } else {
     setTimeout(function(){
       toast('本机模式：数据只在这台电脑；要发帖给同学看，请用公网地址打开');
@@ -2496,3 +2551,45 @@ try{
   if(b){ b.textContent = '⚠️ 页面初始化失败：' + err.message; b.classList.add('show'); }
   if(window.console) console.error(err);
 }
+
+/* ============ 首次访问引导 ============ */
+(function(){
+  const TOUR_KEY = 'sg:tour:v1';
+  try{ if(localStorage.getItem(TOUR_KEY)) return; }catch(e){ return; }
+  const mask = document.getElementById('tourMask');
+  if(!mask) return;
+  const slides = [
+    {e:'👋', t:'欢迎来到清华校园拾光里',
+     b:'一个 AI 全程把关的校园失物招领与爱心互助平台。\n先花 30 秒，带你逛一圈。'},
+    {e:'🔎', t:'失物 · 寻物',
+     b:'丢了东西点「寻物启事」，捡到东西点「失物招领」。\n搜索栏右边的 ＋ 就能发布，类型选错 AI 也会自动纠正。'},
+    {e:'🤝', t:'爱心 · 求助',
+     b:'借用工具、代办跑腿、爱心捐赠、志愿帮忙。\n点「我来帮忙」就能对接，全程 AI 审核。'},
+    {e:'🤖', t:'AI 都在做什么',
+     b:'发布：文字 + 图片双审，违规直接拦。\n拍照：自动识别物品并填写。\n认领：AI 核验特征，支持多轮补充。\n问答：校园失物问题随时问。'},
+    {e:'🚀', t:'开始你的拾光之旅',
+     b:'右上角铃铛看通知，「我的」里管理发布和申请。\n遇到问题，随时找我们。'}
+  ];
+  let idx = 0;
+  function render(){
+    document.getElementById('tourStep').textContent = (idx + 1) + ' / ' + slides.length;
+    document.getElementById('tourEmoji').textContent = slides[idx].e;
+    document.getElementById('tourTitle').textContent = slides[idx].t;
+    document.getElementById('tourBody').textContent = slides[idx].b;
+    document.getElementById('tourDots').innerHTML = slides.map(function(_, i){
+      return '<i class="' + (i === idx ? 'on' : '') + '"></i>';
+    }).join('');
+    document.getElementById('tourNext').textContent = idx === slides.length - 1 ? '开始使用' : '下一步';
+  }
+  function close(){
+    mask.classList.remove('show');
+    try{ localStorage.setItem(TOUR_KEY, '1'); }catch(e){}
+  }
+  document.getElementById('tourNext').onclick = function(){
+    if(idx >= slides.length - 1){ close(); return; }
+    idx++; render();
+  };
+  document.getElementById('tourSkip').onclick = close;
+  render();
+  setTimeout(function(){ mask.classList.add('show'); }, 1400);
+})();
