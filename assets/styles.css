@@ -539,3 +539,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .cs-scan-conf{margin-top:9px;font-size:11px;color:#2f5d9e;}
 .cs-scan-conf b{display:block;margin-bottom:4px;font-size:12px;}
 .cs-scan-conf span{display:block;height:5px;border-radius:99px;background:linear-gradient(90deg,#3a86ff,#8a52c7);}
+
+/* 关闭所有装饰性晃动，只保留加载圈与认领扫描 */
+.tour-emoji,
+.tour.show .tour-emoji,
+.ai-dot,
+.ai-scan,
+.ai-chip,
+.cs-scan-dot,
+.fab-pub,
+.guide-quick span,
+.guide-banner,
+.tour-banner{animation:none!important;}
