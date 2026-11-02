@@ -2597,7 +2597,11 @@ function checkStorage(){
   }catch(e){ warnStorage(); }
 }
 function bootStep(name, fn){
-  try{ fn(); }catch(e){ if(window.console) console.error('boot fail: ' + name, e); }
+  try{ fn(); }catch(e){
+    if(window.console) console.error('boot fail: ' + name, e);
+    var b = document.getElementById('errTop');
+    if(b){ b.textContent = '⚠️ 初始化失败：' + name + ' · ' + (e && e.message || e); b.classList.add('show'); }
+  }
 }
 try{
   bootStep('storage', checkStorage);
