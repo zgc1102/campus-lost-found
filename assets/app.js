@@ -589,11 +589,16 @@ function renderBorrow(tab){
 /* ============ 渲染：中央宣传窗 ============ */
 let MEMORIAL_DATA = MEMORIAL.slice();
 
+let annSig = '';
 async function loadAnnouncements(){
   if(!API_BASE) return;
   try{
     const arr = await fetch(API_BASE + '/announcements').then(function(r){ return r.json(); });
     if(Array.isArray(arr) && arr.length){
+      const sig = arr.map(function(a){ return a.id + '|' + a.title + '|' + a.publishedAt; }).join(',');
+      if(sig === annSig) return;
+      annSig = sig;
+      const keep = memIdx;
       const annSlides = arr.slice(0, 2).map(function(a){
         return {
           key: 'ann_' + a.id,
@@ -603,9 +608,9 @@ async function loadAnnouncements(){
           blocks: [{h: a.title, p: [a.body]}]
         };
       });
-      // 公告排在最前，原来的内容保留在后面
       MEMORIAL_DATA = annSlides.concat(MEMORIAL);
       renderMemorial();
+      if(keep > 0){ memIdx = Math.min(keep, MEMORIAL_DATA.length - 1); applyMem(); }
     }
   }catch(e){}
 }
@@ -794,6 +799,26 @@ function openItem(id){
   document.getElementById('isMeta').textContent = '📍 '+place+
     (it.status ? ('　|　'+statusText(it.status)) : '')+
     (it.contact && it.contact.phone ? ('　|　📞 '+maskPhone(it.contact.phone)) : '');
+  const simBox = document.getElementById('isSimilar');
+  if(simBox){
+    simBox.style.display = 'none';
+    simBox.innerHTML = '';
+    if(API_BASE && it.status === 'approved' && it.type !== 'help'){
+      fetch(API_BASE + '/items/' + encodeURIComponent(it.id) + '/similar')
+        .then(function(r){ return r.json(); })
+        .then(function(list){
+          if(!Array.isArray(list) || !list.length || currentSheetId !== it.id) return;
+          simBox.innerHTML = '<div class="sim-title">🧠 AI 猜你在找</div>' + list.map(function(s){
+            return '<div class="sim-item" data-sim-id="' + esc(s.id) + '">' +
+              '<div class="sim-th">' + (s.photoUrl ? '<img src="' + esc(s.photoUrl) + '" alt="">' : '🔎') + '</div>' +
+              '<div class="sim-info"><div class="sim-t">' + esc(s.title) + '</div>' +
+              '<div class="sim-s">' + esc(s.place || '') + ' · ' + fmtTime(s.createdAt) + '</div></div>' +
+              '<div class="sim-arrow">›</div></div>';
+          }).join('');
+          simBox.style.display = 'block';
+        }).catch(function(){});
+    }
+  }
   const btn = document.getElementById('isAction');
   const box = document.getElementById('claimBox');
   const mine = !!it.isMine || (it.ownerId && it.ownerId === myId());
@@ -2553,43 +2578,79 @@ try{
 }
 
 /* ============ 首次访问引导 ============ */
-(function(){
-  const TOUR_KEY = 'sg:tour:v1';
-  try{ if(localStorage.getItem(TOUR_KEY)) return; }catch(e){ return; }
+let tourIdx = 0;
+const TOUR_KEY = 'sg:tour:v2';
+const TOUR_SLIDES = [
+  {e:'👋', t:'欢迎来到清华校园拾光里',
+   b:'一个 AI 全程把关的校园失物招领与爱心互助平台。\n先花 30 秒，带你逛一圈。'},
+  {e:'🔎', t:'失物 · 寻物',
+   b:'丢了东西点「寻物启事」，捡到东西点「失物招领」。\n搜索栏右边的 ＋ 就能发布，类型选错 AI 会自动纠正。'},
+  {e:'🤝', t:'爱心 · 求助',
+   b:'借用工具、代办跑腿、爱心捐赠、志愿帮忙。\n点「我来帮忙」就能对接，全程 AI 审核。'},
+  {e:'🤖', t:'AI 都在做什么',
+   b:'发布：文字 + 图片双审，违规直接拦。\n拍照：自动识别物品并填写。\n认领：AI 核验特征，支持多轮补充。\n问答：校园失物问题随时问。'},
+  {e:'🚀', t:'开始你的拾光之旅',
+   b:'右上角铃铛看通知，「我的」里管理发布和申请。\n遇到问题，随时找我们。'}
+];
+
+function renderTour(){
   const mask = document.getElementById('tourMask');
   if(!mask) return;
-  const slides = [
-    {e:'👋', t:'欢迎来到清华校园拾光里',
-     b:'一个 AI 全程把关的校园失物招领与爱心互助平台。\n先花 30 秒，带你逛一圈。'},
-    {e:'🔎', t:'失物 · 寻物',
-     b:'丢了东西点「寻物启事」，捡到东西点「失物招领」。\n搜索栏右边的 ＋ 就能发布，类型选错 AI 也会自动纠正。'},
-    {e:'🤝', t:'爱心 · 求助',
-     b:'借用工具、代办跑腿、爱心捐赠、志愿帮忙。\n点「我来帮忙」就能对接，全程 AI 审核。'},
-    {e:'🤖', t:'AI 都在做什么',
-     b:'发布：文字 + 图片双审，违规直接拦。\n拍照：自动识别物品并填写。\n认领：AI 核验特征，支持多轮补充。\n问答：校园失物问题随时问。'},
-    {e:'🚀', t:'开始你的拾光之旅',
-     b:'右上角铃铛看通知，「我的」里管理发布和申请。\n遇到问题，随时找我们。'}
-  ];
-  let idx = 0;
-  function render(){
-    document.getElementById('tourStep').textContent = (idx + 1) + ' / ' + slides.length;
-    document.getElementById('tourEmoji').textContent = slides[idx].e;
-    document.getElementById('tourTitle').textContent = slides[idx].t;
-    document.getElementById('tourBody').textContent = slides[idx].b;
-    document.getElementById('tourDots').innerHTML = slides.map(function(_, i){
-      return '<i class="' + (i === idx ? 'on' : '') + '"></i>';
-    }).join('');
-    document.getElementById('tourNext').textContent = idx === slides.length - 1 ? '开始使用' : '下一步';
-  }
-  function close(){
-    mask.classList.remove('show');
-    try{ localStorage.setItem(TOUR_KEY, '1'); }catch(e){}
-  }
-  document.getElementById('tourNext').onclick = function(){
-    if(idx >= slides.length - 1){ close(); return; }
-    idx++; render();
+  document.getElementById('tourStep').textContent = (tourIdx + 1) + ' / ' + TOUR_SLIDES.length;
+  document.getElementById('tourEmoji').textContent = TOUR_SLIDES[tourIdx].e;
+  document.getElementById('tourTitle').textContent = TOUR_SLIDES[tourIdx].t;
+  document.getElementById('tourBody').textContent = TOUR_SLIDES[tourIdx].b;
+  document.getElementById('tourDots').innerHTML = TOUR_SLIDES.map(function(_, i){
+    return '<i class="' + (i === tourIdx ? 'on' : '') + '"></i>';
+  }).join('');
+  const bar = document.getElementById('tourBar');
+  if(bar) bar.style.width = Math.round(((tourIdx + 1) / TOUR_SLIDES.length) * 100) + '%';
+  document.getElementById('tourNext').textContent =
+    tourIdx === TOUR_SLIDES.length - 1 ? '开始使用' : '下一步';
+  document.getElementById('tourSkip').style.visibility = 'visible';
+}
+function closeTour(save){
+  const mask = document.getElementById('tourMask');
+  if(mask) mask.classList.remove('show');
+  if(save !== false){ try{ localStorage.setItem(TOUR_KEY, '1'); }catch(e){} }
+}
+function openTour(){
+  tourIdx = 0;
+  renderTour();
+  const mask = document.getElementById('tourMask');
+  if(mask) mask.classList.add('show');
+}
+window.openTour = openTour;
+(function(){
+  const mask = document.getElementById('tourMask');
+  if(!mask) return;
+  const next = document.getElementById('tourNext');
+  if(next) next.onclick = function(){
+    if(tourIdx >= TOUR_SLIDES.length - 1){ closeTour(); return; }
+    tourIdx++; renderTour();
   };
-  document.getElementById('tourSkip').onclick = close;
-  render();
-  setTimeout(function(){ mask.classList.add('show'); }, 1400);
+  const skip = document.getElementById('tourSkip');
+  if(skip) skip.onclick = function(){ closeTour(); };
+  const help = document.getElementById('tourBtn');
+  if(help) help.onclick = function(e){ e.stopPropagation(); openTour(); };
+  const replay = document.getElementById('tourReplay');
+  if(replay) replay.onclick = function(e){ e.preventDefault(); openTour(); };
+  let seen = false;
+  try{ seen = localStorage.getItem(TOUR_KEY) === '1'; }catch(e){ seen = false; }
+  if(!seen){
+    renderTour();
+    setTimeout(function(){ mask.classList.add('show'); }, 1200);
+  }
+})();
+
+/* 相似物品点击 */
+(function(){
+  const box = document.getElementById('isSimilar');
+  if(!box) return;
+  box.addEventListener('click', function(e){
+    const b = e.target.closest('[data-sim-id]');
+    if(!b) return;
+    e.stopPropagation();
+    openItem(b.getAttribute('data-sim-id'));
+  });
 })();

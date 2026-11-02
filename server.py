@@ -1706,6 +1706,37 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, raw, "image/jpeg",
                               {"ETag": etag, "Cache-Control": "public, max-age=31536000"})
 
+        if path.startswith("/api/items/") and path.endswith("/similar"):
+            item_id = path[len("/api/items/"):-len("/similar")]
+            with LOCK:
+                all_items = load_items()
+            it = next((x for x in all_items if x.get("id") == item_id), None)
+            if not it:
+                return self._json([])
+            base_text = (it.get("title") or "") + " " + (it.get("desc") or "")
+
+            def grams(t):
+                t = re.sub(r"\s+", "", str(t or ""))
+                return {t[i:i + 2] for i in range(max(0, len(t) - 1))}
+
+            bg = grams(base_text)
+            cands = []
+            for x in all_items:
+                if x.get("id") == item_id or x.get("status") != "approved":
+                    continue
+                if x.get("type") == it.get("type"):
+                    continue
+                score = 0
+                if x.get("cat") == it.get("cat"):
+                    score += 3
+                if it.get("place") and x.get("place") and str(it["place"]) in str(x["place"]):
+                    score += 2
+                score += len(bg & grams((x.get("title") or "") + " " + (x.get("desc") or ""))) * 0.12
+                if score >= 2.4:
+                    cands.append((score, x))
+            cands.sort(key=lambda p: p[0], reverse=True)
+            return self._json([public_item(x, None) for _, x in cands[:3]])
+
         if path == "/api/items":
             owner = self._owner()
             try:

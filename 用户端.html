@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>清华校园拾光里 v3.2 · 校园互助服务平台</title>
-<link rel="stylesheet" href="assets/styles.css?v=20261107">
+<link rel="stylesheet" href="assets/styles.css?v=20261108">
 </head>
 <body>
 <div id="aiBusy" class="ai-busy"><span class="ai-spin"></span><span id="aiBusyText">AI 正在识别图片…</span></div>
@@ -24,7 +24,7 @@
   <!-- ============ 首页 ============ -->
   <section class="screen active" id="screen-home">
     <div class="ticker"><div class="ticker-track"><span>绿色能源 · 智慧矿山 · 红色引领 · 爱国爱岗 · 孝道 · 清华校园拾光里 · 有温度的服务</span><span>绿色能源 · 智慧矿山 · 红色引领 · 爱国爱岗 · 孝道 · 清华校园拾光里 · 有温度的服务</span></div></div>
-    <div class="topbar"><div class="t">清华校园拾光里</div><div class="bell" id="bellBtn" title="通知">🔔<i id="bellDot" style="display:none">0</i></div><div class="login" id="loginBtn" title="我的发布">
+    <div class="topbar"><div class="t">清华校园拾光里</div><button type="button" class="help-btn" id="tourBtn" title="使用引导">?</button><div class="bell" id="bellBtn" title="通知">🔔<i id="bellDot" style="display:none">0</i></div><div class="login" id="loginBtn" title="我的发布">
       <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" width="18" height="18"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
     </div></div>
     <div class="scroll">
@@ -79,7 +79,7 @@
 
       <div class="foot-b">
         <div class="flinks">
-          <span data-nav="mine">我的发布</span><span data-nav="about">平台简介</span><span data-nav="contact">联系方式</span><span data-nav="legal">法律声明</span><span data-nav="privacy">隐私权保护</span>
+          <span data-nav="mine">我的发布</span><span data-nav="about">平台简介</span><span id="tourReplay">使用引导</span><span data-nav="contact">联系方式</span><span data-nav="legal">法律声明</span><span data-nav="privacy">隐私权保护</span>
         </div>
         <div class="flic">测试版 · 暂未备案 · 仅用于校园公益</div>
         <div class="fcopy">Copyright © 2025-2026 清城牧羊 版权所有</div>
@@ -443,6 +443,7 @@
     <div class="sh" id="isTitle"></div>
     <div class="sa" id="isDesc"></div>
     <div class="sa" id="isMeta" style="margin-top:10px;font-size:12.5px;color:var(--sub)"></div>
+    <div id="isSimilar" class="sim-wrap" style="display:none"></div>
     <button class="btn" id="isAction" style="width:100%;margin-top:14px;">认领</button>
     <div class="claimbox" id="claimBox" style="display:none">
       <div class="tip-small" id="claimTip" style="margin:0 0 8px">写下只有失主知道的细节，对方核对后才会通过</div>
@@ -517,13 +518,14 @@
     <div class="tour-title" id="tourTitle">欢迎来到清华校园拾光里</div>
     <div class="tour-body" id="tourBody"></div>
     <div class="tour-dots" id="tourDots"></div>
+    <div class="tour-progress"><i id="tourBar"></i></div>
     <div class="tour-acts">
       <button type="button" class="btn ghost" id="tourSkip">跳过</button>
       <button type="button" class="btn" id="tourNext">下一步</button>
     </div>
   </div>
 </div>
-<script src="assets/app.js?v=20261110"></script>
+<script src="assets/app.js?v=20261111"></script>
 <div id="imgViewer" class="img-viewer"><img id="imgViewerImg" alt=""><div class="img-viewer-close">✕</div></div>
 <script>if(location.protocol==="file:"){var w=document.getElementById("fileWarn");if(w)w.style.display="block";}</script>
 </body>
