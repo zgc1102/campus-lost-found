@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>清华校园拾光里 v3.2 · 校园互助服务平台</title>
-<link rel="stylesheet" href="assets/styles.css?v=20261118">
+<link rel="stylesheet" href="assets/styles.css?v=20261119">
 </head>
 <body>
 <div id="bootGuard" style="position:fixed;inset:0;z-index:3000;background:#1b0b2e;color:#fff;display:flex;align-items:center;justify-content:center;flex-direction:column;font:14px/1.9 'Microsoft YaHei',system-ui,sans-serif;text-align:center;padding:24px">
@@ -90,13 +90,19 @@ setTimeout(function(){
         </div>
       </div>
 
-      <div class="sectitle">给初来清华的人</div>
+      <div class="sectitle">给初来清华的人 · 游客 / 新生 / 家长</div>
       <div class="guide-banner" data-nav="guideHome">
         <div class="gb-text">
           <div class="gb-t1">初入清华园，你想问什么？</div>
-          <div class="gb-t2">一键进入，让学长学姐为你指路。</div>
+          <div class="gb-t2">访客怎么进校？校园卡丢了怎么办？食堂在哪？一键问 AI 或学长学姐。</div>
         </div>
         <div class="gb-arrow">›</div>
+      </div>
+      <div class="guide-quick">
+        <span data-gq="访客怎么进清华？">访客进校</span>
+        <span data-gq="校园卡丢了怎么办？">校园卡丢了</span>
+        <span data-gq="清华哪个食堂好吃？">食堂推荐</span>
+        <span data-gq="校园里哪里可以借雨伞？">借雨伞</span>
       </div>
 
       <div class="foot-b">
@@ -397,7 +403,20 @@ setTimeout(function(){
   <section class="screen" id="screen-guideHome">
     <div class="topbar"><div class="back" data-back>‹</div><div class="t">清华园指路</div></div>
     <div class="scroll">
-      <div class="hero"><h1>初入清华园，你想问什么？</h1><p>一键进入，让学长学姐为你指路。</p></div>
+      <div class="hero"><h1>初入清华园，你想问什么？</h1><p>游客、新生、家长都能用：一键问 AI，或让学长学姐为你指路。</p></div>
+      <div class="guide-ai">
+        <div class="gai-t">🤖 问 AI · 进校、吃饭、丢东西，什么都能问</div>
+        <div class="gai-row">
+          <input id="guideAskInput" maxlength="60" placeholder="例如：访客怎么进校？校园卡丢了怎么办？">
+          <button class="btn" id="guideAskBtn">问 AI</button>
+        </div>
+        <div class="gai-chips">
+          <span data-gq="访客怎么进清华？">访客进校</span>
+          <span data-gq="校园卡丢了怎么办？">校园卡丢了</span>
+          <span data-gq="清华哪个食堂好吃？">食堂推荐</span>
+          <span data-gq="清华有哪些必看的地方？">必看景点</span>
+        </div>
+      </div>
       <div class="sectitle">选择你想用的服务</div>
       <div class="g-card" data-nav="map" style="background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px 16px;margin-bottom:12px;display:flex;align-items:center;gap:14px;cursor:pointer;">
         <div style="width:52px;height:52px;border-radius:14px;background:var(--purple-ll);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;">🗺️</div>
@@ -555,13 +574,13 @@ setTimeout(function(){
 
 <div class="tour show" id="tourMask">
   <div class="tour-card">
-    <div class="tour-step" id="tourStep">1 / 5</div>
+    <div class="tour-step" id="tourStep">1 / 6</div>
     <div class="tour-emoji" id="tourEmoji">👋</div>
     <div class="tour-title" id="tourTitle">欢迎来到清华校园拾光里</div>
     <div class="tour-body" id="tourBody">一个 AI 全程把关的校园失物招领与爱心互助平台。
 先花 30 秒，带你逛一圈。</div>
-    <div class="tour-dots" id="tourDots"><i class="on"></i><i></i><i></i><i></i><i></i></div>
-    <div class="tour-progress"><i id="tourBar" style="width:20%"></i></div>
+    <div class="tour-dots" id="tourDots"><i class="on"></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="tour-progress"><i id="tourBar" style="width:16.7%"></i></div>
     <div class="tour-acts">
       <button type="button" class="btn ghost" id="tourSkip">跳过</button>
       <button type="button" class="btn" id="tourNext">下一步</button>
@@ -571,7 +590,7 @@ setTimeout(function(){
 <script>
 try{ if(localStorage.getItem('sg:tour:v2') === '1'){ var _tm = document.getElementById('tourMask'); if(_tm) _tm.classList.remove('show'); } }catch(e){}
 </script>
-<script src="assets/app.js?v=20261123"></script>
+<script src="assets/app.js?v=20261124"></script>
 <div id="imgViewer" class="img-viewer"><img id="imgViewerImg" alt=""><div class="img-viewer-close">✕</div></div>
 <script>if(location.protocol==="file:"){var w=document.getElementById("fileWarn");if(w)w.style.display="block";}</script>
 </body>

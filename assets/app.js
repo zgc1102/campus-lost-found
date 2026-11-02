@@ -1817,6 +1817,29 @@ if(pageHelpPub) pageHelpPub.onclick = function(){ document.getElementById('helpP
 const homeSearchBtn = document.getElementById('homeSearchBtn');
 if(homeSearchBtn) homeSearchBtn.onclick = function(){ show('search'); };
 
+function askFromGuide(q){
+  q = String(q || '').trim();
+  if(!q){ toast('先写一句想问的'); return; }
+  const ai = document.getElementById('askInput');
+  if(ai) ai.value = q;
+  show('ask');
+  askQuestion(q);
+}
+const guideAskBtn = document.getElementById('guideAskBtn');
+if(guideAskBtn) guideAskBtn.onclick = function(){
+  askFromGuide(document.getElementById('guideAskInput').value);
+};
+const guideAskInput = document.getElementById('guideAskInput');
+if(guideAskInput) guideAskInput.addEventListener('keydown', function(e){
+  if(e.key === 'Enter'){ e.preventDefault(); askFromGuide(this.value); }
+});
+document.addEventListener('click', function(e){
+  const g = e.target.closest('[data-gq]');
+  if(!g) return;
+  e.preventDefault();
+  askFromGuide(g.getAttribute('data-gq'));
+});
+
 document.getElementById('quickPhotoInput').onchange = async function(){
   const file = this.files && this.files[0];
   this.value = '';
@@ -2706,6 +2729,8 @@ const TOUR_SLIDES = [
    b:'一个 AI 全程把关的校园失物招领与爱心互助平台。\n先花 30 秒，带你逛一圈。'},
   {e:'🔎', t:'失物 · 寻物',
    b:'丢了东西点「寻物启事」，捡到东西点「失物招领」。\n点右下角 ＋ 就能发布，类型选错 AI 会自动纠正。'},
+  {e:'🧭', t:'初入清华，先问一句',
+   b:'游客、新生、家长都能用：访客怎么进校、校园卡丢了怎么办、食堂在哪。\n点首页「初入清华园」，或直接问 AI。'},
   {e:'🤝', t:'爱心 · 求助',
    b:'借用工具、代办跑腿、爱心捐赠、志愿帮忙。\n点「我来帮忙」就能对接，全程 AI 审核。'},
   {e:'🤖', t:'AI 都在做什么',
