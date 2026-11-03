@@ -558,3 +558,45 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .cs-scan-row i{background:#62269c;}
 .cs-scan-conf{color:#4a2a78;}
 .cs-scan-conf span{background:linear-gradient(90deg,#62269c,#a06be0);}
+
+/* 发布页重构 */
+.pub-head{background:linear-gradient(135deg,#3b1d63,#62269c 60%,#8a52c7);border-radius:18px;padding:16px 18px;color:#fff;margin-bottom:12px;box-shadow:0 8px 22px rgba(60,20,110,.25);}
+.ph-t{font-size:18px;font-weight:800;}
+.ph-s{font-size:11.5px;opacity:.86;margin-top:4px;}
+.ph-steps{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:10.5px;opacity:.95;}
+.ph-steps i{flex:1;height:1px;background:rgba(255,255,255,.35);}
+.type-tab{background:#ece4f8;border-radius:13px;padding:4px;display:flex;gap:4px;margin-bottom:12px;}
+.type-tab div{flex:1;text-align:center;padding:9px 6px;border-radius:10px;font-size:12.5px;color:#6b5a86;cursor:pointer;}
+.type-tab div.active{background:#fff;color:#4a2a78;font-weight:700;box-shadow:0 2px 8px rgba(80,40,120,.12);}
+.form-card{background:#fff;border:1px solid #eee6f7;border-radius:16px;padding:14px 14px 2px;margin-bottom:12px;box-shadow:0 2px 10px rgba(98,38,156,.04);}
+.fc-title{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:800;color:#4a2d78;margin-bottom:10px;}
+.fc-title span{width:22px;height:22px;border-radius:7px;background:#f1e9fd;color:#62269c;display:flex;align-items:center;justify-content:center;font-size:10.5px;}
+#publishForm .form-item{padding:0 0 12px;}
+#publishForm .form-item label{font-size:12px;color:#5a5268;font-weight:600;margin-bottom:6px;display:block;}
+#publishForm input[type=text],#publishForm input[type=tel],#publishForm input[type=datetime-local],#publishForm select,#publishForm textarea{border:1px solid #e8dff3;background:#fbf9ff;border-radius:11px;padding:11px 12px;font-size:13.5px;width:100%;font-family:inherit;outline:none;}
+#publishForm input:focus,#publishForm select:focus,#publishForm textarea:focus{border-color:#a06be0;box-shadow:0 0 0 3px rgba(160,107,224,.15);background:#fff;}
+#publishForm textarea{min-height:96px;line-height:1.65;}
+#photoInput{border:0;background:transparent;padding:0;}
+.pub-submit .submit-btn{border-radius:14px;padding:14px;font-size:15px;box-shadow:0 8px 20px rgba(98,38,156,.3);}
+.pub-note{text-align:center;font-size:10.5px;color:#8a8298;margin:8px 0 0;}
+
+/* 2.5D 校园地图卡 */
+.map3d{background:#fff;border:1px solid #e9e0f6;border-radius:18px;overflow:hidden;margin-bottom:12px;cursor:pointer;box-shadow:0 6px 18px rgba(98,38,156,.08);}
+.m3-stage{position:relative;height:172px;background:linear-gradient(180deg,#e9f2ff,#f7f2ff 62%,#efe7fb);perspective:700px;transform-style:preserve-3d;transition:transform .25s ease;overflow:hidden;}
+.m3-sun{position:absolute;right:26px;top:20px;width:26px;height:26px;border-radius:50%;background:#ffd98a;box-shadow:0 0 18px rgba(255,217,138,.8);}
+.m3-hill{position:absolute;bottom:34px;border-radius:50% 50% 0 0;background:#d9e6f8;}
+.m3-hill.h1{left:-20px;width:160px;height:60px;}
+.m3-hill.h2{right:-30px;width:190px;height:70px;background:#e2ddf7;}
+.m3-bld{position:absolute;bottom:30px;background:linear-gradient(180deg,#c9a7f0,#8a52c7);border-radius:4px 4px 0 0;box-shadow:inset -6px 0 rgba(0,0,0,.08);}
+.m3-bld::after{content:'';position:absolute;left:6px;right:6px;top:9px;height:2px;background:rgba(255,255,255,.4);box-shadow:0 9px rgba(255,255,255,.3),0 18px rgba(255,255,255,.22);}
+.b1{left:24px;width:34px;height:58px;}
+.b2{left:66px;width:44px;height:86px;background:linear-gradient(180deg,#b98be8,#6d3ab0);}
+.b3{left:118px;width:52px;height:70px;background:linear-gradient(180deg,#d3b6f2,#7b45c9);}
+.b4{left:178px;width:38px;height:102px;background:linear-gradient(180deg,#bfa0ea,#5b2691);}
+.b5{left:224px;width:46px;height:62px;}
+.m3-pin{position:absolute;left:116px;bottom:24px;background:#62269c;color:#fff;font-size:9px;padding:3px 7px;border-radius:99px;transform:translateZ(22px);box-shadow:0 4px 10px rgba(60,20,110,.3);}
+.m3-tip{position:absolute;right:10px;bottom:8px;font-size:9.5px;color:#7a6a96;background:rgba(255,255,255,.75);padding:3px 7px;border-radius:99px;}
+.m3-info{display:flex;align-items:center;gap:8px;padding:12px 14px;}
+.m3-t{font-size:14px;font-weight:800;color:#3b1d63;}
+.m3-s{font-size:10.5px;color:#8a8298;flex:1;}
+.m3-go{font-size:11px;font-weight:700;color:#62269c;}

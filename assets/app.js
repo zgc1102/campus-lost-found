@@ -2795,6 +2795,7 @@ window.openTour = openTour;
   const banner = document.getElementById('tourBanner');
   if(location.search.indexOf('tour=off') >= 0){
     if(banner) banner.style.display = 'none';
+    mask.classList.remove('show');
     return;
   }
   if(banner){
@@ -2815,3 +2816,18 @@ window.openTour = openTour;
 })();
 
 
+
+/* 2.5D 地图卡：拖动倾斜 */
+(function(){
+  const card = document.getElementById('map3dCard');
+  if(!card) return;
+  const stage = card.querySelector('.m3-stage');
+  if(!stage) return;
+  stage.addEventListener('pointermove', function(e){
+    const r = stage.getBoundingClientRect();
+    const x = (e.clientX - r.left) / Math.max(1, r.width) - 0.5;
+    const y = (e.clientY - r.top) / Math.max(1, r.height) - 0.5;
+    stage.style.transform = 'rotateX(' + (-y * 9) + 'deg) rotateY(' + (x * 12) + 'deg)';
+  });
+  stage.addEventListener('pointerleave', function(){ stage.style.transform = ''; });
+})();
