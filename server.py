@@ -57,6 +57,15 @@ TOKEN_TTL = 8 * 3600
 
 PUBLIC_STATUS = ("approved", "claimed", "closed")
 ALLOWED_STATUS = ("pending", "approved", "rejected", "claimed", "closed", "removed", "hidden")
+CLOSED_VISIBLE_MS = 24 * 3600 * 1000
+
+
+def public_visible(it, now=None):
+    """已闭环的内容在用户端只保留 24 小时，后台不受影响"""
+    if it.get("status") != "closed":
+        return True
+    at = it.get("closedAt") or it.get("updatedAt") or it.get("createdAt") or 0
+    return (now or now_ms()) - at < CLOSED_VISIBLE_MS
 
 
 def now_ms():
@@ -1519,27 +1528,47 @@ def vision_analyze(image_b64, mime="image/jpeg"):
     if not cfg["api_key"]:
         return {"ok": False, "reason": "未配置视觉模型（VISION_API_KEY），可先手动选择分类"}
     endpoint = cfg["base_url"].rstrip("/") + "/chat/completions"
-    payload = {
-        "model": cfg["model"],
-        "temperature": 0.1,
-        "messages": [{"role": "user", "content": [
-            {"type": "text", "text": "识别这张失物照片，只输出 JSON："
-                                     "{\"category\":\"物品类别\",\"color\":\"主色\",\"brand\":\"品牌或文字\","
-                                     "\"features\":\"显著特征\",\"desc\":\"一句话描述\"}"},
-            {"type": "image_url", "image_url": {"url": "data:%s;base64,%s" % (mime, image_b64)}},
-        ]}],
-    }
-    try:
-        data = _post_chat(endpoint, payload, cfg["api_key"], timeout=35)
-        text = data["choices"][0]["message"]["content"] or ""
-        m = re.search(r"\{[\s\S]*\}", text)
-        obj = json.loads(m.group(0)) if m else {}
-        return {"ok": True, "category": str(obj.get("category") or "")[:20],
-                "color": str(obj.get("color") or "")[:20], "brand": str(obj.get("brand") or "")[:40],
-                "features": str(obj.get("features") or "")[:80], "desc": str(obj.get("desc") or "")[:120],
-                "model": cfg["model"]}
-    except Exception as e:
-        return {"ok": False, "reason": str(e)[:120]}
+    prompts = [
+        "你是校园失物识别器。看这张照片，只输出 JSON，不要解释、不要 markdown："
+        "{\"category\":\"具体物品，如雨伞/校园卡/钥匙/耳机/水杯/书包/充电宝/其他\","
+        "\"color\":\"主色，如黑色/蓝色/白色\","
+        "\"brand\":\"能看到的品牌、文字或图案，没有就写无\","
+        "\"features\":\"2 到 3 个能核对的显著特征，如划痕、贴纸、挂件\","
+        "\"desc\":\"20 到 40 字的一句话描述\"}。"
+        "即使模糊也要给出最可能的判断，不要留空。",
+        "只输出一个 JSON 对象，字段 category/color/brand/features/desc。"
+        "category 必须写出物品名称，color 必须写颜色。不要输出任何其他文字。",
+    ]
+    last = {}
+    for prompt in prompts:
+        payload = {
+            "model": cfg["model"],
+            "temperature": 0.1,
+            "messages": [{"role": "user", "content": [
+                {"type": "text", "text": prompt},
+                {"type": "image_url", "image_url": {"url": "data:%s;base64,%s" % (mime, image_b64)}},
+            ]}],
+        }
+        try:
+            data = _post_chat(endpoint, payload, cfg["api_key"], timeout=35)
+            text = data["choices"][0]["message"]["content"] or ""
+            m = re.search(r"\{[\s\S]*\}", text)
+            obj = json.loads(m.group(0)) if m else {}
+        except Exception as e:
+            last = {"ok": False, "reason": str(e)[:120]}
+            continue
+        cat = str(obj.get("category") or "").strip()
+        color = str(obj.get("color") or "").strip()
+        feats = str(obj.get("features") or "").strip()
+        desc = str(obj.get("desc") or "").strip()
+        if cat and cat not in ("无法识别", "未知", "其他"):
+            return {"ok": True, "category": cat[:20], "color": color[:20],
+                    "brand": str(obj.get("brand") or "")[:40], "features": feats[:80],
+                    "desc": desc[:120], "model": cfg["model"]}
+        last = {"ok": True, "category": cat[:20], "color": color[:20],
+                "brand": str(obj.get("brand") or "")[:40], "features": feats[:80],
+                "desc": desc[:120], "model": cfg["model"]}
+    return last if last.get("ok") else {"ok": False, "reason": last.get("reason") or "AI 没看清，请手动填写"}
 
 
 
@@ -1797,7 +1826,7 @@ class Handler(BaseHTTPRequestHandler):
                                    "Vary": "X-Owner"})
             with LOCK:
                 items = [public_item(x, owner) for x in load_items()
-                         if x.get("status") in PUBLIC_STATUS]
+                         if x.get("status") in PUBLIC_STATUS and public_visible(x)]
                 _claims = load_claims()
             _my_claims = {c.get("itemId"): c for c in _claims if c.get("from") == owner}
             for _x in items:
@@ -1833,7 +1862,8 @@ class Handler(BaseHTTPRequestHandler):
             owner = self._owner()
             with LOCK:
                 all_items = load_items()
-            pub = [public_item(x, owner) for x in all_items if x.get("status") in PUBLIC_STATUS]
+            pub = [public_item(x, owner) for x in all_items
+                   if x.get("status") in PUBLIC_STATUS and public_visible(x)]
             with LOCK:
                 _claims = load_claims()
             _my_claims = {c.get("itemId"): c for c in _claims if c.get("from") == owner}
@@ -2600,6 +2630,7 @@ class Handler(BaseHTTPRequestHandler):
                 claim["updatedAt"] = now_ms()
                 claim["completedAt"] = now_ms()
                 item["status"] = "closed"
+                item["closedAt"] = now_ms()
                 item["updatedAt"] = now_ms()
                 save_claims(claims)
                 save_items(items)

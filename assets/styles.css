@@ -600,3 +600,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .m3-t{font-size:14px;font-weight:800;color:#3b1d63;}
 .m3-s{font-size:10.5px;color:#8a8298;flex:1;}
 .m3-go{font-size:11px;font-weight:700;color:#62269c;}
+
+/* 上传区 */
+.upload-box{border:1.5px dashed #d8c7ef;background:#faf7ff;border-radius:14px;padding:16px 12px;text-align:center;cursor:pointer;}
+.upload-box:active{background:#f3ebff;}
+.ub-ico{font-size:26px;line-height:1.1;}
+.ub-t{font-size:13px;font-weight:700;color:#5a2b8f;margin-top:4px;}
+.ub-s{font-size:10.5px;color:#8a8298;margin-top:2px;}

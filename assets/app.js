@@ -1639,11 +1639,14 @@ function guessCategory(text){
   return '其他';
 }
 
+const uploadBox = document.getElementById('uploadBox');
+if(uploadBox) uploadBox.onclick = function(){ document.getElementById('photoInput').click(); };
 document.getElementById('photoInput').onchange = function(){
   const f = this.files && this.files[0];
   const box = document.getElementById('photoPreview');
   pendingPhoto = null; box.innerHTML = '';
   if(!f) return;
+  if(uploadBox) uploadBox.style.display = 'none';
   const seq = ++photoSeq;
   photoBusy = true;
   box.innerHTML = '<div class="tip-small">图片处理中…</div>';
@@ -1797,6 +1800,7 @@ function resetPublishForm(){
   phoneManualRequest = false;
   const pp = document.getElementById('photoPreview'); if(pp) pp.innerHTML = '';
   const pi = document.getElementById('photoInput'); if(pi) pi.value = '';
+  const ub = document.getElementById('uploadBox'); if(ub) ub.style.display = 'block';
   const dc = document.getElementById('descCount'); if(dc) dc.textContent = '0';
   const ap = document.getElementById('aiFormatPanel'); if(ap) ap.style.display = 'none';
   const ph = document.getElementById('phoneHint'); if(ph) ph.textContent = '';

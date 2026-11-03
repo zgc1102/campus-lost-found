@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>清华校园拾光里 v3.2 · 校园互助服务平台</title>
-<link rel="stylesheet" href="assets/styles.css?v=20261124">
+<link rel="stylesheet" href="assets/styles.css?v=20261125">
 </head>
 <body>
 <div id="bootGuard" style="position:fixed;inset:0;z-index:3000;background:#1b0b2e;color:#fff;display:flex;align-items:center;justify-content:center;flex-direction:column;font:14px/1.9 'Microsoft YaHei',system-ui,sans-serif;text-align:center;padding:24px">
@@ -249,8 +249,12 @@ setTimeout(function(){
 
         <div class="form-item" data-field="photo">
           <label>物品图片（选填，1 张）</label>
-          <input type="file" id="photoInput" accept="image/*">
-          <div class="tip-small">会自动压缩，只保存在本机</div>
+          <div class="upload-box" id="uploadBox">
+            <div class="ub-ico">📷</div>
+            <div class="ub-t">点击上传 / 拍照</div>
+            <div class="ub-s">会自动压缩，只保存在本机</div>
+          </div>
+          <input type="file" id="photoInput" accept="image/*" style="display:none">
           <div id="photoPreview"></div>
           <div class="errmsg"></div>
         </div>
@@ -434,23 +438,12 @@ setTimeout(function(){
           <span data-gq="清华有哪些必看的地方？">必看景点</span>
         </div>
       </div>
-      <div class="sectitle">先看看校园</div>
-      <div class="map3d" id="map3dCard" data-nav="map">
-        <div class="m3-stage">
-          <div class="m3-sun"></div>
-          <div class="m3-hill h1"></div><div class="m3-hill h2"></div>
-          <div class="m3-bld b1"></div><div class="m3-bld b2"></div><div class="m3-bld b3"></div>
-          <div class="m3-bld b4"></div><div class="m3-bld b5"></div>
-          <div class="m3-pin">二校门</div>
-          <div class="m3-tip">拖动看看</div>
-        </div>
-        <div class="m3-info">
-          <div class="m3-t">3D 校园地图</div>
-          <div class="m3-s">先看看没去过的地方 · 点地标看实景</div>
-          <div class="m3-go">进入 ›</div>
-        </div>
-      </div>
       <div class="sectitle">选择你想用的服务</div>
+      <div class="g-card" data-nav="map" style="background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px 16px;margin-bottom:12px;display:flex;align-items:center;gap:14px;cursor:pointer;">
+        <div style="width:52px;height:52px;border-radius:14px;background:var(--purple-ll);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;">🗺️</div>
+        <div><div style="font-size:16px;font-weight:700;">清华大学全景地图</div><div style="font-size:12.5px;color:var(--sub);margin-top:3px;">文旅图风格全图导览，地标一目了然</div></div>
+        <div style="margin-left:auto;color:var(--purple);font-size:22px;font-weight:700;">›</div>
+      </div>
       <div class="g-card" data-nav="faqList" style="background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px 16px;margin-bottom:12px;display:flex;align-items:center;gap:14px;cursor:pointer;">
         <div style="width:52px;height:52px;border-radius:14px;background:var(--purple-ll);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;">❓</div>
         <div><div style="font-size:16px;font-weight:700;">来清华大学常问的问题</div><div style="font-size:12.5px;color:var(--sub);margin-top:3px;">图文结合的答案，新生/访客必看</div></div>
@@ -618,7 +611,7 @@ setTimeout(function(){
 <script>
 try{ if(localStorage.getItem('sg:tour:v2') === '1'){ var _tm = document.getElementById('tourMask'); if(_tm) _tm.classList.remove('show'); } }catch(e){}
 </script>
-<script src="assets/app.js?v=20261129"></script>
+<script src="assets/app.js?v=20261130"></script>
 <div id="imgViewer" class="img-viewer"><img id="imgViewerImg" alt=""><div class="img-viewer-close">✕</div></div>
 <script>if(location.protocol==="file:"){var w=document.getElementById("fileWarn");if(w)w.style.display="block";}</script>
 </body>
