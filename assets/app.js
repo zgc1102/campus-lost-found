@@ -832,26 +832,6 @@ function openItem(id){
   document.getElementById('isMeta').textContent = '📍 '+place+
     (it.status ? ('　|　'+statusText(it.status)) : '')+
     (it.contact && it.contact.phone ? ('　|　📞 '+maskPhone(it.contact.phone)) : '');
-  const simBox = document.getElementById('isSimilar');
-  if(simBox){
-    simBox.style.display = 'none';
-    simBox.innerHTML = '';
-    if(API_BASE && it.status === 'approved' && it.type !== 'help'){
-      fetch(API_BASE + '/items/' + encodeURIComponent(it.id) + '/similar')
-        .then(function(r){ return r.json(); })
-        .then(function(list){
-          if(!Array.isArray(list) || !list.length || currentSheetId !== it.id) return;
-          simBox.innerHTML = '<div class="sim-title">🧠 AI 猜你在找</div>' + list.map(function(s){
-            return '<div class="sim-item" data-sim-id="' + esc(s.id) + '">' +
-              '<div class="sim-th">' + (s.photoUrl ? '<img src="' + esc(s.photoUrl) + '" alt="">' : '🔎') + '</div>' +
-              '<div class="sim-info"><div class="sim-t">' + esc(s.title) + '</div>' +
-              '<div class="sim-s">' + esc(s.place || '') + ' · ' + fmtTime(s.createdAt) + '</div></div>' +
-              '<div class="sim-arrow">›</div></div>';
-          }).join('');
-          simBox.style.display = 'block';
-        }).catch(function(){});
-    }
-  }
   const btn = document.getElementById('isAction');
   const box = document.getElementById('claimBox');
   const mine = !!it.isMine || (it.ownerId && it.ownerId === myId());
@@ -2834,14 +2814,4 @@ window.openTour = openTour;
   });
 })();
 
-/* 相似物品点击 */
-(function(){
-  const box = document.getElementById('isSimilar');
-  if(!box) return;
-  box.addEventListener('click', function(e){
-    const b = e.target.closest('[data-sim-id]');
-    if(!b) return;
-    e.stopPropagation();
-    openItem(b.getAttribute('data-sim-id'));
-  });
-})();
+
