@@ -2721,7 +2721,7 @@ try{
       toast('本机模式：数据只在这台电脑；要发帖给同学看，请用公网地址打开');
     }, 900);
   }
-  const _sm = location.search.match(/[?&]screen=([a-z]+)/);
+  const _sm = location.search.match(/[?&]screen=([A-Za-z]+)/);
   if(_sm){ setTimeout(function(){ show(_sm[1]); }, 700); }
   console.log('清华校园拾光里 v3.2 已就绪 · 模式=' + (API_BASE ? '共享' : '本机') + ' · 存储键 ' + STORE_KEY);
 }catch(err){
