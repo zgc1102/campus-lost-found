@@ -276,25 +276,36 @@ body:has(#helpSheet.show) .bottom-nav{transform:translate(-50%,120%);}
 
 /* 桌面端：全屏，不再是一个小手机 */
 @media (min-width:760px){
-  body{display:block;background:#E8E1F2;padding:0;}
-  .phone{width:100%;max-width:none;min-height:100vh;margin:0;border-radius:0;box-shadow:none;}
-  .topbar{height:64px;padding:0 max(24px,calc((100vw - 1120px)/2));}
-  .topbar .t{font-size:18px;}
-  .scroll{max-width:1120px;margin:0 auto;padding:0 24px 104px;}
-  .home-stats{grid-template-columns:repeat(3,1fr);max-width:640px;}
-  .cat-group .grid{grid-template-columns:repeat(4,1fr);}
-  .cat-group.g-a .grid{grid-template-columns:repeat(2,1fr);max-width:560px;}
-  .help-cats{grid-template-columns:repeat(4,1fr);}
-  #lostWrap,#foundWrap,#helpList{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-  .item{margin-bottom:0;}
-  .bottom-nav{width:100%;left:0;transform:none;justify-content:center;gap:24px;}
-  .bottom-nav button{flex:0 0 150px;}
-  .fab-pub{left:auto;right:max(24px,calc((100vw - 1120px)/2));bottom:88px;}
+  body{display:flex;justify-content:center;align-items:flex-start;background:#E8E1F2;padding:24px 0;min-height:100vh;}
+  .phone{width:390px;max-width:390px;min-height:calc(100vh - 48px);margin:0 auto;border-radius:28px;box-shadow:0 0 0 1px #D9CDEA,0 26px 70px rgba(59,19,95,.22);overflow:hidden;}
+  .topbar{height:58px;padding:0 14px;}
+  .topbar .t{font-size:16px;}
+  .scroll{max-width:none;margin:0;padding:0 14px 92px;}
+  .home-stats{grid-template-columns:repeat(3,1fr);max-width:none;}
+  .cat-group .grid{grid-template-columns:1fr 1fr;}
+  .cat-group.g-a .grid{grid-template-columns:1fr 1fr;max-width:none;}
+  .help-cats{grid-template-columns:1fr 1fr;}
+  #lostWrap,#foundWrap,#helpList{display:block;}
+  .item{margin-bottom:9px;}
+  .bottom-nav{width:390px;left:50%;transform:translateX(-50%);justify-content:space-between;gap:0;}
+  .bottom-nav button{flex:1;}
+  .fab-pub{left:auto;right:calc(50% - 195px + 14px);bottom:88px;}
   body::before{display:none;}
-  #helpSheet.show{width:100%;max-width:none;left:0;transform:none;}
-  .hp-top{padding-left:max(24px,calc((100vw - 760px)/2));}
-  .hp-body{max-width:760px;margin:0 auto;}
-  .hp-cats{grid-template-columns:repeat(4,1fr);}
-  .hp-submit{width:100%;left:0;transform:none;}
-  .hp-submit .btn{max-width:760px;display:block;margin:0 auto;}
+  #helpSheet.show{width:390px;max-width:390px;left:50%;transform:translateX(-50%);}
+  .hp-top{padding-left:14px;}
+  .hp-body{max-width:none;margin:0;}
+  .hp-cats{grid-template-columns:1fr 1fr;}
+  .hp-submit{width:390px;left:50%;transform:translateX(-50%);}
+  .hp-submit .btn{max-width:none;display:block;margin:0;}
+}
+
+/* 桌面端手机框内部滚动，底部导航贴住手机底 */
+@media (min-width:760px){
+  .phone{height:calc(100vh - 48px);min-height:0;overflow:hidden;}
+  .screen{min-height:0;height:100%;}
+  .screen .scroll{flex:1;min-height:0;overflow-y:auto;}
+  .bottom-nav{bottom:24px;height:64px;border-radius:0 0 28px 28px;}
+  .fab-pub{bottom:100px;}
+  #helpSheet.show{top:24px;bottom:24px;height:auto;max-height:none;border-radius:0 0 28px 28px;}
+  .hp-submit{bottom:24px;}
 }
