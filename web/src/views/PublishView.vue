@@ -30,6 +30,8 @@ const result = ref(null)
 const error = ref('')
 const photo = ref('')
 const visionState = ref('')
+const needPhoneConfirm = ref(false)
+const phoneConfirmed = ref(false)
 
 function onPhoto(e) {
   const file = e.target.files && e.target.files[0]
@@ -94,14 +96,20 @@ async function submit() {
       eventTime: form.eventTime || '',
       secret: form.secret.trim(),
       contact: { phone: form.phone.trim() },
-      photo: photo.value || null
+      photo: photo.value || null,
+      phoneConfirmed: phoneConfirmed.value
     }
     const saved = await api.create(item)
     result.value = saved
     try { sessionStorage.setItem('sg:lastResult', JSON.stringify(saved)) } catch (e) {}
     emit('nav', 'success')
   } catch (e) {
-    error.value = e.message || '提交失败，请稍后再试'
+    if (e.body && e.body.needConfirm) {
+      needPhoneConfirm.value = true
+      error.value = '这个号码需要确认，请核对后勾选'
+    } else {
+      error.value = e.message || '提交失败，请稍后再试'
+    }
   } finally {
     submitting.value = false
   }
@@ -180,6 +188,10 @@ async function submit() {
         </div>
 
         <div v-if="error" class="warn-box" style="margin-bottom:10px">{{ error }}</div>
+        <label v-if="needPhoneConfirm" style="display:flex;align-items:center;gap:6px;font-size:10px;color:var(--sub);margin-bottom:10px">
+          <input v-model="phoneConfirmed" type="checkbox" style="width:auto;margin:0;accent-color:var(--primary)">
+          我确认这个号码正确，可以联系到我
+        </label>
 
         <button type="button" class="submit-btn" :disabled="submitting" @click="submit">
           {{ submitting ? '提交中…' : '提交发布 · AI 先审核' }}

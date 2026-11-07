@@ -21,11 +21,14 @@ async function call(path, options = {}) {
   const res = await fetch(API_BASE + path, { ...options, headers })
   if (!res.ok) {
     let message = 'HTTP ' + res.status
+    let body = null
     try {
-      const body = await res.json()
+      body = await res.json()
       if (body && body.error) message = body.error
     } catch (_) {}
-    throw new Error(message)
+    const err = new Error(message)
+    err.body = body
+    throw err
   }
   const text = await res.text()
   return text ? JSON.parse(text) : null
