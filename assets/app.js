@@ -2,26 +2,26 @@
 /* ============ v3.0：异常可见化（绝不再静默失败） ============ */
 window.addEventListener('error', function(ev){
   const b = document.getElementById('errTop');
-  if(b && ev && ev.message){ b.textContent = '页面出现异常：' + ev.message; b.classList.add('show'); }
+  if(b && ev && ev.message){ b.textContent = '⚠️ 页面出现异常：' + ev.message; b.classList.add('show'); }
 });
 window.addEventListener('unhandledrejection', function(ev){
   const b = document.getElementById('errTop');
-  if(b){ b.textContent = '操作没有完成：' + ((ev.reason && ev.reason.message) || '未知错误'); b.classList.add('show'); }
+  if(b){ b.textContent = '⚠️ 操作没有完成：' + ((ev.reason && ev.reason.message) || '未知错误'); b.classList.add('show'); }
 });
 
 /* ============ 分类图标 ============ */
 const CAT = {
-  bag:{e:'包',c:'#62269c',l:'箱包'}, card:{e:'卡',c:'#7a35b8',l:'证件卡'}, watch:{e:'表',c:'#3a86a8',l:'手表'},
-  electronics:{e:'机',c:'#c0392b',l:'电子'}, umbrella:{e:'伞',c:'#2f6f8f',l:'雨具'}, key:{e:'钥',c:'#b8860b',l:'钥匙'},
-  book:{e:'书',c:'#8a52c7',l:'书籍'}, sports:{e:'动',c:'#e08a2b',l:'运动'}, cup:{e:'杯',c:'#2f9e8f',l:'杯具'},
-  charger:{e:'电',c:'#4e9a4e',l:'充电'}, repair:{e:'修',c:'#62269c',l:'维修'}, life:{e:'生',c:'#2f6f8f',l:'生活'},
-  office:{e:'公',c:'#7a35b8',l:'办公'}, outdoor:{e:'野',c:'#3a86a8',l:'户外'},
-  cloth:{e:'衣',c:'#8a52c7',l:'衣物'}, other:{e:'其',c:'#6b6480',l:'其他'},
-  help_borrow:{e:'修',c:'#62269c',l:'借用'}, help_errand:{e:'跑',c:'#e08a2b',l:'代办'},
-  help_donate:{e:'赠',c:'#2f9e8f',l:'捐赠'}, help_volunteer:{e:'志',c:'#2f6f8f',l:'志愿'}
+  bag:{e:'🎒',c:'#62269c',l:'箱包'}, card:{e:'🪪',c:'#7a35b8',l:'证件卡'}, watch:{e:'⌚',c:'#3a86a8',l:'手表'},
+  electronics:{e:'🎧',c:'#c0392b',l:'电子'}, umbrella:{e:'☂️',c:'#2f6f8f',l:'雨具'}, key:{e:'🔑',c:'#b8860b',l:'钥匙'},
+  book:{e:'📚',c:'#8a52c7',l:'书籍'}, sports:{e:'🏀',c:'#e08a2b',l:'运动'}, cup:{e:'🥤',c:'#2f9e8f',l:'杯具'},
+  charger:{e:'🔋',c:'#4e9a4e',l:'充电'}, repair:{e:'🛠️',c:'#62269c',l:'维修'}, life:{e:'🏠',c:'#2f6f8f',l:'生活'},
+  office:{e:'🖨️',c:'#7a35b8',l:'办公'}, outdoor:{e:'⛺',c:'#3a86a8',l:'户外'},
+  cloth:{e:'🧥',c:'#8a52c7',l:'衣物'}, other:{e:'📦',c:'#6b6480',l:'其他'},
+  help_borrow:{e:'🛠️',c:'#62269c',l:'借用'}, help_errand:{e:'🏃',c:'#e08a2b',l:'代办'},
+  help_donate:{e:'🎁',c:'#2f9e8f',l:'捐赠'}, help_volunteer:{e:'🤝',c:'#2f6f8f',l:'志愿'}
 };
-function catInfo(k){ return CAT[k] || {e:'其',c:'#62269c',l:'其他'}; }
-function thumbHTML(k,title){ const m=catInfo(k); const ch=(m.l==='其他'&&title)?String(title).slice(0,1):m.e; return '<div class="thumb" style="background:transparent">'+ch+'</div>'; }
+function catInfo(k){ return CAT[k] || {e:'📦',c:'#62269c',l:'其他'}; }
+function thumbHTML(k){ const m=catInfo(k); return '<div class="thumb" style="background:linear-gradient(135deg,'+m.c+','+shade(m.c)+')">'+m.e+'</div>'; }
 function shade(hex){ const n=parseInt(hex.slice(1),16); let r=(n>>16)&255,g=(n>>8)&255,b=n&255; r=Math.min(255,r+40);g=Math.min(255,g+40);b=Math.min(255,b+40); return 'rgb('+r+','+g+','+b+')'; }
 
 /* ============ 数据（套用 demo-v3 内容） ============ */
@@ -70,7 +70,7 @@ function warnStorage(){
   storageWarned = true;
   const b = document.getElementById('errTop');
   if(b){
-    b.textContent = '这个浏览器没法保存数据（可能是无痕模式、存储已满或被拦截）。你发布的内容只在当前页面有效，刷新会消失；换成普通窗口打开就能保存。';
+    b.textContent = '⚠️ 这个浏览器没法保存数据（可能是无痕模式、存储已满或被拦截）。你发布的内容只在当前页面有效，刷新会消失；换成普通窗口打开就能保存。';
     b.classList.add('show');
   }
 }
@@ -254,39 +254,15 @@ function setNetBadge(){
   el.className = 'netbadge ' + (netOnline ? 'on' : 'off');
   el.textContent = netOnline
     ? '🌐 已连接服务器：' + location.origin + '（其他同学也能看到）'
-    : '暂时连不上服务器，正在用本机数据';
+    : '⚠️ 暂时连不上服务器，正在用本机数据';
 }
 function showStale(){
   const b = document.getElementById('errTop');
   if(!b) return;
-  b.textContent = '连不上服务器：这个链接可能已经过期（每次重启地址会变）。请用最新的公网地址重新打开；点这里可以重试。';
+  b.textContent = '⚠️ 连不上服务器：这个链接可能已经过期（每次重启地址会变）。请用最新的公网地址重新打开；点这里可以重试。';
   b.classList.add('show');
   b.onclick = function(){ netFails = 0; b.classList.remove('show'); netSync(); };
 }
-function renderHomeLatest(){
-  const box = document.getElementById('homeLatest');
-  if(!box) return;
-  const open = Store.list({statuses:['approved','claimed']});
-  const closed = Store.list({status:'closed'});
-  const so = document.getElementById('statOpen'), sc = document.getElementById('statClosed');
-  if(so) so.textContent = open.length;
-  if(sc) sc.textContent = closed.length;
-  const lost = open.filter(function(x){ return x.type === 'lost'; }).slice(0, 2);
-  const found = open.filter(function(x){ return x.type === 'found'; }).slice(0, 2);
-  const arr = lost.concat(found).sort(function(a,b){ return (b.createdAt||0)-(a.createdAt||0); }).slice(0, 4);
-  if(!arr.length){
-    box.innerHTML = '<div class="hl-empty">还没有新动态，发布第一条吧</div>';
-    return;
-  }
-  box.innerHTML = arr.map(function(it){
-    const kind = it.type === 'lost' ? '寻物' : '招领';
-    return '<button type="button" class="hl-card" data-kind="' + esc(it.type) + '" data-item="' + esc(it.id) + '">' +
-      '<span class="hl-type">' + kind + '</span>' +
-      '<b>' + esc(it.title || '未命名') + '</b>' +
-      '<span>' + esc(it.place || '地点待补充') + '</span></button>';
-  }).join('');
-}
-
 async function netSync(){
   if(!API_BASE || netBusy) return;
   netBusy = true;
@@ -307,7 +283,7 @@ async function netSync(){
       LS.set(STORE_KEY, JSON.stringify(Object.keys(byId).map(function(k){ return byId[k]; })));
       netOnline = true;
       netFails = 0;
-      renderLost(); renderFound(); renderMine(); renderHomeLatest();
+      renderLost(); renderFound(); renderMine();
     }
   }catch(e){
     netOnline = false;
@@ -337,7 +313,7 @@ const MEMORIAL = [
    blocks:[
      {h:'🚀 红色引领，绿色发展', p:['在吴城董事长带领下，以“红色引领、绿色发展”为理念，带领集团从智慧矿山拓展至化工、贸易、能源。','以科技创新驱动传统产业升级，绿色低碳、安全智能，市值再创新高。']},
      {h:'⛏️ 智慧矿山 · 化工能源', p:['深耕智慧矿山建设，推动开采智能化、管理数字化。','延伸至化工、能源领域，服务国家战略与实体经济高质量发展。']},
-     {h:'志 热心公益', p:['积极支持校园公益平台建设，以实干担当回馈社会。']}
+     {h:'🤝 热心公益', p:['积极支持校园公益平台建设，以实干担当回馈社会。']}
    ]},
   {key:'zj', star:'🌾', name:'中基控股集团', sub:'智慧文旅 · 乡村振兴',
    blocks:[
@@ -370,10 +346,10 @@ const FAQ = [
 const LANDMARKS = [
  {name:'西门（主校门）', icon:'🌟', x:9,  y:34, desc:'清华最具代表性的校门，题字“清华大学”于此，访客主要入校口之一，紧邻圆明园。'},
  {name:'观畴园（食堂）', icon:'🍚', x:34, y:22, desc:'万人食堂，位于校园中北部，游客可扫码就餐，菜品丰富、性价比高。'},
- {name:'紫操',           icon:'跑', x:72, y:14, desc:'紫荆操场，校园东北部，夜跑与社团活动常用场地。'},
+ {name:'紫操',           icon:'🏃', x:72, y:14, desc:'紫荆操场，校园东北部，夜跑与社团活动常用场地。'},
  {name:'综合体育馆',     icon:'🏟️', x:86, y:20, desc:'东北部大型场馆，开学典礼、毕业典礼与大型演出常在此举办。'},
- {name:'图书馆（北馆）', icon:'书', x:70, y:30, desc:'李文正馆，早期建筑区东北侧，馆内安静、适合自习与参观。'},
- {name:'老图书馆',       icon:'书', x:60, y:36, desc:'清华早期四大建筑之一，红砖坡顶，杨绛先生笔下“最爱的图书馆”。'},
+ {name:'图书馆（北馆）', icon:'📚', x:70, y:30, desc:'李文正馆，早期建筑区东北侧，馆内安静、适合自习与参观。'},
+ {name:'老图书馆',       icon:'📚', x:60, y:36, desc:'清华早期四大建筑之一，红砖坡顶，杨绛先生笔下“最爱的图书馆”。'},
  {name:'大礼堂',         icon:'🎭', x:46, y:42, desc:'古罗马穹顶风格，与大草坪、日晷构成校园中轴经典景观。'},
  {name:'清华学堂',       icon:'🏛️', x:56, y:44, desc:'1911 年建校起点，德国古典风格，培养人才的摇篮。'},
  {name:'校史馆',         icon:'📜', x:38, y:50, desc:'展示清华建校与发展历程，位于大礼堂西侧，预约可参观。'},
@@ -466,7 +442,7 @@ function renderHeat(){
   const top = all.filter(function(z){ return z.name !== '其他 / 未填写'; }).slice(0, 2)
     .map(function(z){ return z.name; }).join('和');
   host.innerHTML = '<div class="heat-panel">' +
-    '<div class="heat-head">失物热力<span>共 ' + total + ' 条发布</span></div>' +
+    '<div class="heat-head">🔥 失物热力<span>共 ' + total + ' 条发布</span></div>' +
     '<div class="heat-sub">' + (top || '图书馆') + '最容易丢东西；已闭环 ' + done + ' 条，闭环率 ' + rate + '%。</div>' +
     all.map(function(z){
       return '<div class="heat-row"><span class="heat-name">' + esc(z.name) + '</span>' +
@@ -556,7 +532,7 @@ function itemHTML(it, srcLabel){
     : '<span class="src-tag">'+esc(srcLabel)+'</span>';
   const thumb = (it.photo || it.photoUrl)
     ? '<div class="thumb" style="padding:0;overflow:hidden;background:#eee"><img loading="lazy" decoding="async" src="'+esc(it.photo || it.photoUrl)+'" alt="" style="width:100%;height:100%;object-fit:cover;display:block"></div>'
-    : thumbHTML(it.cat, it.title);
+    : thumbHTML(it.cat);
   let btnHTML;
   if(mine){ btnHTML = '<button class="btn ghost">查看</button>'; }
   else if(it.myClaim === 'pending'){ btnHTML = '<button class="btn ghost">已申请</button>'; }
@@ -565,8 +541,8 @@ function itemHTML(it, srcLabel){
   else { btnHTML = '<button class="btn" data-act="'+esc(act)+'">'+esc(act)+'</button>'; }
   const chips = (it.fields ? Object.keys(it.fields).map(function(k){ return it.fields[k]; }).filter(Boolean).slice(0, 3) : [])
     .map(function(v){ return '<span class="chip">' + esc(v) + '</span>'; }).join('');
-  const meta = '地点 ' + esc(place) + (it.createdAt ? (' · ' + fmtTime(it.createdAt)) : '');
-  return '<div class="item" data-kind="'+esc(it.type)+'" data-item="'+esc(it.id)+'">'+
+  const meta = '📍 ' + esc(place) + (it.createdAt ? (' · ' + fmtTime(it.createdAt)) : '');
+  return '<div class="item" data-item="'+esc(it.id)+'">'+
     thumb+
     '<div class="body"><div class="tt">'+tag+esc(it.title)+statusChip(it.status)+'</div>'+
     (it.summary ? '<div class="sum">'+esc(it.summary)+'</div>' : '')+
@@ -766,7 +742,7 @@ function renderMemorialDetail(idx){
   w.insertAdjacentHTML('beforeend','<div class="road" style="left:44%;top:0;width:7px;height:100%"></div>');
   w.insertAdjacentHTML('beforeend','<div class="road" style="left:0;top:62%;width:100%"></div>');
   w.insertAdjacentHTML('beforeend','<div class="route" style="left:14%;top:36%;width:46%;transform:rotate(26deg)"></div>');
-  w.insertAdjacentHTML('beforeend','<div class="legend"><b>图例</b><br>🏛️ 校门/礼堂 · 书 图书馆<br>🍚 食堂 · 🏥 医疗 · 🏟️ 场馆<br>🌊 水系 · 🌳 绿地</div>');
+  w.insertAdjacentHTML('beforeend','<div class="legend"><b>图例</b><br>🏛️ 校门/礼堂 · 📚 图书馆<br>🍚 食堂 · 🏥 医疗 · 🏟️ 场馆<br>🌊 水系 · 🌳 绿地</div>');
   LANDMARKS.forEach((l,i)=>{
     const p=document.createElement('div');
     const up = l.y < 20 ? false : (l.y > 78 ? true : (i % 2 === 1));
@@ -782,7 +758,7 @@ function openLandmark(i){
   const th=document.getElementById('isThumb');
   th.style.background='linear-gradient(135deg,#c9a24a,#e3c98a)';
   if(url){
-    th.innerHTML='<img src="'+url+'" alt="'+l.name+'" style="width:100%;height:100%;object-fit:cover;border-radius:12px" onerror="this.parentNode.textContent=\'地点 图片未能加载\';">';
+    th.innerHTML='<img src="'+url+'" alt="'+l.name+'" style="width:100%;height:100%;object-fit:cover;border-radius:12px" onerror="this.parentNode.textContent=\'📍 图片未能加载\';">';
   }else{
     th.textContent='📍';
   }
@@ -800,7 +776,7 @@ function openLandmark(i){
   const pe=document.createElement('div');
   pe.className='q';pe.id='phoneEntry';
   pe.style.background='linear-gradient(135deg,#f7f1fc,#fdf6e9)';pe.style.borderColor='var(--purple-ll)';
-  pe.innerHTML='<div class="qt"><b>电话 常见电话</b><br><span style="font-size:12px;color:var(--sub)">急救 · 安保 · 后勤 · 招生，一键拨打</span></div><div class="qa">›</div>';
+  pe.innerHTML='<div class="qt"><b>📞 常见电话</b><br><span style="font-size:12px;color:var(--sub)">急救 · 安保 · 后勤 · 招生，一键拨打</span></div><div class="qa">›</div>';
   pe.onclick=()=>{ renderPhones(); show('phones'); };
   w.appendChild(pe);
   FAQ.forEach((c,ci)=>{
@@ -823,7 +799,7 @@ function renderPhones(){
       h+='<a class="ph-row" href="tel:'+it.t.replace(/-/g,'')+'"><span class="ph-n">'+it.n+'</span><span class="ph-t">'+it.t+'</span><span class="qa">›</span></a>';
     });
   });
-  h+='<div class="faq-note">电话 号码来源：清华大学保卫部、校医院、总务部门及本科 / 研究生招生网的公开信息；如与最新官方公布不符，以学校官方渠道为准。校外紧急电话：报警 110 · 火警 119 · 急救 120 / 999。</div>';
+  h+='<div class="faq-note">📞 号码来源：清华大学保卫部、校医院、总务部门及本科 / 研究生招生网的公开信息；如与最新官方公布不符，以学校官方渠道为准。校外紧急电话：报警 110 · 火警 119 · 急救 120 / 999。</div>';
   w.innerHTML=h;
 }
 function openFaq(ci,qi){
@@ -853,9 +829,9 @@ function openItem(id){
     : m.e;
   document.getElementById('isTitle').textContent = it.title;
   document.getElementById('isDesc').textContent = it.desc;
-  document.getElementById('isMeta').textContent = '地点 '+place+
+  document.getElementById('isMeta').textContent = '📍 '+place+
     (it.status ? ('　|　'+statusText(it.status)) : '')+
-    (it.contact && it.contact.phone ? ('　|　电话 '+maskPhone(it.contact.phone)) : '');
+    (it.contact && it.contact.phone ? ('　|　📞 '+maskPhone(it.contact.phone)) : '');
   const btn = document.getElementById('isAction');
   const box = document.getElementById('claimBox');
   const mine = !!it.isMine || (it.ownerId && it.ownerId === myId());
@@ -1326,7 +1302,6 @@ document.addEventListener('click', e=>{
     if(t==='legal'){show('legal');return;}
     if(t==='privacy'){show('privacy');return;}
     if(t==='mine'){renderMine();show('mine');return;}
-    if(t==='help'){renderHelp();show('help');return;}
     show(t); return;
   }
   const mem=e.target.closest('[data-mem]');
@@ -2362,7 +2337,7 @@ function renderHelp(){
       '<div class="body">' +
       '<div class="tt">' + esc(it.title) + statusChip(it.status) + '</div>' +
       '<div class="dd">' + esc(it.desc || '') + '</div>' +
-      '<div class="row"><span class="meta">地点 ' + esc(it.place || '未填写地点') + ' · ' + fmtTime(it.createdAt) + '</span>' +
+      '<div class="row"><span class="meta">📍 ' + esc(it.place || '未填写地点') + ' · ' + fmtTime(it.createdAt) + '</span>' +
       '<button class="btn" data-help-go="' + esc(it.id) + '">我来帮忙</button></div>' +
       '</div></div>';
   }).join('');
@@ -2539,7 +2514,7 @@ function bindPhoneHint(input, hint, confirmWrap, confirmBox){
       hint.style.color = '#2f7d46';
       input.style.borderColor = '#b8e0c2';
     } else if(r.status === 'yellow'){
-      hint.textContent = '' + r.reason;
+      hint.textContent = '⚠️ ' + r.reason;
       hint.style.color = '#a15c00';
       input.style.borderColor = '#f0c36d';
     } else {
@@ -2717,7 +2692,7 @@ function bootStep(name, fn){
   try{ fn(); }catch(e){
     if(window.console) console.error('boot fail: ' + name, e);
     var b = document.getElementById('errTop');
-    if(b){ b.textContent = '初始化失败：' + name + ' · ' + (e && e.message || e); b.classList.add('show'); }
+    if(b){ b.textContent = '⚠️ 初始化失败：' + name + ' · ' + (e && e.message || e); b.classList.add('show'); }
   }
 }
 try{
@@ -2753,7 +2728,7 @@ try{
   window.__SG_READY = true;
   if(window.__sgEnter) window.__sgEnter();
   const b = document.getElementById('errTop');
-  if(b){ b.textContent = '页面初始化失败：' + err.message; b.classList.add('show'); }
+  if(b){ b.textContent = '⚠️ 页面初始化失败：' + err.message; b.classList.add('show'); }
   if(window.console) console.error(err);
 }
 
@@ -2767,7 +2742,7 @@ const TOUR_SLIDES = [
    b:'丢了东西点「寻物启事」，捡到东西点「失物招领」。\n点右下角 ＋ 就能发布，类型选错 AI 会自动纠正。'},
   {e:'🧭', t:'初入清华，先问一句',
    b:'游客、新生、家长都能用：访客怎么进校、校园卡丢了怎么办、食堂在哪。\n点首页「初入清华园」，或直接问 AI。'},
-  {e:'志', t:'爱心 · 求助',
+  {e:'🤝', t:'爱心 · 求助',
    b:'借用工具、代办跑腿、爱心捐赠、志愿帮忙。\n点「我来帮忙」就能对接，全程 AI 审核。'},
   {e:'🤖', t:'AI 都在做什么',
    b:'发布：文字 + 图片双审，违规直接拦。\n拍照：自动识别物品并填写。\n认领：AI 核验特征，支持多轮补充。\n问答：校园失物问题随时问。'},
@@ -2860,25 +2835,3 @@ window.openTour = openTour;
   });
   stage.addEventListener('pointerleave', function(){ stage.style.transform = ''; });
 })();
-
-/* 底部导航状态 */
-(function(){
-  const nav = document.getElementById('bottomNav');
-  if(!nav) return;
-  const map = {home:'home', lost:'lost', found:'lost', help:'help', mine:'mine'};
-  function sync(){
-    const active = document.querySelector('.screen.active');
-    const id = active ? active.id.replace('screen-','') : 'home';
-    const want = map[id] || '';
-    nav.querySelectorAll('button').forEach(function(b){
-      b.classList.toggle('on', b.getAttribute('data-nav') === want);
-    });
-  }
-  new MutationObserver(sync).observe(document.querySelector('.phone'), {
-    subtree:true, attributes:true, attributeFilter:['class']
-  });
-  sync();
-})();
-
-/* 首屏最新动态（离线也能看本地数据） */
-setTimeout(function(){ try{ renderHomeLatest(); }catch(e){} }, 900);
