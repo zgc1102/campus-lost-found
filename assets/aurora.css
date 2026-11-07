@@ -497,3 +497,33 @@ html::-webkit-scrollbar,body::-webkit-scrollbar{display:none;width:0;height:0;}
 .lost-mini b{display:block;font-size:21px;font-weight:600;color:var(--primary);line-height:1.1;}
 .lost-mini span{display:block;font-size:9px;color:var(--sub);margin-top:1px;}
 .lost-mini i{display:block;font-style:normal;font-size:7.5px;color:#A99BB9;margin-top:5px;letter-spacing:.03em;}
+
+/* 入口行：插画靠左，文字延伸到右侧 */
+.entry-split .entry-list .entry-card .entry-art{
+  order:1!important;flex:0 0 46px!important;width:46px!important;height:46px!important;
+}
+.entry-split .entry-list .entry-art svg{width:38px;height:38px;}
+.entry-split .entry-list .entry-copy{order:2!important;padding-right:2px;}
+.entry-split .entry-list .entry-copy b{font-size:13px!important;line-height:1.35;}
+.entry-split .entry-list .entry-copy i{font-size:9.5px!important;}
+.entry-split .entry-list .entry-arrow{order:3!important;}
+.entry-split .entry-list .entry-card{min-height:62px!important;}
+
+/* 02 下方补功能块 */
+.lost-cta{
+  width:100%;margin-top:8px;padding:11px 12px 12px;position:relative;
+  border:1px solid rgba(91,42,145,.2);border-radius:14px;
+  background:linear-gradient(145deg,#5B2A91,#3B1D63);
+  color:#fff;text-align:left;font-family:inherit;cursor:pointer;
+  box-shadow:0 8px 18px rgba(59,19,95,.16);
+}
+.lost-cta .lc-kicker{display:block;font-size:7px;letter-spacing:.16em;color:#D7C6EA;margin-bottom:4px;}
+.lost-cta b{display:block;font-size:12.5px;font-weight:600;line-height:1.3;}
+.lost-cta i{display:block;font-style:normal;font-size:8.5px;line-height:1.5;color:#D7C6EA;margin-top:3px;padding-right:18px;}
+.lost-cta .lc-plus{position:absolute;right:10px;bottom:10px;width:22px;height:22px;border-radius:50%;background:#C8A96A;color:#3B1D63;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;}
+.lost-cta:active{transform:scale(.98);}
+
+.lost-cta{min-height:74px;padding:9px 10px 10px!important;}
+.lost-cta b{font-size:12px!important;}
+.lost-cta i{font-size:8px!important;line-height:1.45;padding-right:34px!important;}
+.lost-cta .lc-plus{right:8px!important;bottom:8px!important;width:20px!important;height:20px!important;font-size:13px!important;}
