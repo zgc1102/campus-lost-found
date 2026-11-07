@@ -2778,6 +2778,10 @@ try{
   }
   const _sm = location.search.match(/[?&]screen=([A-Za-z]+)/);
   if(_sm){ setTimeout(function(){ show(_sm[1]); }, 700); }
+  const _op = new URLSearchParams(location.search).get('open');
+  if(_op === 'tag'){ setTimeout(function(){ if(typeof openTagSheet === 'function') openTagSheet(); }, 900); }
+  if(_op === 'detective'){ setTimeout(function(){ if(typeof openBlankDetective === 'function') openBlankDetective(); }, 900); }
+  if(_op === 'notices'){ setTimeout(function(){ if(typeof renderNotices === 'function') renderNotices(); show('notices'); }, 900); }
   console.log('清华校园拾光里 v3.2 已就绪 · 模式=' + (API_BASE ? '共享' : '本机') + ' · 存储键 ' + STORE_KEY);
 }catch(err){
   window.__SG_READY = true;
