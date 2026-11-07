@@ -20,7 +20,7 @@ import TourOverlay from './components/TourOverlay.vue'
 const params = new URLSearchParams(location.search)
 const initial = params.get('view')
 const isAdmin = location.pathname.replace(/\/+$/, '') === '/admin'
-const initialView = isAdmin ? 'admin' : ['lost', 'found', 'help', 'publish', 'radar', 'tag', 'mine', 'guide', 'map', 'ask', 'notices', 'info', 'search'].includes(initial) ? initial : 'home'
+const initialView = isAdmin ? 'admin' : ['lost', 'found', 'help', 'publish', 'radar', 'tag', 'mine', 'guide', 'map', 'ask', 'notices', 'info', 'search', 'admin'].includes(initial) ? initial : 'home'
 const view = ref(initialView)
 const publishType = ref(params.get('type') || 'lost')
 const helpCat = ref(params.get('cat') || 'help_borrow')
