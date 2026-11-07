@@ -47,6 +47,12 @@ export const api = {
   report(id) {
     return call('/items/' + encodeURIComponent(id) + '/report', { method: 'POST' })
   },
+  claims() {
+    return call('/claims')
+  },
+  claimAction(id, body) {
+    return call('/claims/' + encodeURIComponent(id), { method: 'PATCH', body: JSON.stringify(body || {}) })
+  },
   mine() {
     return call('/mine')
   },
