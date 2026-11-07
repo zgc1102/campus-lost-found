@@ -2181,6 +2181,9 @@ class Handler(BaseHTTPRequestHandler):
                 return self._serve_path(target)
             return self._send(404, "not found", "text/plain; charset=utf-8")
         if path == "/admin" or path == "/admin/":
+            admin_vue = os.path.join(BASE_DIR, "web", "dist", "index.html")
+            if os.path.isfile(admin_vue):
+                return self._serve_file("web/dist/index.html")
             return self._serve_file("管理端.html")
         if path == "/api/ping":
             with LOCK:

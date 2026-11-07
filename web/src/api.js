@@ -42,6 +42,27 @@ export const api = {
   mine() {
     return call('/mine')
   },
+  ask(question) {
+    return call('/ask', { method: 'POST', body: JSON.stringify({ question }) })
+  },
+  notices() {
+    return call('/notices')
+  },
+  readNotices() {
+    return call('/notices/read', { method: 'POST' })
+  },
+  adminLogin(password) {
+    return call('/login', { method: 'POST', body: JSON.stringify({ password }) })
+  },
+  adminItems(token) {
+    return call('/admin/items', { headers: { 'X-Admin-Token': token } })
+  },
+  adminStats(token) {
+    return call('/admin/stats', { headers: { 'X-Admin-Token': token } })
+  },
+  adminPatch(id, body, token) {
+    return call('/admin/items/' + encodeURIComponent(id), { method: 'PATCH', headers: { 'X-Admin-Token': token }, body: JSON.stringify(body) })
+  },
   radar(body) {
     return call('/agent/radar', { method: 'POST', body: JSON.stringify(body) })
   },
