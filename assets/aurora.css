@@ -416,3 +416,52 @@ body:has(#helpSheet.show) .bottom-nav{transform:translate(-50%,120%);}
 .entry-card .entry-copy{order:2;flex:1;min-width:0;text-align:left;}
 .entry-card .entry-art{order:3;flex:0 0 58px;width:58px!important;height:58px!important;margin:0!important;}
 .entry-card .entry-arrow{order:4;flex:0 0 14px;position:static!important;font-size:12px;color:#B4A6C6;opacity:1;}
+
+/* 恢复两大栏：爱心求助 / 失物寻物 */
+.entry-section{margin:0 0 18px;position:relative;}
+.entry-head{
+  display:flex;align-items:flex-end;justify-content:space-between;
+  padding:0 2px 10px;margin-bottom:10px;border-bottom:1px solid var(--line);
+  position:relative;
+}
+.eh-kicker{display:block;font-size:8px;letter-spacing:.2em;color:var(--sub);margin-bottom:4px;}
+.entry-head h2{margin:0;font-size:21px;font-weight:600;letter-spacing:.01em;color:var(--ink);}
+.eh-count{
+  font-size:9px;padding:3px 8px;border-radius:99px;
+  background:var(--surface-2);color:var(--sub);
+}
+.section-help .entry-head h2{color:#5B2A91;}
+.section-help .entry-head{border-bottom-color:#E6D6F4;}
+.section-help .eh-count{background:#F3EAFB;color:#6D3AB0;}
+.section-lost .entry-head h2{color:#3B1D63;}
+.section-lost .entry-head{border-bottom-color:#DDD2EE;}
+.section-lost .eh-count{background:#EDE7F7;color:#5B2A91;}
+.entry-head::after{
+  position:absolute;right:18px;bottom:6px;font-size:42px;font-weight:700;
+  line-height:1;color:rgba(91,42,145,.06);pointer-events:none;
+}
+.section-help .entry-head::after{content:"01";}
+.section-lost .entry-head::after{content:"02";}
+.entry-list{
+  background:#fff;border:1px solid var(--line);border-radius:18px;
+  overflow:hidden;box-shadow:0 10px 28px rgba(59,19,95,.055);
+  counter-reset:entry;
+}
+.section-help .entry-list{border-top:2px solid #C8A96A;}
+.section-lost .entry-list{border-top:2px solid #7A3CB0;}
+.entry-list .entry-card{
+  display:flex!important;align-items:center;gap:10px;
+  min-height:76px!important;padding:10px 13px!important;
+  border:0;border-bottom:1px solid var(--line);border-radius:0;
+  background:#fff;box-shadow:none;
+}
+.entry-list .entry-card:last-child{border-bottom:0;}
+.entry-list .entry-card::before{
+  content:"0" counter(entry);order:0;flex:0 0 24px;width:24px;
+  font-size:9px;letter-spacing:.06em;color:#B4A6C6;align-self:center;padding:0;
+}
+.entry-list .entry-card .entry-copy{order:2;flex:1;min-width:0;text-align:left;}
+.entry-list .entry-card .entry-art{order:3;flex:0 0 56px;width:56px!important;height:56px!important;margin:0!important;border-radius:15px;}
+.entry-list .entry-card .entry-art svg{width:46px;height:46px;}
+.entry-list .entry-card .entry-arrow{order:4;flex:0 0 14px;position:static!important;font-size:12px;color:#B4A6C6;opacity:1;}
+.entry-list .entry-card:active{background:#FAF6FF;}
