@@ -1320,6 +1320,8 @@ document.addEventListener('click', e=>{
     if(t==='privacy'){show('privacy');return;}
     if(t==='mine'){renderMine();show('mine');return;}
     if(t==='help'){renderHelp();show('help');return;}
+    if(t==='lost'){renderLost();show('lost');return;}
+    if(t==='found'){renderFound();show('found');return;}
     show(t); return;
   }
   const mem=e.target.closest('[data-mem]');
@@ -1570,6 +1572,7 @@ function openEdit(id){
   if(it.type === 'help'){
     /* 求助帖走求助弹层，避免被当成失物/招领改类型 */
     document.getElementById('helpCatSel').value = it.cat || 'help_borrow';
+    document.getElementById('helpCatSel').dispatchEvent(new Event('change', {bubbles:true}));
     document.getElementById('helpTitleInput').value = it.title || '';
     document.getElementById('helpDesc').value = it.desc || '';
     document.getElementById('helpPlace').value = it.place || '';
@@ -1921,6 +1924,7 @@ async function handleDonatePhoto(file){
   const hp = document.getElementById('helpPhotoPreview');
   if(hp) hp.innerHTML = '<img src="' + data + '" alt="预览" style="width:100%;max-height:170px;object-fit:cover;border-radius:10px;margin-top:8px">';
   document.getElementById('helpCatSel').value = 'help_donate';
+  document.getElementById('helpCatSel').dispatchEvent(new Event('change', {bubbles:true}));
   document.getElementById('helpSheet').classList.add('show');
   toast('照片处理中…');
   aiBusy(true, 'AI 正在识别捐赠物品…');
@@ -2878,11 +2882,12 @@ window.openTour = openTour;
       const b = e.target.closest('[data-hp-cat]');
       if(!b) return;
       sel.value = b.getAttribute('data-hp-cat');
+      sel.dispatchEvent(new Event('change', {bubbles:true}));
       syncCards();
     });
     sel.addEventListener('change', syncCards);
     const pub = document.getElementById('helpPublishBtn');
-    if(pub) pub.addEventListener('click', function(){ setTimeout(syncCards, 0); });
+    if(pub) pub.addEventListener('click', function(){ setTimeout(function(){ sel.dispatchEvent(new Event('change', {bubbles:true})); syncCards(); }, 0); });
     syncCards();
   }
 
@@ -3108,9 +3113,11 @@ function renderDetective(data){
   let h = '<div class="dt-route"><label>补充线索，让侦探重新推一次</label>' +
     '<textarea id="detRoute" maxlength="120" placeholder="今天走过：图书馆 → 食堂 → 未名湖 → 宿舍 → 快递点">' + esc(radarRoute) + '</textarea>' +
     '<div class="dt-carry"><span>平时放在</span>' +
-      ['口袋','背包','手持'].map(function(c){ return '<button type="button" data-carry="' + c + '" class="' + (radarCarry === c ? 'on' : '') + '">' + c + '</button>'; }).join('') +
+      ['口袋','背包','手持','其他'].map(function(c){ return '<button type="button" data-carry="' + c + '" class="' + (radarCarry === c ? 'on' : '') + '">' + c + '</button>'; }).join('') +
     '</div>' +
-    '<input id="detLastSeen" maxlength="50" placeholder="最后确认还在：例如 15:00 在图书馆" value="' + esc(radarLastSeen) + '">' +
+    '<input id="detCarryOther" maxlength="40" placeholder="其他位置（选填），例如：外套口袋 / 电脑包侧袋" value="' + esc(radarCarry && ['口袋','背包','手持'].indexOf(radarCarry) < 0 ? radarCarry : '') + '">' +
+    '<label class="det-last-label">最后一次见到它 <i>时间 / 地点</i></label>' +
+    '<input id="detLastSeen" maxlength="60" placeholder="例如：今天 15:00 在图书馆三楼还用过" value="' + esc(radarLastSeen) + '">' +
     '<button type="button" id="detRouteRun">按这些线索重新推理</button></div>';
   h += '<div class="dt-summary">' + esc(data.summary || '') + '</div>';
 
@@ -3141,6 +3148,7 @@ function renderDetective(data){
     tl.forEach(function(x){ h += '<div class="dt-time"><b>' + esc(x.time || '') + '</b><span>' + esc(x.label || '') + '</span></div>'; });
   }
   h += '<div class="dt-note">' + esc(data.disclaimer || '以上为线索建议，不保证物品一定在这些位置。') + '</div>';
+  h += '<button type="button" class="dt-ask" id="detAsk">还拿不准？问校园 AI</button>';
   body.innerHTML = h;
   foot.style.display = 'block';
   foot.innerHTML = '<button class="btn" id="radarBackBtn">返回雷达结果</button>';
@@ -3150,8 +3158,10 @@ function renderDetective(data){
   if(run) run.onclick = function(){
     const inp = document.getElementById('detRoute');
     const ls = document.getElementById('detLastSeen');
+    const other = document.getElementById('detCarryOther');
     radarRoute = inp ? inp.value.trim() : '';
     radarLastSeen = ls ? ls.value.trim() : '';
+    radarCarry = other && other.value.trim() ? other.value.trim() : radarCarry;
     openDetective();
   };
   document.querySelectorAll('#radarBody [data-carry]').forEach(function(b){
@@ -3160,6 +3170,15 @@ function renderDetective(data){
       document.querySelectorAll('#radarBody [data-carry]').forEach(function(x){ x.classList.toggle('on', x === b); });
     };
   });
+  const ask = document.getElementById('detAsk');
+  if(ask) ask.onclick = function(){
+    const q = (radarQueryData && radarQueryData.title) ? ('我在' + (radarQueryData.place || '校园') + '丢了' + radarQueryData.title + '，校园里一般去哪里找？') : '校园里丢了东西，一般去哪里找？';
+    closeRadar();
+    show('ask');
+    const input = document.getElementById('askInput');
+    if(input) input.value = q;
+    if(typeof askQuestion === 'function') askQuestion(q);
+  };
 }
 
 async function openRadarForType(type){
@@ -3231,12 +3250,13 @@ function renderDetectiveStart(){
       '<div class="ds-kicker">NO POST? NO PROBLEM</div>' +
       '<div class="ds-title">不用先发布，填线索就能推</div>' +
       '<label>丢了什么 <b>*</b></label><input id="dsTitle" maxlength="40" placeholder="例如：校园卡 / 黑色键盘 / 雨伞">' +
-      '<label>在哪丢的</label><input id="dsPlace" maxlength="40" placeholder="例如：图书馆三楼">' +
-      '<label>今天走过</label><textarea id="dsRoute" maxlength="120" placeholder="例如：图书馆 → 食堂 → 未名湖 → 宿舍 → 快递点"></textarea>' +
+      '<label>在哪丢的 <i>选填</i></label><input id="dsPlace" maxlength="40" placeholder="例如：图书馆三楼">' +
+      '<label>今天走过 <i>可以直接叙述，AI 帮你整理</i></label><textarea id="dsRoute" maxlength="160" placeholder="例如：今天 9 点从图书馆出来，去了观畴园吃饭，又回紫荆公寓，最后去快递驿站取件"></textarea>' +
       '<div class="dt-carry"><span>平时放在</span>' +
-        ['口袋','背包','手持'].map(function(c){ return '<button type="button" data-ds-carry="' + c + '">' + c + '</button>'; }).join('') +
+        ['口袋','背包','手持','其他'].map(function(c){ return '<button type="button" data-ds-carry="' + c + '">' + c + '</button>'; }).join('') +
       '</div>' +
-      '<label>最后确认还在</label><input id="dsLastSeen" maxlength="50" placeholder="例如：15:00 在图书馆">' +
+      '<input id="dsCarryOther" maxlength="40" placeholder="其他位置（选填），例如：外套口袋 / 电脑包侧袋">' +
+      '<label>最后一次见到它 <i>时间 / 地点</i></label><input id="dsLastSeen" maxlength="60" placeholder="例如：今天 15:00 在图书馆三楼还用过">' +
       '<button type="button" class="ds-run" id="dsRun">开始推理</button>' +
     '</div>';
   let carry = '';
@@ -3254,7 +3274,7 @@ function renderDetectiveStart(){
     radarCurrentItem = null;
     radarQueryData = {title:title, place:place, cat:'other', type:'lost'};
     radarRoute = (document.getElementById('dsRoute').value || '').trim();
-    radarCarry = carry;
+    radarCarry = (document.getElementById('dsCarryOther').value || '').trim() || carry;
     radarLastSeen = (document.getElementById('dsLastSeen').value || '').trim();
     openDetective();
   };

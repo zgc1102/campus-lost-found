@@ -739,3 +739,27 @@ body:has(#itemSheet.show) .bottom-nav{transform:translate(-50%,120%)!important;}
 /* 底部导航只在普通页面出现；任何弹层打开都让位 */
 body:has(.sheet.show) .bottom-nav{transform:translate(-50%,120%)!important;}
 .note{z-index:1000!important;}
+
+.dt-start label i,.det-last-label i{font-style:normal;font-weight:400;font-size:8.5px;color:#A99BB9;margin-left:3px;}
+.dt-start label b{color:var(--accent);font-weight:400;margin-left:2px;}
+.dt-route #detCarryOther{margin-top:6px;width:100%;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:10px;padding:9px;font-family:inherit;font-size:10px;color:var(--ink);outline:none;}
+.dt-route .det-last-label{display:block;font-size:9.5px;color:var(--sub);margin:8px 0 5px;}
+
+/* 二级/发布页复用首页插画 */
+.help-cats .hc-ic,.hp-cat .hc-ic{background:#F7F0FF!important;border:1px solid #EEE2FA;color:inherit!important;}
+.help-cats .hc-ic{width:42px;height:42px;border-radius:12px;}
+.help-cats .hc-ic svg{width:38px;height:38px;}
+.hp-cat{grid-template-columns:42px 1fr!important;}
+.hp-cat .hc-ic{width:42px;height:42px;}
+.hp-cat .hc-ic svg{width:38px;height:38px;}
+
+/* 失物 / 寻物 顶部切换 */
+.lf-tabs{display:flex;gap:6px;padding:8px 14px 2px;background:var(--bg);}
+.lf-tabs button{
+  flex:1;border:1px solid var(--line);border-radius:11px;background:#fff;
+  color:var(--sub);font-family:inherit;font-size:11px;font-weight:500;padding:9px 6px;cursor:pointer;
+}
+.lf-tabs button.on{background:linear-gradient(135deg,#5B2A91,#7A3CB0);color:#fff;border-color:transparent;font-weight:600;}
+
+.hp-note{font-size:8.5px;line-height:1.6;color:#A99BB9;padding:0 16px 74px;text-align:center;}
+.dt-ask{width:100%;margin-top:10px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--primary);font-family:inherit;font-size:11px;font-weight:600;padding:10px;cursor:pointer;}

@@ -174,6 +174,7 @@ setTimeout(function(){
       <div class="back" data-back>‹</div><div class="t">失物招领</div>
       <button class="btn" data-publish="lost">发布启事</button>
     </div>
+    <div class="lf-tabs"><button type="button" class="on" data-nav="lost">失物招领</button><button type="button" data-nav="found">寻物启事</button></div>
     <div class="scroll">
       <div class="tip-box">⚠️ 认领提示：认领物品前，请务必核对物品独有特征，请勿仅凭照片认领，谨防冒领。<br>交接请选择公共场所，不要前往偏僻地点，谨慎公开手机号、微信等私人联系方式。</div>
       <div class="list-meta" id="lostMeta"></div>
@@ -194,6 +195,7 @@ setTimeout(function(){
       <div class="back" data-back>‹</div><div class="t">寻物启事</div>
       <button class="btn" data-publish="found">发布启事</button>
     </div>
+    <div class="lf-tabs"><button type="button" data-nav="lost">失物招领</button><button type="button" class="on" data-nav="found">寻物启事</button></div>
     <div class="scroll">
       <div class="tip-box">⚠️ 防骗提示：主动联系你并提供“验证码 / 转账 / 付费解锁”的，基本都是骗子。<br>真实认领请当面核对物品细节，平台不会收取任何费用。</div>
       <div class="list-meta" id="foundMeta"></div>
@@ -342,7 +344,7 @@ setTimeout(function(){
     <div class="scroll">
       <div class="hintline" id="helpHint">同学之间互相搭把手：借个东西、帮取快递、闲置送人、找人帮忙。</div>
       <div class="help-cats">
-        <button type="button" data-help-cat="help_borrow"><span class="hc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 0 1 16 0H4Z"/><path d="M12 12v7a2 2 0 0 0 4 0"/><path d="M9 12V9a3 3 0 0 1 6 0v3"/></svg></span><div><b>借用工具</b><span>借伞 / 充电宝</span></div></button>
+        <button type="button" data-help-cat="help_borrow"><span class="hc-ic"><svg viewBox="0 0 80 80" fill="none"><path d="M14 54c0-12 12-20 26-20s26 8 26 20" fill="#C9A7F0"/><path d="M40 46s-11-6.5-11-12a6 6 0 0 1 11-2 6 6 0 0 1 11 2c0 5.5-11 12-11 12Z" fill="#8A52C7"/><path d="M18 58l-8 10M62 58l8 10" stroke="#5B2A91" stroke-width="4" stroke-linecap="round"/></svg></span><div><b>借用工具</b><span>借伞 / 充电宝</span></div></button>
         <button type="button" data-help-cat="help_errand"><span class="hc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 18c4 0 4-6 8-6s4-6 7-6"/><circle cx="5" cy="18" r="2"/><path d="M18 3l3 3-3 3"/></svg></span><div><b>代办跑腿</b><span>帮取 / 帮带</span></div></button>
         <button type="button" data-help-cat="help_donate"><span class="hc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h16v10H4z"/><path d="M12 10v10"/><path d="M4 10l2-4h12l2 4"/><path d="M12 6c-2-4-6-2-4 1M12 6c2-4 6-2 4 1"/></svg></span><div><b>爱心捐赠</b><span>闲置送人</span></div></button>
         <button type="button" data-help-cat="help_volunteer"><span class="hc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.3-7-9a4 4 0 0 1 7-2 4 4 0 0 1 7 2c0 4.7-7 9-7 9Z"/><path d="M8 20l-3 2M16 20l3 2"/></svg></span><div><b>志愿帮忙</b><span>找人搭把手</span></div></button>
@@ -367,10 +369,10 @@ setTimeout(function(){
     <div class="hp-body">
       <div class="hp-lead" id="helpLead">先选一个方向，再把时间、地点说清楚。</div>
       <div class="hp-cats" id="helpCatCards">
-        <button type="button" class="hp-cat on" data-hp-cat="help_borrow"><span class="hc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 0 1 16 0H4Z"/><path d="M12 12v7a2 2 0 0 0 4 0"/><path d="M9 12V9a3 3 0 0 1 6 0v3"/></svg></span><div><b>借用工具</b><span>借伞、充电宝、工具</span></div></button>
-        <button type="button" class="hp-cat" data-hp-cat="help_errand"><span class="hc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 18c4 0 4-6 8-6s4-6 7-6"/><circle cx="5" cy="18" r="2"/><path d="M18 3l3 3-3 3"/></svg></span><div><b>代办跑腿</b><span>帮取、帮带、帮买</span></div></button>
-        <button type="button" class="hp-cat" data-hp-cat="help_donate"><span class="hc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h16v10H4z"/><path d="M12 10v10"/><path d="M4 10l2-4h12l2 4"/><path d="M12 6c-2-4-6-2-4 1M12 6c2-4 6-2 4 1"/></svg></span><div><b>爱心捐赠</b><span>闲置物品送人</span></div></button>
-        <button type="button" class="hp-cat" data-hp-cat="help_volunteer"><span class="hc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.3-7-9a4 4 0 0 1 7-2 4 4 0 0 1 7 2c0 4.7-7 9-7 9Z"/><path d="M8 20l-3 2M16 20l3 2"/></svg></span><div><b>志愿帮忙</b><span>找人搭把手</span></div></button>
+        <button type="button" class="hp-cat on" data-hp-cat="help_borrow"><span class="hc-ic"><svg viewBox="0 0 80 80" fill="none"><path d="M12 40a28 28 0 0 1 56 0H12Z" fill="#8A52C7"/><path d="M12 40c8-8 14-8 20 0 6-8 12-8 20 0 6-8 12-8 16 0" stroke="#C8A96A" stroke-width="3" stroke-linecap="round"/><path d="M40 40v20a8 8 0 0 0 16 0" stroke="#3B1D63" stroke-width="4" stroke-linecap="round"/><circle cx="24" cy="62" r="5" fill="#E8DCF7"/></svg></span><div><b>借用工具</b><span>借伞、充电宝、工具</span></div></button>
+        <button type="button" class="hp-cat" data-hp-cat="help_errand"><span class="hc-ic"><svg viewBox="0 0 80 80" fill="none"><rect x="18" y="28" width="32" height="32" rx="6" fill="#E8B4A0"/><path d="M24 28v-6h20v6" stroke="#8A4A33" stroke-width="4" stroke-linecap="round"/><path d="M50 38h9l7 10v10H52V38Z" fill="#C8A96A"/><circle cx="26" cy="64" r="5" fill="#5B2A91"/><circle cx="54" cy="64" r="5" fill="#5B2A91"/><path d="M26 48h14M26 54h9" stroke="#8A4A33" stroke-width="2.5" stroke-linecap="round"/></svg></span><div><b>代办跑腿</b><span>帮取、帮带、帮买</span></div></button>
+        <button type="button" class="hp-cat" data-hp-cat="help_donate"><span class="hc-ic"><svg viewBox="0 0 80 80" fill="none"><rect x="16" y="30" width="48" height="34" rx="5" fill="#E8B4A0"/><rect x="16" y="24" width="48" height="12" rx="4" fill="#C8A96A"/><rect x="36" y="24" width="8" height="40" fill="#FFF4E8"/><path d="M40 50s-9-5.4-9-10a5 5 0 0 1 9-2 5 5 0 0 1 9 2c0 4.6-9 10-9 10Z" fill="#B85A3C"/></svg></span><div><b>爱心捐赠</b><span>闲置物品送人</span></div></button>
+        <button type="button" class="hp-cat" data-hp-cat="help_volunteer"><span class="hc-ic"><svg viewBox="0 0 80 80" fill="none"><path d="M14 54c0-12 12-20 26-20s26 8 26 20" fill="#C9A7F0"/><path d="M40 46s-11-6.5-11-12a6 6 0 0 1 11-2 6 6 0 0 1 11 2c0 5.5-11 12-11 12Z" fill="#8A52C7"/><path d="M18 58l-8 10M62 58l8 10" stroke="#5B2A91" stroke-width="4" stroke-linecap="round"/></svg></span><div><b>志愿帮忙</b><span>找人搭把手</span></div></button>
       </div>
       <select id="helpCatSel">
         <option value="help_borrow">借用工具</option>
@@ -402,6 +404,7 @@ setTimeout(function(){
         <div id="helpPhotoPreview"></div>
       </div>
     </div>
+    <div class="hp-note">AI 整理仅作参考，实际以现场和校方失物招领点为准。</div>
     <div class="hp-submit"><button class="btn" id="helpSubmit">发布求助</button></div>
   </div>
 
