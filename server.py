@@ -2168,6 +2168,15 @@ class Handler(BaseHTTPRequestHandler):
 
         if path in ("/", "/index.html"):
             return self._serve_file("用户端.html")
+        # Vue 迁移预览：/web/，不影响线上根路径
+        if path in ("/web", "/web/"):
+            return self._serve_file("web/dist/index.html")
+        if path.startswith("/web/assets/"):
+            rel = path[len("/web/"):]
+            target = os.path.abspath(os.path.join(BASE_DIR, "web", "dist", rel))
+            if target.startswith(os.path.join(BASE_DIR, "web", "dist") + os.sep) and os.path.isfile(target):
+                return self._serve_path(target)
+            return self._send(404, "not found", "text/plain; charset=utf-8")
         if path == "/admin" or path == "/admin/":
             return self._serve_file("管理端.html")
         if path == "/api/ping":
