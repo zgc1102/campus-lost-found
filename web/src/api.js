@@ -92,6 +92,9 @@ export const api = {
   adminConfig(token) {
     return call('/admin/ai/config', { headers: { 'X-Admin-Token': token } })
   },
+  adminSaveConfig(body, token) {
+    return call('/admin/ai/config', { method: 'POST', headers: { 'X-Admin-Token': token }, body: JSON.stringify(body) })
+  },
   adminAccounts(token) {
     return call('/admin/accounts', { headers: { 'X-Admin-Token': token } })
   },

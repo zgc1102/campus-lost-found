@@ -16,6 +16,7 @@ const announcements = ref([])
 const deployLog = ref([])
 const annTitle = ref('')
 const annBody = ref('')
+const apiKey = ref('')
 
 onMounted(() => { if (token.value) load() })
 
@@ -76,6 +77,25 @@ async function switchTab(t) {
       deployLog.value = Array.isArray(d) ? d : (d.items || d.logs || [])
     } catch (e) { error.value = e.message }
   }
+}
+
+async function saveConfig() {
+  if (!config.value) return
+  try {
+    const body = {
+      enabled: !!config.value.enabled,
+      base_url: config.value.base_url || '',
+      model: config.value.model || '',
+      auto_approve: !!config.value.auto_approve,
+      approve_threshold: Number(config.value.approve_threshold || 0),
+      auto_reject: !!config.value.auto_reject,
+      reject_threshold: Number(config.value.reject_threshold || 0)
+    }
+    if (apiKey.value) body.api_key = apiKey.value
+    await api.adminSaveConfig(body, token.value)
+    apiKey.value = ''
+    await switchTab('config')
+  } catch (e) { error.value = e.message || '保存失败' }
 }
 
 async function createAnnouncement() {
@@ -140,9 +160,23 @@ async function removeAnnouncement(a) {
           <button type="button" :class="{ on: tab === 'announcements' }" @click="switchTab('announcements')">公告</button>
           <button type="button" :class="{ on: tab === 'deploy' }" @click="switchTab('deploy')">部署</button>
         </div>
-        <div v-if="tab === 'config'" class="form-card">
+        <div v-if="tab === 'config' && config" class="form-card">
           <div class="fc-title">AI 配置</div>
-          <pre style="font-size:10px;line-height:1.6;white-space:pre-wrap">{{ JSON.stringify(config, null, 2) }}</pre>
+          <label style="display:flex;gap:6px;align-items:center;font-size:11px;margin:8px 0">
+            <input v-model="config.enabled" type="checkbox" style="width:auto"> 启用 AI 审核
+          </label>
+          <div class="sa">Base URL</div>
+          <input v-model="config.base_url" style="width:100%;box-sizing:border-box;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:9px;padding:8px;margin:4px 0 8px;font-family:inherit;font-size:11px">
+          <div class="sa">模型</div>
+          <input v-model="config.model" style="width:100%;box-sizing:border-box;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:9px;padding:8px;margin:4px 0 8px;font-family:inherit;font-size:11px">
+          <div class="sa">API Key（留空不修改）</div>
+          <input v-model="apiKey" type="password" style="width:100%;box-sizing:border-box;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:9px;padding:8px;margin:4px 0 8px;font-family:inherit;font-size:11px">
+          <div class="sa">自动通过阈值 / 自动驳回阈值</div>
+          <div style="display:flex;gap:6px">
+            <input v-model.number="config.approve_threshold" type="number" min="0" max="100" style="flex:1;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:9px;padding:8px;font-family:inherit;font-size:11px">
+            <input v-model.number="config.reject_threshold" type="number" min="0" max="100" style="flex:1;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:9px;padding:8px;font-family:inherit;font-size:11px">
+          </div>
+          <button type="button" class="btn" style="width:100%;margin-top:10px" @click="saveConfig">保存 AI 配置</button>
         </div>
         <div v-else-if="tab === 'accounts'" class="form-card">
           <div class="fc-title">账号</div>
