@@ -48,6 +48,11 @@ function ask() {
         <div><div>来清华常问的问题</div><div class="sa">图文结合的答案，新生 / 访客必看</div></div>
         <div class="gb-arrow">›</div>
       </button>
+      <button type="button" class="g-card" style="margin-top:8px" @click="$emit('nav', 'info', 'phones')">
+        <div style="width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:22px">☎️</div>
+        <div><div>常用电话</div><div class="sa">校医院、保卫部、后勤、招生办</div></div>
+        <div class="gb-arrow">›</div>
+      </button>
       <div class="sa" style="text-align:center;padding:16px 0">免登录即可浏览地图与问答</div>
     </div>
   </section>
