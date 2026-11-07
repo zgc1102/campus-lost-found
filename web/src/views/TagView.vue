@@ -37,6 +37,9 @@ function copyLink() {
   if (!link) return
   if (navigator.clipboard) navigator.clipboard.writeText(link)
 }
+function resetTag() {
+  result.value = null
+}
 </script>
 
 <template>
@@ -79,6 +82,7 @@ function copyLink() {
           <a class="primary" :download="'拾光码-' + result.code + '.png'" :href="result.qrData">保存 / 打印</a>
           <button type="button" @click="copyLink">复制链接</button>
         </div>
+        <div class="tr-actions"><button type="button" @click="resetTag">重新生成一张</button></div>
       </div>
     </div>
   </section>
