@@ -173,6 +173,7 @@ setTimeout(function(){
     <div class="scroll">
       <div class="tip-box">⚠️ 认领提示：认领物品前，请务必核对物品独有特征，请勿仅凭照片认领，谨防冒领。<br>交接请选择公共场所，不要前往偏僻地点，谨慎公开手机号、微信等私人联系方式。</div>
       <div class="list-meta" id="lostMeta"></div>
+      <button type="button" class="radar-entry" id="radarLostBtn"><span class="re-badge">AI</span><span class="re-copy"><b>寻物雷达</b><i>自动比对全站招领</i></span><span class="re-go">扫描 →</span></button>
       <div class="page-bar">
         <div class="pb-search"><svg class="pb-mag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></svg><input data-filter="lost" placeholder="搜索失物招领"></div>
         <button type="button" class="pb-ico primary" data-publish="lost" title="发布启事">＋</button>
@@ -192,6 +193,7 @@ setTimeout(function(){
     <div class="scroll">
       <div class="tip-box">⚠️ 防骗提示：主动联系你并提供“验证码 / 转账 / 付费解锁”的，基本都是骗子。<br>真实认领请当面核对物品细节，平台不会收取任何费用。</div>
       <div class="list-meta" id="foundMeta"></div>
+      <button type="button" class="radar-entry" id="radarFoundBtn"><span class="re-badge">AI</span><span class="re-copy"><b>招领雷达</b><i>自动比对全站寻物</i></span><span class="re-go">扫描 →</span></button>
       <div class="page-bar">
         <div class="pb-search"><svg class="pb-mag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></svg><input data-filter="found" placeholder="搜索寻物启事"></div>
         <button type="button" class="pb-ico primary" data-publish="found" title="发布启事">＋</button>
@@ -458,6 +460,7 @@ setTimeout(function(){
         <div class="faq-note" id="okTypeHint" style="display:none;text-align:left"></div>
         <p>你可以在「我的发布」里随时查看审核进度，也可以撤回删除。</p>
         <div class="okacts">
+          <button class="btn" id="okRadar" style="display:none">AI 雷达找一找</button>
           <button class="btn" id="okMine">查看我的发布</button>
           <button class="btn ghost" data-publish="lost">继续发布一条</button>
         </div>
@@ -669,6 +672,12 @@ setTimeout(function(){
       <button class="btn ghost" id="tdBack" style="width:100%;margin-top:8px">返回修改</button>
     </div>
   </div>
+  <div class="sheet agent-sheet" id="radarSheet">
+    <div class="ag-top"><button type="button" class="ag-back" id="radarClose" aria-label="返回">‹</button><div class="ag-title"><b>AI 寻物雷达</b><span id="radarSub">正在扫描全站信息…</span></div></div>
+    <div class="ag-body" id="radarBody"><div class="ag-loading">雷达扫描中…</div></div>
+    <div class="ag-foot" id="radarFoot" style="display:none"></div>
+  </div>
+
   <nav class="bottom-nav" id="bottomNav">
     <button type="button" data-nav="home" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg><span>首页</span></button>
     <button type="button" data-nav="lost"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></svg><span>失物</span></button>

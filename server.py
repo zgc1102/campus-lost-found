@@ -1482,6 +1482,190 @@ def agent_review(item, claim, on_step=None):
             "tools": [t["name"] for t in AGENT_TOOL_DEFS]}
 
 
+
+
+# ---------- 寻物 Agent：雷达 + 侦探 ----------
+PLACE_GROUPS = [
+    ("图书馆", ("图书馆", "library", "自习室", "借还")),
+    ("食堂", ("食堂", "餐厅", "canteen", "饭堂")),
+    ("教学楼", ("教学楼", "二教", "三教", "四教", "五教", "六教", "教室", "学堂")),
+    ("操场", ("操场", "体育场", "篮球场", "足球场", "跑道", "球场")),
+    ("宿舍", ("宿舍", "紫荆", "公寓", "楼管", "寝室")),
+]
+
+
+def _place_group(place):
+    p = str(place or "").strip()
+    if not p:
+        return "未填写地点"
+    low = p.lower()
+    for name, keys in PLACE_GROUPS:
+        if any(k.lower() in low for k in keys):
+            return name
+    return p[:12]
+
+
+def _hotspot_stats(items, limit=6):
+    groups = {}
+    for it in items:
+        if it.get("status") not in ("approved", "claimed", "closed"):
+            continue
+        if it.get("type") not in ("lost", "found"):
+            continue
+        g = _place_group(it.get("place"))
+        if g == "未填写地点":
+            continue
+        row = groups.setdefault(g, {"place": g, "count": 0, "lost": 0, "found": 0})
+        row["count"] += 1
+        row["lost" if it.get("type") == "lost" else "found"] += 1
+    out = sorted(groups.values(), key=lambda x: (-x["count"], x["place"]))
+    total = sum(x["count"] for x in out) or 1
+    for x in out:
+        x["share"] = int(round(x["count"] * 100.0 / total))
+    return out[:limit]
+
+
+def _radar_matches(item, items):
+    """把一条寻物/招领与全站反向类型做匹配，返回可解释的候选。"""
+    target = "found" if item.get("type") == "lost" else "lost"
+    base_group = _place_group(item.get("place"))
+    base_time = item.get("createdAt") or 0
+    out = []
+    for x in items:
+        if x.get("id") == item.get("id"):
+            continue
+        if x.get("type") != target:
+            continue
+        if x.get("status") not in ("approved", "claimed"):
+            continue
+        text_score = match_score(item, x)
+        x_group = _place_group(x.get("place"))
+        same_place = bool(base_group and base_group != "未填写地点" and base_group == x_group)
+        same_cat = bool(item.get("cat") and item.get("cat") == x.get("cat"))
+        gap_h = None
+        if base_time and x.get("createdAt"):
+            gap_h = abs(int(base_time) - int(x.get("createdAt"))) / 3600000.0
+        time_close = gap_h is not None and gap_h <= 24 * 7
+        score = text_score * 0.55 + (0.18 if same_place else 0) + (0.15 if time_close else 0) + (0.12 if same_cat else 0)
+        if score < 0.18 and text_score < 0.30:
+            continue
+        reasons = []
+        if same_place:
+            reasons.append("地点都在%s" % base_group)
+        if time_close:
+            reasons.append("发布时间接近")
+        if same_cat:
+            reasons.append("同类物品")
+        if text_score >= 0.30:
+            reasons.append("描述相似")
+        if not reasons:
+            reasons.append("标题/描述有重合")
+        pct = max(1, min(99, int(round(score * 100))))
+        out.append({
+            "item": public_item(x, None),
+            "score": pct,
+            "textScore": int(round(text_score * 100)),
+            "confidence": "高" if pct >= 68 else ("中" if pct >= 45 else "低"),
+            "reasons": reasons[:3],
+            "placeGroup": x_group,
+            "gapHours": int(gap_h) if gap_h is not None else None,
+        })
+    out.sort(key=lambda x: (-x["score"], -(x["item"].get("createdAt") or 0)))
+    return out[:5]
+
+
+def agent_radar(item, items):
+    matches = _radar_matches(item, items)
+    hotspots = _hotspot_stats(items)
+    scanned = len([x for x in items if x.get("status") in ("approved", "claimed", "closed")])
+    steps = [
+        {"tool": "scan_items", "finding": "扫描全站 %d 条公开信息" % scanned},
+        {"tool": "match", "finding": "按地点、时间、描述比对，命中 %d 条" % len(matches)},
+        {"tool": "hotspot", "finding": "最高频区域：%s" % (hotspots[0]["place"] if hotspots else "暂无数据")},
+    ]
+    return {
+        "ok": True,
+        "item": public_item(item, None),
+        "matches": matches,
+        "hotspots": hotspots,
+        "scanned": scanned,
+        "steps": steps,
+        "summary": ("给你找到 %d 条可能相关的招领，先看置信度最高的那条。" % len(matches))
+                   if matches else "暂时没有高置信度匹配，可以看下面的高频区域，或让侦探推理下一步。",
+    }
+
+
+def _place_tips(group):
+    return {
+        "图书馆": ["图书馆一层服务台", "自助借还机旁", "自习区管理员"],
+        "食堂": ["食堂入口失物箱", "收餐台", "食堂前台"],
+        "教学楼": ["教学楼物业值班室", "教室讲台", "楼层保洁处"],
+        "操场": ["体育场器材室", "看台入口", "操场门卫"],
+        "宿舍": ["宿舍楼管值班室", "一楼公告栏", "洗衣房"],
+    }.get(group, ["校园失物招领点", "就近的楼管/前台"])
+
+
+def agent_detective(item, items):
+    matches = _radar_matches(item, items)
+    hotspots = _hotspot_stats(items)
+    group = _place_group(item.get("place"))
+    tips = _place_tips(group)
+    actions = []
+    if matches:
+        top = matches[0]
+        actions.append({
+            "title": "先联系这条招领",
+            "detail": "%s（置信度 %d%%）——%s" % (
+                top["item"].get("title") or "招领", top["score"], "、".join(top["reasons"])),
+            "itemId": top["item"].get("id"),
+        })
+    for t in tips[:3]:
+        actions.append({"title": "去%s找找" % t, "detail": "按丢失地点推断，这里最可能先被送到。", "itemId": ""})
+    for h in hotspots[:2]:
+        if h["place"] == group:
+            continue
+        actions.append({
+            "title": "顺路看一眼%s" % h["place"],
+            "detail": "全站 %d 条失物里，%s 是高频区域（%d 条）。" % (
+                sum(x["count"] for x in hotspots), h["place"], h["count"]),
+            "itemId": "",
+        })
+    actions.append({"title": "在校园地图里看路线", "detail": "打开「初入清华」里的校园地图，按顺序走一遍。", "itemId": ""})
+
+    timeline = []
+    if item.get("eventTime"):
+        timeline.append({"time": str(item.get("eventTime")), "label": "你填的丢失时间"})
+    elif item.get("createdAt"):
+        timeline.append({"time": time.strftime("%m-%d %H:%M", time.localtime(int(item["createdAt"]) / 1000)), "label": "你发布寻物的时间"})
+    for m in matches[:2]:
+        timeline.append({
+            "time": time.strftime("%m-%d %H:%M", time.localtime(int((m["item"].get("createdAt") or now_ms()) / 1000))),
+            "label": "招领：%s" % (m["item"].get("title") or "未命名"),
+        })
+    if hotspots:
+        timeline.append({"time": "统计", "label": "高频区域：%s" % "、".join(h["place"] for h in hotspots[:3])})
+
+    top_score = matches[0]["score"] if matches else 0
+    return {
+        "ok": True,
+        "item": public_item(item, None),
+        "matches": matches,
+        "hotspots": hotspots,
+        "timeline": timeline,
+        "actions": actions[:6],
+        "steps": [
+            {"tool": "read_item", "finding": "读取丢失地点：%s" % (item.get("place") or "未填写")},
+            {"tool": "match", "finding": "比对 %d 条反向信息，命中 %d 条" % (len(items), len(matches))},
+            {"tool": "hotspot", "finding": "计算校园高频区域"},
+            {"tool": "plan", "finding": "生成 %d 条行动建议" % len(actions[:6])},
+        ],
+        "confidence": "高" if top_score >= 68 else ("中" if top_score >= 45 else "低"),
+        "summary": "按你给的地点和时间，先看匹配到的招领，再按下面的顺序找。",
+        "disclaimer": "以上是线索建议，不保证物品一定在这些位置；找到后请当面核对特征。",
+    }
+
+
+
 # ---------- 多模态 ----------
 def vision_config():
     return {
@@ -2308,6 +2492,26 @@ class Handler(BaseHTTPRequestHandler):
             out["newLen"] = len(out["desc"])
             return self._json(out)
 
+
+        if path == "/api/agent/radar":
+            body = self._read_body()
+            item_id = str(body.get("itemId") or "")
+            with LOCK:
+                items = load_items()
+            item = next((x for x in items if x.get("id") == item_id), None)
+            if not item:
+                return self._json({"error": "not found"}, 404)
+            return self._json(agent_radar(item, items))
+
+        if path == "/api/agent/detective":
+            body = self._read_body()
+            item_id = str(body.get("itemId") or "")
+            with LOCK:
+                items = load_items()
+            item = next((x for x in items if x.get("id") == item_id), None)
+            if not item:
+                return self._json({"error": "not found"}, 404)
+            return self._json(agent_detective(item, items))
 
         if path == "/api/agent/review":
             owner = self._owner()

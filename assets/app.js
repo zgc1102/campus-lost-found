@@ -235,6 +235,8 @@ const Net = {
   vision(image, mime){ return this.call('/vision/analyze', {method:'POST', body: JSON.stringify({image: image, mime: mime || 'image/jpeg'})}); },
   format(body){ return this.call('/format', {method:'POST', body: JSON.stringify(body)}); },
   notices(){ return this.call('/notices'); },
+  radar(id){ return this.call('/agent/radar', {method:'POST', body: JSON.stringify({itemId:id})}); },
+  detective(id){ return this.call('/agent/detective', {method:'POST', body: JSON.stringify({itemId:id})}); },
   recover(body){ return this.call('/recover', {method:'POST', body: JSON.stringify(body)}); },
   accountLogin(body){ return this.call('/account/login', {method:'POST', body: JSON.stringify(body)}); },
   readNotices(){ return this.call('/notices/read', {method:'POST'}); }
@@ -2016,6 +2018,15 @@ function showSuccess(item, isEdit){
     (item.type === 'lost' ? '寻物启事' : '招领启事') + ' · 编号 ' + item.id + ' · ' + fmtTime(item.createdAt);
   const hint2 = document.getElementById('okTypeHint');
   if(hint2){ hint2.style.display = 'none'; hint2.innerHTML = ''; }
+  const okRadar = document.getElementById('okRadar');
+  if(okRadar){
+    if(item && (item.type === 'lost' || item.type === 'found')){
+      okRadar.style.display = '';
+      okRadar.onclick = function(){ openRadarItem(item.id); };
+    }else{
+      okRadar.style.display = 'none';
+    }
+  }
   if(stack[stack.length-1] === 'publish') stack.pop();
   show('success');
   burstConfetti();
@@ -2957,4 +2968,163 @@ document.addEventListener('visibilitychange', function(){
   if(!document.hidden && API_BASE){
     netSync().then(function(){ renderHelp(); }).catch(function(){});
   }
+});
+
+/* ============ 寻物 Agent：雷达 + 侦探 ============ */
+let radarCurrentItem = null;
+let radarData = null;
+
+function closeRadar(){
+  const sh = document.getElementById('radarSheet');
+  if(sh) sh.classList.remove('show');
+}
+
+function radarLoading(text){
+  const body = document.getElementById('radarBody');
+  const foot = document.getElementById('radarFoot');
+  if(body) body.innerHTML = '<div class="ag-loading">' + esc(text || '雷达扫描中…') + '</div>';
+  if(foot) foot.style.display = 'none';
+}
+
+async function openRadarItem(id){
+  if(!API_BASE){ toast('雷达需要在共享模式/公网地址下使用'); return; }
+  if(!id){ toast('没有找到可扫描的条目'); return; }
+  radarCurrentItem = id;
+  const sh = document.getElementById('radarSheet');
+  const sub = document.getElementById('radarSub');
+  if(sub) sub.textContent = '正在扫描全站信息…';
+  if(sh) sh.classList.add('show');
+  radarLoading('雷达扫描中：读取全站失物与招领…');
+  try{
+    const data = await Net.radar(id);
+    radarData = data;
+    renderRadar(data);
+  }catch(e){
+    radarLoading('扫描失败：' + ((e && e.message) || '请稍后重试'));
+  }
+}
+
+function renderRadar(data){
+  const body = document.getElementById('radarBody');
+  const foot = document.getElementById('radarFoot');
+  const sub = document.getElementById('radarSub');
+  if(!body || !foot) return;
+  const matches = data.matches || [];
+  const hots = data.hotspots || [];
+  if(sub) sub.textContent = '已扫描 ' + (data.scanned || 0) + ' 条 · 命中 ' + matches.length + ' 条';
+  const t0 = document.querySelector('.ag-title b'); if(t0) t0.textContent = 'AI 寻物雷达';
+
+  let h = '<div class="rd-summary">' + esc(data.summary || '') + '</div>';
+  if(matches.length){
+    matches.forEach(function(m){
+      const it = m.item || {};
+      h += '<div class="rd-match" data-radar-item="' + esc(it.id) + '">' +
+        '<div class="rd-score">' + esc(m.score) + '%</div>' +
+        '<div class="rd-main"><div class="rd-title">' + esc(it.title || '未命名') + '</div>' +
+        '<div class="rd-meta">' + esc(it.place || '未填写地点') + ' · ' + fmtTime(it.createdAt) +
+        '<span class="rd-conf">' + esc(m.confidence) + '置信</span></div>' +
+        '<div class="rd-reasons">' + (m.reasons || []).map(function(r){ return '<span>' + esc(r) + '</span>'; }).join('') + '</div>' +
+        '</div></div>';
+    });
+  }else{
+    h += '<div class="rd-summary" style="padding:18px 0;text-align:center">暂时没有高置信度匹配，先看下面的高频区域。</div>';
+  }
+  if(hots.length){
+    h += '<div class="rd-section">校园失物高频区域</div><div class="rd-hot">';
+    hots.forEach(function(x){
+      h += '<div class="rd-hot-row"><span class="rd-hot-name">' + esc(x.place) + '</span>' +
+        '<span class="rd-bar"><i style="width:' + Math.max(6, x.share || 0) + '%"></i></span>' +
+        '<span class="rd-hot-n">' + esc(x.count) + ' 条</span></div>';
+    });
+    h += '</div>';
+  }
+  body.innerHTML = h;
+  foot.style.display = 'block';
+  foot.innerHTML = '<button class="btn" id="radarDetectiveBtn">让侦探推理下一步</button>';
+  const btn = document.getElementById('radarDetectiveBtn');
+  if(btn) btn.onclick = openDetective;
+}
+
+async function openDetective(){
+  if(!radarCurrentItem) return;
+  const sub = document.getElementById('radarSub');
+  if(sub) sub.textContent = '侦探正在整理时间线与行动建议…';
+  radarLoading('侦探推理中：读取地点、时间与高频区域…');
+  try{
+    const data = await Net.detective(radarCurrentItem);
+    renderDetective(data);
+  }catch(e){
+    radarLoading('推理失败：' + ((e && e.message) || '请稍后重试'));
+  }
+}
+
+function renderDetective(data){
+  const body = document.getElementById('radarBody');
+  const foot = document.getElementById('radarFoot');
+  const sub = document.getElementById('radarSub');
+  if(!body || !foot) return;
+  if(sub) sub.textContent = '侦探推理完成 · 置信度 ' + (data.confidence || '中');
+  const t1 = document.querySelector('.ag-title b'); if(t1) t1.textContent = '寻物侦探';
+  let h = '<div class="dt-summary">' + esc(data.summary || '') + '</div>';
+
+  const actions = data.actions || [];
+  if(actions.length){
+    h += '<div class="dt-title">建议按这个顺序找</div>';
+    actions.forEach(function(a, i){
+      h += '<div class="dt-action" ' + (a.itemId ? 'data-radar-item="' + esc(a.itemId) + '"' : '') + '>' +
+        '<span class="dt-num">' + (i + 1) + '</span>' +
+        '<span class="dt-act-main"><b>' + esc(a.title || '') + '</b><span>' + esc(a.detail || '') + '</span></span></div>';
+    });
+  }
+
+  const hots = data.hotspots || [];
+  if(hots.length){
+    h += '<div class="dt-title">高频区域</div><div class="rd-hot">';
+    hots.forEach(function(x){
+      h += '<div class="rd-hot-row"><span class="rd-hot-name">' + esc(x.place) + '</span>' +
+        '<span class="rd-bar"><i style="width:' + Math.max(6, x.share || 0) + '%"></i></span>' +
+        '<span class="rd-hot-n">' + esc(x.count) + ' 条</span></div>';
+    });
+    h += '</div>';
+  }
+
+  const tl = data.timeline || [];
+  if(tl.length){
+    h += '<div class="dt-title">时间线</div>';
+    tl.forEach(function(x){ h += '<div class="dt-time"><b>' + esc(x.time || '') + '</b><span>' + esc(x.label || '') + '</span></div>'; });
+  }
+  h += '<div class="dt-note">' + esc(data.disclaimer || '以上为线索建议，不保证物品一定在这些位置。') + '</div>';
+  body.innerHTML = h;
+  foot.style.display = 'block';
+  foot.innerHTML = '<button class="btn" id="radarBackBtn">返回雷达结果</button>';
+  const back = document.getElementById('radarBackBtn');
+  if(back) back.onclick = function(){ if(radarData) renderRadar(radarData); };
+}
+
+async function openRadarForType(type){
+  if(!API_BASE){ toast('雷达需要在共享模式/公网地址下使用'); return; }
+  let list = [];
+  try{ list = await Net.mine(); }catch(e){ list = []; }
+  if(!list || !list.length) list = Store.list({owner: myId()});
+  const own = (list || []).filter(function(x){
+    return x && x.type === type && x.status !== 'withdrawn' && x.status !== 'rejected';
+  }).sort(function(a,b){ return (b.createdAt || 0) - (a.createdAt || 0); })[0];
+  if(!own){
+    toast(type === 'lost' ? '先发一条寻物启事，再让雷达扫描' : '先发一条招领启事，再让雷达扫描');
+    return;
+  }
+  openRadarItem(own.id);
+}
+
+document.getElementById('radarLostBtn') && (document.getElementById('radarLostBtn').onclick = function(){ openRadarForType('lost'); });
+document.getElementById('radarFoundBtn') && (document.getElementById('radarFoundBtn').onclick = function(){ openRadarForType('found'); });
+document.getElementById('radarClose') && (document.getElementById('radarClose').onclick = closeRadar);
+
+document.getElementById('radarBody') && document.getElementById('radarBody').addEventListener('click', function(e){
+  const card = e.target.closest('[data-radar-item]');
+  if(!card) return;
+  const id = card.getAttribute('data-radar-item');
+  if(!id) return;
+  closeRadar();
+  if(typeof openItem === 'function') openItem(id);
 });
