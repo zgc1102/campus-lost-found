@@ -127,6 +127,13 @@ async function removeAnnouncement(a) {
     await switchTab('announcements')
   } catch (e) { error.value = e.message || '删除失败' }
 }
+
+async function toggleBan(a) {
+  try {
+    await api.adminBanAccount(a.id, !a.banned, token.value)
+    await switchTab('accounts')
+  } catch (e) { error.value = e.message || '操作失败' }
+}
 </script>
 
 <template>
@@ -180,7 +187,10 @@ async function removeAnnouncement(a) {
         </div>
         <div v-else-if="tab === 'accounts'" class="form-card">
           <div class="fc-title">账号</div>
-          <div v-for="a in accounts" :key="a.id" class="sa" style="padding:7px 0;border-bottom:1px solid var(--line)">{{ a.phone }} · {{ a.banned ? '封禁' : '正常' }}</div>
+          <div v-for="a in accounts" :key="a.id" class="sa" style="padding:7px 0;border-bottom:1px solid var(--line)">
+            {{ a.phone }} · {{ a.banned ? '封禁' : '正常' }}
+            <button type="button" class="btn ghost" style="margin-left:6px" @click="toggleBan(a)">{{ a.banned ? '解封' : '封禁' }}</button>
+          </div>
         </div>
         <div v-else-if="tab === 'announcements'" class="form-card">
           <div class="fc-title">公告</div>

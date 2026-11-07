@@ -98,6 +98,9 @@ export const api = {
   adminAccounts(token) {
     return call('/admin/accounts', { headers: { 'X-Admin-Token': token } })
   },
+  adminBanAccount(id, banned, token) {
+    return call('/admin/accounts/' + encodeURIComponent(id) + '/ban', { method: 'POST', headers: { 'X-Admin-Token': token }, body: JSON.stringify({ banned }) })
+  },
   adminAnnouncements(token) {
     return call('/admin/announcements', { headers: { 'X-Admin-Token': token } })
   },
