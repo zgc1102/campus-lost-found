@@ -11,6 +11,31 @@ const items = ref([])
 const loading = ref(true)
 const query = ref('')
 const selected = ref(null)
+const claimMsg = ref('')
+const claimPhone = ref('')
+const claimState = ref('')
+const claiming = ref(false)
+
+function openDetail(it) {
+  selected.value = it
+  claimMsg.value = ''
+  claimPhone.value = ''
+  claimState.value = ''
+}
+async function submitClaim() {
+  if (!selected.value) return
+  if (claimMsg.value.trim().length < 2) { claimState.value = '写一下只有失主知道的细节'; return }
+  claiming.value = true
+  claimState.value = ''
+  try {
+    await api.claim(selected.value.id, { message: claimMsg.value.trim(), contact: claimPhone.value.trim() })
+    claimState.value = '已发送，等对方确认'
+  } catch (e) {
+    claimState.value = e.message || '发送失败'
+  } finally {
+    claiming.value = false
+  }
+}
 
 const copy = computed(() => props.type === 'lost'
   ? { title: '失物招领', kicker: 'LOST & FOUND', hint: '捡到的东西在这里等主人', other: '寻物启事', publish: '发布启事' }
@@ -136,7 +161,7 @@ function openOldHelp() {
       <div v-if="loading" class="empty">正在读取校园数据…</div>
       <div v-else-if="!visible.length" class="empty">暂时没有{{ type === 'lost' ? '招领' : '寻物' }}，换个关键词试试</div>
       <div v-else class="vue-list">
-        <article v-for="it in visible" :key="it.id" class="item" @click="selected = it">
+        <article v-for="it in visible" :key="it.id" class="item" @click="openDetail(it)">
           <div class="thumb" :style="it.photoUrl ? 'padding:0;overflow:hidden' : ''">
             <img v-if="it.photoUrl" :src="it.photoUrl" alt="" loading="lazy">
             <span v-else>{{ thumbText(it) }}</span>
@@ -152,7 +177,7 @@ function openOldHelp() {
             </div>
             <div class="row">
               <span class="meta">📍 {{ it.place || '未填写地点' }} · {{ fmt(it.createdAt) }}</span>
-              <button class="btn" type="button" @click.stop="selected = it">认领</button>
+              <button class="btn" type="button" @click.stop="openDetail(it)">认领</button>
             </div>
           </div>
         </article>
@@ -169,7 +194,10 @@ function openOldHelp() {
       <div class="sa">{{ selected.desc || '暂无描述' }}</div>
       <div class="sa" style="margin-top:8px">📍 {{ selected.place || '未填写地点' }} · {{ fmt(selected.createdAt) }}</div>
       <div class="sa" style="margin-top:8px">联系方式：{{ (selected.contact && selected.contact.phone) || '认领时由发布者确认' }}</div>
-      <button type="button" class="btn" style="width:100%;margin-top:12px" @click="selected = null">关闭</button>
+      <textarea v-model="claimMsg" maxlength="200" placeholder="写下只有失主知道的细节，例如：伞骨内侧缠过胶带" style="width:100%;box-sizing:border-box;margin-top:10px;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:11px;padding:10px;font-family:inherit;font-size:11px;min-height:70px"></textarea>
+      <input v-model="claimPhone" maxlength="30" placeholder="你的联系方式（手机号 / 微信号）" style="width:100%;box-sizing:border-box;margin-top:7px;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:11px;padding:10px;font-family:inherit;font-size:11px">
+      <div v-if="claimState" class="sa" style="margin-top:6px">{{ claimState }}</div>
+      <button type="button" class="btn" style="width:100%;margin-top:12px" :disabled="claiming" @click="submitClaim">{{ claiming ? '发送中…' : '发送认领申请' }}</button>
       <div class="close" @click="selected = null">收起</div>
     </div>
   </section>

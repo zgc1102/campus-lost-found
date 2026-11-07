@@ -11,21 +11,30 @@ import GuideView from './views/GuideView.vue'
 import MapView from './views/MapView.vue'
 import AskView from './views/AskView.vue'
 import NoticesView from './views/NoticesView.vue'
+import SearchView from './views/SearchView.vue'
+import InfoView from './views/InfoView.vue'
 import AdminView from './views/AdminView.vue'
 import BottomNav from './components/BottomNav.vue'
 
 const params = new URLSearchParams(location.search)
 const initial = params.get('view')
 const isAdmin = location.pathname.replace(/\/+$/, '') === '/admin'
-const initialView = isAdmin ? 'admin' : ['lost', 'found', 'help', 'publish', 'radar', 'tag', 'mine', 'guide', 'map', 'ask', 'notices'].includes(initial) ? initial : 'home'
+const initialView = isAdmin ? 'admin' : ['lost', 'found', 'help', 'publish', 'radar', 'tag', 'mine', 'guide', 'map', 'ask', 'notices', 'info', 'search'].includes(initial) ? initial : 'home'
 const view = ref(initialView)
 const publishType = ref(params.get('type') || 'lost')
 const helpCat = ref(params.get('cat') || 'help_borrow')
+const infoKey = ref(params.get('info') || 'about')
 
-function go(target) {
+function go(target, arg) {
   if (target === 'home') {
     view.value = 'home'
     history.replaceState({}, '', location.pathname)
+    return
+  }
+  if (target === 'info') {
+    infoKey.value = arg || 'about'
+    view.value = 'info'
+    history.replaceState({}, '', location.pathname + '?view=info&info=' + infoKey.value)
     return
   }
   if (target === 'lost' || target === 'found' || target === 'help') {
@@ -38,7 +47,7 @@ function go(target) {
     history.replaceState({}, '', location.pathname + '?view=' + (target === 'detective' ? 'radar' : target))
     return
   }
-  if (target === 'guide' || target === 'map' || target === 'ask' || target === 'notices') {
+  if (target === 'guide' || target === 'map' || target === 'ask' || target === 'notices' || target === 'search') {
     view.value = target
     history.replaceState({}, '', location.pathname + '?view=' + target)
     return
@@ -68,6 +77,8 @@ function publish(type, cat) {
     <MapView v-else-if="view === 'map'" @nav="go" />
     <AskView v-else-if="view === 'ask'" @nav="go" />
     <NoticesView v-else-if="view === 'notices'" @nav="go" />
+    <InfoView v-else-if="view === 'info'" :info-key="infoKey" @nav="go" />
+    <SearchView v-else-if="view === 'search'" @nav="go" />
     <AdminView v-else-if="view === 'admin'" />
     <BottomNav v-if="view !== 'admin' && view !== 'map' && view !== 'ask'" :active="view === 'publish' ? (publishType === 'help' ? 'help' : publishType) : view" @nav="go" />
   </div>

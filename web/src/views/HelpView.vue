@@ -12,6 +12,10 @@ const loading = ref(true)
 const query = ref('')
 const active = ref(props.initialCat)
 const selected = ref(null)
+const goMsg = ref('')
+const goPhone = ref('')
+const goState = ref('')
+const going = ref(false)
 
 const cats = [
   { id: 'help_borrow', title: '借用工具', sub: '借伞 / 充电宝', art: art('<path d="M4 12a8 8 0 0 1 16 0H4Z"/><path d="M12 12v7a2 2 0 0 0 4 0"/><path d="M9 12V9a3 3 0 0 1 6 0v3"/>') },
@@ -55,6 +59,26 @@ async function load() {
     loading.value = false
   }
 }
+function openDetail(it) {
+  selected.value = it
+  goMsg.value = ''
+  goPhone.value = ''
+  goState.value = ''
+}
+async function submitHelp() {
+  if (!selected.value) return
+  if (goMsg.value.trim().length < 2) { goState.value = '说一句你能怎么帮'; return }
+  going.value = true
+  goState.value = ''
+  try {
+    await api.claim(selected.value.id, { message: goMsg.value.trim(), contact: goPhone.value.trim() })
+    goState.value = '已告诉对方，等 TA 确认'
+  } catch (e) {
+    goState.value = e.message || '发送失败'
+  } finally {
+    going.value = false
+  }
+}
 </script>
 
 <template>
@@ -95,7 +119,7 @@ async function load() {
       <div v-if="loading" class="empty">正在读取求助…</div>
       <div v-else-if="!visible.length" class="empty">这个方向暂时没有求助</div>
       <div v-else class="vue-list">
-        <article v-for="it in visible" :key="it.id" class="item" @click="selected = it">
+        <article v-for="it in visible" :key="it.id" class="item" @click="openDetail(it)">
           <div class="thumb" :style="it.photoUrl ? 'padding:0;overflow:hidden' : ''">
             <img v-if="it.photoUrl" :src="it.photoUrl" alt="" loading="lazy">
             <span v-else>{{ thumb(it) }}</span>
@@ -106,7 +130,7 @@ async function load() {
             <div v-if="chips(it).length" class="chips"><span v-for="c in chips(it)" :key="c" class="chip">{{ c }}</span></div>
             <div class="row">
               <span class="meta">📍 {{ it.place || '未填写地点' }} · {{ fmt(it.createdAt) }}</span>
-              <button type="button" class="btn" @click.stop="selected = it">我来帮忙</button>
+              <button type="button" class="btn" @click.stop="openDetail(it)">我来帮忙</button>
             </div>
           </div>
         </article>
@@ -119,8 +143,12 @@ async function load() {
       <div class="sh">{{ selected.title }}</div>
       <div class="sa">{{ selected.desc }}</div>
       <div class="sa" style="margin-top:8px">📍 {{ selected.place || '未填写地点' }}</div>
-      <div class="sa" style="margin-top:8px">联系方式：{{ (selected.contact && selected.contact.phone) || '认领时由发布者确认' }}</div>
-      <button type="button" class="btn" style="width:100%;margin-top:12px" @click="selected = null">关闭</button>
+      <div class="sa" style="margin-top:8px">联系方式：{{ (selected.contact && selected.contact.phone) || '对方确认后可见' }}</div>
+      <textarea v-model="goMsg" maxlength="120" placeholder="说一句你能怎么帮，例如：我明天上午可以带过去" style="width:100%;box-sizing:border-box;margin-top:10px;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:11px;padding:10px;font-family:inherit;font-size:11px;min-height:64px"></textarea>
+      <input v-model="goPhone" maxlength="20" placeholder="你的联系方式（对方确认后可见）" style="width:100%;box-sizing:border-box;margin-top:7px;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:11px;padding:10px;font-family:inherit;font-size:11px">
+      <div v-if="goState" class="sa" style="margin-top:6px">{{ goState }}</div>
+      <button type="button" class="btn" style="width:100%;margin-top:12px" :disabled="going" @click="submitHelp">{{ going ? '发送中…' : '发送' }}</button>
+      <div class="close" @click="selected = null">收起</div>
     </div>
   </section>
 </template>

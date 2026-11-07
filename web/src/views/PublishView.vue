@@ -20,6 +20,27 @@ const form = reactive({
 const submitting = ref(false)
 const result = ref(null)
 const error = ref('')
+const photo = ref('')
+
+function onPhoto(e) {
+  const file = e.target.files && e.target.files[0]
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = () => {
+    const img = new Image()
+    img.onload = () => {
+      const max = 1200
+      const scale = Math.min(1, max / Math.max(img.width, img.height))
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.round(img.width * scale)
+      canvas.height = Math.round(img.height * scale)
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height)
+      photo.value = canvas.toDataURL('image/jpeg', 0.82)
+    }
+    img.src = reader.result
+  }
+  reader.readAsDataURL(file)
+}
 
 const typeLabel = computed(() => isHelp.value ? '爱心求助' : (props.type === 'lost' ? '寻物启事' : '失物招领'))
 const helpName = computed(() => ({
@@ -44,7 +65,8 @@ async function submit() {
       place: form.place.trim() || '未填写地点',
       eventTime: form.eventTime || '',
       secret: form.secret.trim(),
-      contact: { phone: form.phone.trim() }
+      contact: { phone: form.phone.trim() },
+      photo: photo.value || null
     }
     const saved = await api.create(item)
     result.value = saved
@@ -108,6 +130,11 @@ async function submit() {
           <div v-if="!isHelp" class="form-item">
             <label>独有特征（仅用于核验）</label>
             <input v-model="form.secret" maxlength="80" placeholder="不会公开展示，只用于认领核验">
+          </div>
+          <div class="form-item">
+            <label>照片（选填）</label>
+            <input type="file" accept="image/*" @change="onPhoto">
+            <img v-if="photo" :src="photo" alt="预览" style="width:100%;max-height:180px;object-fit:cover;border-radius:10px;margin-top:8px">
           </div>
         </div>
 

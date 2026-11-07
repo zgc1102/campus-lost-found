@@ -43,7 +43,7 @@ function ask() {
         <div><div>清华大学全景地图</div><div class="sa">文旅图风格全景导览，地标一目了然</div></div>
         <div class="gb-arrow">›</div>
       </button>
-      <button type="button" class="g-card" style="margin-top:8px" @click="$emit('nav', 'ask')">
+      <button type="button" class="g-card" style="margin-top:8px" @click="$emit('nav', 'info', 'faq')">
         <div style="width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:22px">❓</div>
         <div><div>来清华常问的问题</div><div class="sa">图文结合的答案，新生 / 访客必看</div></div>
         <div class="gb-arrow">›</div>

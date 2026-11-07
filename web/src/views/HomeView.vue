@@ -104,7 +104,7 @@ onUnmounted(() => clearTimeout(timer))
     </div>
 
     <div class="topbar">
-      <button type="button" class="top-search" title="搜索" @click="$emit('nav', 'lost')">
+      <button type="button" class="top-search" title="搜索" @click="$emit('nav', 'search')">
         <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></svg>
       </button>
       <div class="t">清华校园拾光里</div>
@@ -212,11 +212,11 @@ onUnmounted(() => clearTimeout(timer))
       <div class="foot-b">
         <div class="flinks">
           <span @click="$emit('nav', 'mine')">我的发布</span>
-          <span @click="$emit('nav', 'guide')">平台简介</span>
+          <span @click="$emit('nav', 'info', 'about')">平台简介</span>
           <span @click="$emit('nav', 'guide')">使用引导</span>
-          <span @click="$emit('nav', 'guide')">联系方式</span>
-          <span @click="$emit('nav', 'guide')">法律声明</span>
-          <span @click="$emit('nav', 'guide')">隐私权保护</span>
+          <span @click="$emit('nav', 'info', 'contact')">联系方式</span>
+          <span @click="$emit('nav', 'info', 'legal')">法律声明</span>
+          <span @click="$emit('nav', 'info', 'privacy')">隐私权保护</span>
         </div>
         <div class="flic">测试版 · 暂未备案 · 仅用于校园公益</div>
         <div class="fcopy">Copyright © 2025-2026 清城牧羊 版权所有</div>

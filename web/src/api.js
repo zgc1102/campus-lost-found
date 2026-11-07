@@ -39,6 +39,9 @@ export const api = {
   create(item) {
     return call('/items', { method: 'POST', body: JSON.stringify(item) })
   },
+  claim(id, body) {
+    return call('/items/' + encodeURIComponent(id) + '/claims', { method: 'POST', body: JSON.stringify(body || {}) })
+  },
   mine() {
     return call('/mine')
   },
