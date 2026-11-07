@@ -78,6 +78,8 @@ async function submit() {
     }
     const saved = await api.create(item)
     result.value = saved
+    try { sessionStorage.setItem('sg:lastResult', JSON.stringify(saved)) } catch (e) {}
+    emit('nav', 'success')
   } catch (e) {
     error.value = e.message || '提交失败，请稍后再试'
   } finally {
