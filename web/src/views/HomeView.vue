@@ -212,11 +212,11 @@ onUnmounted(() => clearTimeout(timer))
       <div class="foot-b">
         <div class="flinks">
           <span @click="$emit('nav', 'mine')">我的发布</span>
-          <span @click="$emit('nav', 'info', 'about')">平台简介</span>
+          <span @click="$emit('nav', 'legacy', 'about')">平台简介</span>
           <span @click="$emit('nav', 'guide')">使用引导</span>
-          <span @click="$emit('nav', 'info', 'contact')">联系方式</span>
-          <span @click="$emit('nav', 'info', 'legal')">法律声明</span>
-          <span @click="$emit('nav', 'info', 'privacy')">隐私权保护</span>
+          <span @click="$emit('nav', 'legacy', 'contact')">联系方式</span>
+          <span @click="$emit('nav', 'legacy', 'legal')">法律声明</span>
+          <span @click="$emit('nav', 'legacy', 'privacy')">隐私权保护</span>
         </div>
         <div class="flic">测试版 · 暂未备案 · 仅用于校园公益</div>
         <div class="fcopy">Copyright © 2025-2026 清城牧羊 版权所有</div>
