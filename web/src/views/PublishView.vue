@@ -29,6 +29,7 @@ const submitting = ref(false)
 const result = ref(null)
 const error = ref('')
 const photo = ref('')
+const visionState = ref('')
 
 function onPhoto(e) {
   const file = e.target.files && e.target.files[0]
@@ -44,10 +45,29 @@ function onPhoto(e) {
       canvas.height = Math.round(img.height * scale)
       canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height)
       photo.value = canvas.toDataURL('image/jpeg', 0.82)
+      analyzePhoto()
     }
     img.src = reader.result
   }
   reader.readAsDataURL(file)
+}
+
+async function analyzePhoto() {
+  if (!photo.value) return
+  visionState.value = 'AI 正在识别照片…'
+  try {
+    const d = await api.vision(photo.value)
+    if (d && d.ok !== false) {
+      const bits = [d.category, d.color, d.desc].filter(Boolean)
+      if (!form.title.trim() && d.category) form.title = String(d.category).slice(0, 30)
+      if (!form.desc.trim() && bits.length) form.desc = bits.join('，').slice(0, 200)
+      visionState.value = 'AI 识别：' + (bits.join(' · ') || '已识别')
+    } else {
+      visionState.value = ''
+    }
+  } catch (e) {
+    visionState.value = ''
+  }
 }
 
 const typeLabel = computed(() => isHelp.value ? '爱心求助' : (kind.value === 'lost' ? '寻物启事' : '失物招领'))
@@ -155,6 +175,7 @@ async function submit() {
             <label>照片（选填）</label>
             <input type="file" accept="image/*" @change="onPhoto">
             <img v-if="photo" :src="photo" alt="预览" style="width:100%;max-height:180px;object-fit:cover;border-radius:10px;margin-top:8px">
+            <div v-if="visionState" class="sa" style="margin-top:5px">{{ visionState }}</div>
           </div>
         </div>
 

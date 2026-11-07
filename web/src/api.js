@@ -68,6 +68,9 @@ export const api = {
   ask(question) {
     return call('/ask', { method: 'POST', body: JSON.stringify({ question }) })
   },
+  vision(image) {
+    return call('/vision/analyze', { method: 'POST', body: JSON.stringify({ image, mime: 'image/jpeg' }) })
+  },
   notices() {
     return call('/notices')
   },
