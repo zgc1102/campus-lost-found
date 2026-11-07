@@ -16,6 +16,8 @@ import LegacyStatic from './views/LegacyStatic.vue'
 import SuccessView from './views/SuccessView.vue'
 import ToolsView from './views/ToolsView.vue'
 import MemorialView from './views/MemorialView.vue'
+import FaqView from './views/FaqView.vue'
+import PhonesView from './views/PhonesView.vue'
 import InfoView from './views/InfoView.vue'
 import AdminView from './views/AdminView.vue'
 import BottomNav from './components/BottomNav.vue'
@@ -24,7 +26,7 @@ import TourOverlay from './components/TourOverlay.vue'
 const params = new URLSearchParams(location.search)
 const initial = params.get('view')
 const isAdmin = location.pathname.replace(/\/+$/, '') === '/admin'
-const initialView = isAdmin ? 'admin' : ['lost', 'found', 'help', 'publish', 'radar', 'tag', 'mine', 'guide', 'map', 'ask', 'notices', 'info', 'search', 'admin', 'legacy', 'success', 'lend', 'borrow', 'memorial'].includes(initial) ? initial : 'home'
+const initialView = isAdmin ? 'admin' : ['lost', 'found', 'help', 'publish', 'radar', 'tag', 'mine', 'guide', 'map', 'ask', 'notices', 'info', 'search', 'admin', 'legacy', 'success', 'lend', 'borrow', 'memorial', 'faq', 'phones'].includes(initial) ? initial : 'home'
 const view = ref(initialView)
 const publishType = ref(params.get('type') || 'lost')
 const helpCat = ref(params.get('cat') || 'help_borrow')
@@ -63,7 +65,7 @@ function go(target, arg) {
     history.replaceState({}, '', location.pathname + '?view=' + (target === 'detective' ? 'radar' : target))
     return
   }
-  if (target === 'guide' || target === 'map' || target === 'ask' || target === 'notices' || target === 'search' || target === 'success' || target === 'memorial') {
+  if (target === 'guide' || target === 'map' || target === 'ask' || target === 'notices' || target === 'search' || target === 'success' || target === 'memorial' || target === 'faq' || target === 'phones') {
     view.value = target
     history.replaceState({}, '', location.pathname + '?view=' + target)
     return
@@ -99,6 +101,8 @@ function publish(type, cat) {
     <SuccessView v-else-if="view === 'success'" @nav="go" />
     <ToolsView v-else-if="view === 'lend' || view === 'borrow'" :mode="view" @nav="go" />
     <MemorialView v-else-if="view === 'memorial'" @nav="go" />
+    <FaqView v-else-if="view === 'faq'" @nav="go" />
+    <PhonesView v-else-if="view === 'phones'" @nav="go" />
     <AdminView v-else-if="view === 'admin'" />
     <BottomNav v-if="view !== 'admin' && view !== 'map' && view !== 'ask'" :active="view === 'publish' ? (publishType === 'help' ? 'help' : publishType) : view" @nav="go" />
     <TourOverlay />
