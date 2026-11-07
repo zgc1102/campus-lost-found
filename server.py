@@ -2167,9 +2167,7 @@ class Handler(BaseHTTPRequestHandler):
         path = unquote(urlparse(self.path).path)
 
         if path in ("/", "/index.html"):
-            vue_index = os.path.join(BASE_DIR, "web", "dist", "index.html")
-            if os.path.isfile(vue_index):
-                return self._serve_file("web/dist/index.html")
+            # 迁移期间：根路径固定旧版作为 1:1 基准，Vue 在 /web/ 对照
             return self._serve_file("用户端.html")
         # Vue 迁移预览：/web/，不影响线上根路径
         if path in ("/web", "/web/"):
@@ -2181,9 +2179,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._serve_path(target)
             return self._send(404, "not found", "text/plain; charset=utf-8")
         if path == "/admin" or path == "/admin/":
-            admin_vue = os.path.join(BASE_DIR, "web", "dist", "index.html")
-            if os.path.isfile(admin_vue):
-                return self._serve_file("web/dist/index.html")
+            # 迁移期间：管理端也用旧版 1:1 基准
             return self._serve_file("管理端.html")
         if path == "/api/ping":
             with LOCK:
