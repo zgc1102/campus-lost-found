@@ -74,6 +74,9 @@ export const api = {
   vision(image) {
     return call('/vision/analyze', { method: 'POST', body: JSON.stringify({ image, mime: 'image/jpeg' }) })
   },
+  format(title, desc, place) {
+    return call('/format', { method: 'POST', body: JSON.stringify({ title, desc, place }) })
+  },
   notices() {
     return call('/notices')
   },

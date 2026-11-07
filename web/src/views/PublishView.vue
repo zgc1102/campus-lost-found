@@ -19,6 +19,7 @@ const helpCats = [
 ]
 const form = reactive({
   title: '',
+  category: '',
   desc: '',
   place: '',
   eventTime: '',
@@ -32,6 +33,46 @@ const photo = ref('')
 const visionState = ref('')
 const needPhoneConfirm = ref(false)
 const phoneConfirmed = ref(false)
+const aiPanel = ref(false)
+const aiData = ref(null)
+const aiLoading = ref(false)
+const descCount = computed(() => form.desc.length)
+const fileInput = ref(null)
+
+const catMap = {
+  '证件': 'card',
+  '电子设备': 'electronics',
+  '衣物': 'cloth',
+  '水杯': 'bottle',
+  '书包': 'bag',
+  '其他': 'other'
+}
+
+async function aiFormat() {
+  if (!form.title.trim() && !form.desc.trim()) return
+  aiLoading.value = true
+  try {
+    aiData.value = await api.format(form.title.trim(), form.desc.trim(), form.place.trim())
+    aiPanel.value = true
+  } catch (e) {
+    error.value = e.message || 'AI 整理失败'
+  } finally { aiLoading.value = false }
+}
+function useAi() {
+  if (!aiData.value) return
+  if (aiData.value.summary) form.title = String(aiData.value.summary).slice(0, 30)
+  if (aiData.value.desc) form.desc = String(aiData.value.desc).slice(0, 300)
+  aiPanel.value = false
+}
+function fillDemo() {
+  kind.value = 'lost'
+  form.title = '白色有线耳机'
+  form.category = '电子设备'
+  form.desc = '白色有线耳机，带一个透明耳机盒，左耳外壳有一道浅划痕。'
+  form.place = '六教 3 区'
+  form.phone = '13800138000'
+  form.secret = '耳机盒内侧写了名字缩写'
+}
 
 function onPhoto(e) {
   const file = e.target.files && e.target.files[0]
@@ -88,7 +129,7 @@ async function submit() {
   try {
     const item = {
       type: isHelp.value ? 'help' : kind.value,
-      cat: isHelp.value ? helpCatLocal.value : 'other',
+      cat: isHelp.value ? helpCatLocal.value : (catMap[form.category] || 'other'),
       helpCat: isHelp.value ? helpCatLocal.value : '',
       title: form.title.trim(),
       desc: form.desc.trim(),
@@ -127,13 +168,13 @@ async function submit() {
       <div class="pub-head">
         <div class="ph-t">{{ isHelp ? '发布一条爱心求助' : '发布一条启事' }}</div>
         <div class="ph-s">{{ isHelp ? helpName : (kind === 'lost' ? '寻物启事 · 丢了东西' : '失物招领 · 捡到东西') }}</div>
-        <div class="ph-steps"><span>1 填写</span><span>2 AI 审核</span><span>3 上架</span></div>
+        <div class="ph-steps"><span>1 填写</span><i></i><span>2 AI 审核</span><i></i><span>3 上架</span></div>
       </div>
+      <div class="warn-box">❗禁止发布现金、贵重物品、危险品、药品；虚假信息会被下架并限制发布权限。</div>
 
       <div class="type-tab" style="margin-bottom:10px">
-        <button type="button" :class="{ active: kind === 'lost' }" @click="kind = 'lost'">寻物启事</button>
-        <button type="button" :class="{ active: kind === 'found' }" @click="kind = 'found'">失物招领</button>
-        <button type="button" :class="{ active: kind === 'help' }" @click="kind = 'help'">爱心求助</button>
+        <div :class="{ active: kind === 'lost' }" @click="kind = 'lost'">我要寻物（东西丢了）</div>
+        <div :class="{ active: kind === 'found' }" @click="kind = 'found'">我要招领（捡到物品）</div>
       </div>
 
       <div v-if="isHelp" class="help-picker">
@@ -156,34 +197,75 @@ async function submit() {
         <div class="form-card">
           <div class="fc-title"><span>01</span>基本信息</div>
           <div class="form-item">
-            <label>标题</label>
+            <label>物品名称 <span class="req">*</span></label>
             <input v-model="form.title" maxlength="30" :placeholder="isHelp ? '例如：想借一把雨伞' : '例如：白色有线耳机'">
           </div>
           <div class="form-item">
-            <label>详细说明</label>
-            <textarea v-model="form.desc" maxlength="200" :placeholder="isHelp ? '说明需求、时间和地点' : '颜色、划痕、标记……越具体越容易核对'"></textarea>
+            <label>物品分类</label>
+            <select v-model="form.category">
+              <option value="">不选则归入「其他」</option>
+              <option>证件</option>
+              <option>电子设备</option>
+              <option>衣物</option>
+              <option>水杯</option>
+              <option>书包</option>
+              <option>其他</option>
+            </select>
           </div>
           <div class="form-item">
-            <label>地点</label>
-            <input v-model="form.place" maxlength="40" placeholder="例如：图书馆三楼">
+            <label>{{ kind === 'lost' ? '丢失地点' : '捡到地点' }}</label>
+            <input v-model="form.place" maxlength="40" placeholder="不填也可以，例如：六教 3 区">
           </div>
           <div v-if="!isHelp" class="form-item">
-            <label>丢失时间</label>
+            <label>{{ kind === 'lost' ? '丢失时间' : '捡到时间' }}</label>
             <input v-model="form.eventTime" type="datetime-local">
+            <div class="tip-small">不填就记为提交时间</div>
           </div>
+        </div>
+
+        <div class="form-card">
+          <div class="fc-title"><span>02</span>描述与独有特征</div>
           <div class="form-item">
-            <label>联系方式</label>
-            <input v-model="form.phone" maxlength="20" placeholder="手机 / 微信（公开展示会打码）">
+            <label>物品描述 <span class="req">*</span></label>
+            <textarea v-model="form.desc" maxlength="300" :placeholder="isHelp ? '说明需求、时间和地点' : '颜色、划痕、标记……越具体越容易核对'"></textarea>
+            <div class="tip-small">{{ descCount }}/300 · 超过 60 字建议让 AI 精简</div>
+            <button type="button" class="btn ghost" style="width:100%;margin-top:8px" :disabled="aiLoading" @click="aiFormat">{{ aiLoading ? 'AI 整理中…' : '✨ AI 帮我整理成模板' }}</button>
+          </div>
+          <div v-if="aiPanel && aiData" class="ai-format" style="display:block">
+            <div class="af-head">AI 整理建议</div>
+            <div class="af-row"><span class="af-k">摘要</span><span>{{ aiData.summary }}</span></div>
+            <div class="af-row"><span class="af-k">描述</span><span>{{ aiData.desc }}</span></div>
+            <div class="af-tags"><span v-for="t in (aiData.fields ? Object.values(aiData.fields) : [])" :key="t">{{ t }}</span></div>
+            <div class="af-acts">
+              <button type="button" class="btn ok" @click="useAi">用这个</button>
+              <button type="button" class="btn ghost" @click="aiFormat">重新生成</button>
+              <button type="button" class="btn ghost" @click="aiPanel = false">不用了</button>
+            </div>
           </div>
           <div v-if="!isHelp" class="form-item">
-            <label>独有特征（仅用于核验）</label>
-            <input v-model="form.secret" maxlength="80" placeholder="不会公开展示，只用于认领核验">
+            <label>独有特征（选填，仅审核员可见）</label>
+            <textarea v-model="form.secret" maxlength="100" placeholder="只有失主知道的细节，例如：卡背面写了名字"></textarea>
+            <div class="tip-small">不会公开展示，用来防止冒领</div>
           </div>
+        </div>
+
+        <div class="form-card">
+          <div class="fc-title"><span>03</span>图片与联系方式</div>
           <div class="form-item">
-            <label>照片（选填）</label>
-            <input type="file" accept="image/*" @change="onPhoto">
+            <label>物品图片（选填，1 张）</label>
+            <div class="upload-box" @click="fileInput && fileInput.click()">
+              <div class="ub-ico">📷</div>
+              <div class="ub-t">点击上传 / 拍照</div>
+              <div class="ub-s">会自动压缩，只保存在本机</div>
+            </div>
+            <input ref="fileInput" type="file" accept="image/*" style="display:none" @change="onPhoto">
             <img v-if="photo" :src="photo" alt="预览" style="width:100%;max-height:180px;object-fit:cover;border-radius:10px;margin-top:8px">
             <div v-if="visionState" class="sa" style="margin-top:5px">{{ visionState }}</div>
+          </div>
+          <div class="form-item">
+            <label>联系电话（选填）</label>
+            <input v-model="form.phone" maxlength="20" placeholder="会在列表里脱敏显示">
+            <div class="tip-small">会在列表里脱敏显示</div>
           </div>
         </div>
 
@@ -197,6 +279,7 @@ async function submit() {
           {{ submitting ? '提交中…' : '提交发布 · AI 先审核' }}
         </button>
         <div class="pub-note">提交后先审文字和图片，通过后同学才能看到；AI 匹配仅供参考，实际以现场和校方失物招领点为准</div>
+        <button type="button" class="btn ghost" style="width:100%;margin:10px 0 20px;padding:11px" @click="fillDemo">一键填入示例，快速体验</button>
       </template>
     </div>
   </section>
@@ -214,7 +297,8 @@ async function submit() {
   margin-bottom: 6px;
 }
 .form-card .form-item input,
-.form-card .form-item textarea {
+.form-card .form-item textarea,
+.form-card .form-item select {
   width: 100%;
   box-sizing: border-box;
   background: #F8F4FD;
