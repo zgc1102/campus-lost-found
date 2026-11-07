@@ -15,6 +15,7 @@ const claimMsg = ref('')
 const claimPhone = ref('')
 const claimState = ref('')
 const claiming = ref(false)
+const reportState = ref('')
 
 function openDetail(it) {
   selected.value = it
@@ -34,6 +35,15 @@ async function submitClaim() {
     claimState.value = e.message || '发送失败'
   } finally {
     claiming.value = false
+  }
+}
+async function reportItem() {
+  if (!selected.value || !confirm('确认举报这条信息？')) return
+  try {
+    await api.report(selected.value.id)
+    reportState.value = '已举报，管理员会核实'
+  } catch (e) {
+    reportState.value = e.message || '举报失败'
   }
 }
 
@@ -198,6 +208,8 @@ function openOldHelp() {
       <input v-model="claimPhone" maxlength="30" placeholder="你的联系方式（手机号 / 微信号）" style="width:100%;box-sizing:border-box;margin-top:7px;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:11px;padding:10px;font-family:inherit;font-size:11px">
       <div v-if="claimState" class="sa" style="margin-top:6px">{{ claimState }}</div>
       <button type="button" class="btn" style="width:100%;margin-top:12px" :disabled="claiming" @click="submitClaim">{{ claiming ? '发送中…' : '发送认领申请' }}</button>
+      <div v-if="reportState" class="sa" style="margin-top:6px">{{ reportState }}</div>
+      <div class="close" @click="reportItem">🚩 举报这条信息</div>
       <div class="close" @click="selected = null">收起</div>
     </div>
   </section>
