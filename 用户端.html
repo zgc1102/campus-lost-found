@@ -115,7 +115,11 @@ setTimeout(function(){
             <span class="entry-copy"><b>寻物启事</b><i>丢了的东西</i></span><span class="entry-arrow">↗</span>
           </button>
         </div>
-        <div class="lost-mini"><b id="lostMini">0</b><span>件已找回</span><i>校园互助 · 真实数据</i></div>
+        <button type="button" class="tag-entry tag-inline" id="tagEntry">
+          <span class="tag-badge">码</span>
+          <span class="tag-copy"><b>拾光码</b><i>给失物一张身份证</i></span>
+          <span class="tag-go">→</span>
+        </button>
         <button type="button" class="lost-cta detective-cta" id="homeDetectiveBtn">
           <span class="lc-kicker">LOST DETECTIVE</span>
           <b>寻物侦探</b>
@@ -124,12 +128,6 @@ setTimeout(function(){
         </button>
       </div>
       </div>
-
-      <button type="button" class="tag-entry" id="tagEntry">
-        <span class="tag-badge">拾光码</span>
-        <span class="tag-copy"><b>给失物一张身份证</b><i>生成二维码，捡到的人扫码联系你</i></span>
-        <span class="tag-go">申请 →</span>
-      </button>
 
       <div class="sectitle">给初来清华的人 · 游客 / 新生 / 家长</div>
       <div class="guide-banner" data-nav="guideHome">
@@ -681,6 +679,22 @@ setTimeout(function(){
   </div>
   <div class="sheet agent-sheet" id="radarSheet">
     <div class="ag-top"><button type="button" class="ag-back" id="radarClose" aria-label="返回">‹</button><div class="ag-title"><b>AI 寻物雷达</b><span id="radarSub">正在扫描全站信息…</span></div></div>
+    <div class="radar-query">
+      <input id="radarQTitle" maxlength="40" placeholder="丢了什么？例如：黑色机械键盘">
+      <div class="rq-row">
+        <input id="radarQPlace" maxlength="30" placeholder="在哪丢的（选填）">
+        <select id="radarQCat">
+          <option value="other">自动判断</option>
+          <option value="card">校园卡</option>
+          <option value="keys">钥匙</option>
+          <option value="electronics">手机/电脑</option>
+          <option value="umbrella">雨伞</option>
+          <option value="bottle">水杯</option>
+        </select>
+        <button type="button" id="radarQBtn">扫描</button>
+      </div>
+      <div class="rq-tip">不用先发布，也可以直接查任意物品</div>
+    </div>
     <div class="ag-body" id="radarBody"><div class="ag-loading">雷达扫描中…</div></div>
     <div class="ag-foot" id="radarFoot" style="display:none"></div>
   </div>
@@ -688,8 +702,8 @@ setTimeout(function(){
   <div class="sheet tag-screen" id="tagSheet">
     <div class="tag-top"><button type="button" class="tag-back" id="tagClose" aria-label="返回">‹</button><div class="tag-title"><b>拾光码</b><span>给失物一张身份证</span></div></div>
     <div class="tag-body" id="tagBody">
-      <div class="tag-intro">生成一张二维码贴在物品上。捡到的人扫码后，可以只给你发通知，也可以直接看到你的电话。</div>
-      <div class="tag-sec"><label for="tagItem">物品名称</label><input id="tagItem" maxlength="30" placeholder="例如：黑色长柄雨伞"></div>
+      <div class="tag-intro">一个拾光码可以贴在任何物品上：电脑、键盘、校园卡、充电器都行。捡到的人扫码后，可以只给你发通知，也可以直接看到你的电话。</div>
+      <div class="tag-sec"><label for="tagItem">这枚码主要贴在哪（选填）</label><input id="tagItem" maxlength="30" placeholder="例如：键盘 / 校园卡 / 充电器"></div>
       <div class="tag-sec"><label for="tagPhone">手机号</label><input id="tagPhone" maxlength="20" inputmode="tel" placeholder="用于失主联系，可打码展示"></div>
       <div class="tag-sec">
         <label>扫码后</label>
@@ -697,7 +711,7 @@ setTimeout(function(){
         <label class="tag-mode"><input type="radio" name="tagMode" value="phone"> 直接显示我的手机号 <i>方便对方立刻联系</i></label>
       </div>
       <div class="tag-sec"><label for="tagNote">备注（选填）</label><input id="tagNote" maxlength="80" placeholder="例如：捡到请联系我，谢谢"></div>
-      <button class="btn" id="tagCreate" style="width:100%">生成拾光码</button>
+      <button class="btn" id="tagCreate" style="width:100%">生成我的拾光码</button>
       <div class="tag-result" id="tagResult" style="display:none"></div>
     </div>
   </div>

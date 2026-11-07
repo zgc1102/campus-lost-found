@@ -59,14 +59,15 @@
     if(!t || t.error){ card.innerHTML = '<div class="kicker">NOT FOUND</div><div class="item">这个拾光码已失效</div><div class="note">' + esc((t && t.error) || '请让失主重新生成。') + '</div>'; return; }
     var phoneMode = t.mode === 'phone';
     var h = '<div class="kicker">FOUND SOMETHING?</div>' +
-      '<div class="item">' + esc(t.itemName || '失物') + '</div>' +
-      '<div class="note">' + (t.note ? esc(t.note) : '失主正在等它回家。如果你捡到了，请联系 TA。') + '</div>' +
+      '<div class="item">失主的拾光码</div>' +
+      '<div class="note">这枚码可能贴在电脑、键盘、校园卡、充电器上。' + (t.note ? esc(t.note) : '如果你捡到了，请联系失主。') + '</div>' +
       '<div class="code">拾光码 ' + esc(t.code) + '</div>';
     if(phoneMode){
       h += '<div class="actions"><button class="primary" id="showPhone">联系失主</button>' +
         '<div class="phone" id="phoneBox">' + esc(t.phoneFull || t.phoneMasked || '') + '</div></div>';
     }else{
-      h += '<div class="actions"><textarea id="msg" maxlength="160" placeholder="我捡到了，在……（写清地点/时间）"></textarea>' +
+      h += '<div class="actions"><input id="foundItem" maxlength="40" placeholder="你捡到的是什么？例如：黑色雨伞">' +
+        '<textarea id="msg" maxlength="160" placeholder="在哪捡到的？写清地点/时间，失主会更快找到"></textarea>' +
         '<input id="contact" maxlength="40" placeholder="你的联系方式（选填，方便失主联系你）">' +
         '<button class="primary" id="send">我捡到了，通知失主</button><div class="ok" id="ok">已通知失主，谢谢你的善意。</div></div>';
     }
@@ -81,11 +82,12 @@
     }else{
       document.getElementById('send').onclick = function(){
         var btn = this, msg = document.getElementById('msg').value.trim(), contact = document.getElementById('contact').value.trim();
+        var found = (document.getElementById('foundItem').value || '').trim();
         if(msg.length < 2){ msg = '我捡到了，请联系我'; }
         btn.disabled = true; btn.textContent = '发送中…';
         fetch('/api/tags/' + encodeURIComponent(code) + '/notify', {
           method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({message: msg, contact: contact})
+          body: JSON.stringify({message: msg, contact: contact, itemName: found})
         }).then(function(r){ return r.json(); }).then(function(res){
           if(res && res.ok){ document.getElementById('ok').style.display = 'block'; btn.style.display = 'none'; }
           else { btn.disabled = false; btn.textContent = '发送失败，再试一次'; }

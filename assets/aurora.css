@@ -666,3 +666,59 @@ body:has(#itemSheet.show) .bottom-nav{transform:translate(-50%,120%)!important;}
 .dt-route label{display:block;font-size:10.5px;font-weight:600;color:var(--ink);margin-bottom:6px;}
 .dt-route textarea{width:100%;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:10px;padding:9px;font-family:inherit;font-size:11px;line-height:1.55;color:var(--ink);outline:none;resize:vertical;min-height:58px;}
 .dt-route button{width:100%;margin-top:7px;border:0;border-radius:10px;background:linear-gradient(135deg,#5B2A91,#7A3CB0);color:#fff;font-family:inherit;font-size:11px;font-weight:600;padding:9px;cursor:pointer;}
+
+.tag-entry.tag-inline{margin:8px 0 0;padding:9px 8px;gap:7px;border-radius:14px;}
+.tag-inline .tag-badge{flex:0 0 30px;height:30px;font-size:9px;border-radius:9px;}
+.tag-inline .tag-copy b{font-size:10.5px;}
+.tag-inline .tag-copy i{font-size:8px;line-height:1.35;}
+.tag-inline .tag-go{font-size:8px;}
+
+/* 雷达临时查询 */
+.radar-query{flex:0 0 auto;padding:9px 16px 10px;background:#fff;border-bottom:1px solid var(--line);}
+.radar-query > input{width:100%;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:10px;padding:9px 10px;font-family:inherit;font-size:11px;color:var(--ink);outline:none;}
+.rq-row{display:flex;gap:6px;margin-top:6px;}
+.rq-row input{flex:1;min-width:0;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:10px;padding:8px 9px;font-family:inherit;font-size:10px;color:var(--ink);outline:none;}
+.rq-row select{flex:0 0 82px;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:10px;padding:0 4px;font-family:inherit;font-size:9px;color:var(--ink);outline:none;}
+.rq-row button{flex:0 0 46px;border:0;border-radius:10px;background:linear-gradient(135deg,#5B2A91,#7A3CB0);color:#fff;font-family:inherit;font-size:10px;font-weight:600;cursor:pointer;}
+.rq-tip{font-size:8px;color:#A99BB9;margin-top:5px;}
+
+/* 侦探补充：携带方式 + 最后确认 */
+.dt-carry{display:flex;align-items:center;gap:5px;margin-top:7px;font-size:9.5px;color:var(--sub);}
+.dt-carry button{border:1px solid var(--line);border-radius:99px;background:#F8F4FD;color:var(--sub);font-family:inherit;font-size:9px;padding:5px 9px;cursor:pointer;}
+.dt-carry button.on{background:#5B2A91;color:#fff;border-color:#5B2A91;}
+.dt-route #detLastSeen{margin-top:7px;width:100%;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:10px;padding:9px;font-family:inherit;font-size:10px;color:var(--ink);outline:none;}
+
+/* 逐条出现 */
+@keyframes cardIn{from{opacity:0;transform:translateY(9px);}to{opacity:1;transform:translateY(0);}}
+.rd-match,.dt-action{animation:cardIn .34s ease both;}
+@media (prefers-reduced-motion:reduce){.rd-match,.dt-action{animation:none!important;}}
+
+/* 求助发布 390：防止两列卡片和双输入框横向溢出 */
+#helpSheet.help-screen.show{overflow-x:hidden!important;}
+.hp-body,.hp-cat,.hp-sec,.hp-row,.hp-cats{box-sizing:border-box;min-width:0;}
+.hp-cat{overflow:hidden;}
+.hp-cat > div{min-width:0;overflow:hidden;}
+.hp-cat div b,.hp-cat div span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;}
+.hp-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr);}
+.hp-row input{width:100%!important;min-width:0!important;box-sizing:border-box;}
+.hp-steps{gap:6px;font-size:9px;}
+.hp-steps span{white-space:nowrap;}
+
+/* 400–759 视口：让整屏页和手机框同宽，避免半屏串位 */
+@media (min-width:431px) and (max-width:759px){
+  #helpSheet.help-screen.show,
+  #tagSheet.tag-screen.show,
+  #radarSheet.agent-sheet.show{
+    width:390px;max-width:390px;left:50%;transform:translateX(-50%);
+  }
+}
+
+/* 覆盖 sheetUp 动画残留的 translateX(-50%)，保证整屏页和手机框对齐 */
+@media (min-width:431px){
+  #helpSheet.help-screen.show,
+  #tagSheet.tag-screen.show,
+  #radarSheet.agent-sheet.show{
+    left:50%!important;
+    transform:translateX(-50%)!important;
+  }
+}

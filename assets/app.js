@@ -237,8 +237,8 @@ const Net = {
   notices(){ return this.call('/notices'); },
   createTag(body){ return this.call('/tags', {method:'POST', body: JSON.stringify(body)}); },
   tag(code){ return this.call('/tags/' + encodeURIComponent(code)); },
-  radar(id){ return this.call('/agent/radar', {method:'POST', body: JSON.stringify({itemId:id})}); },
-  detective(id, route){ return this.call('/agent/detective', {method:'POST', body: JSON.stringify({itemId:id, route: route || ''})}); },
+  radar(body){ const p = (typeof body === 'string') ? {itemId:body} : (body || {}); return this.call('/agent/radar', {method:'POST', body: JSON.stringify(p)}); },
+  detective(body){ const p = (typeof body === 'string') ? {itemId:body} : (body || {}); return this.call('/agent/detective', {method:'POST', body: JSON.stringify(p)}); },
   recover(body){ return this.call('/recover', {method:'POST', body: JSON.stringify(body)}); },
   accountLogin(body){ return this.call('/account/login', {method:'POST', body: JSON.stringify(body)}); },
   readNotices(){ return this.call('/notices/read', {method:'POST'}); }
@@ -2975,6 +2975,9 @@ document.addEventListener('visibilitychange', function(){
 /* ============ 寻物 Agent：雷达 + 侦探 ============ */
 let radarCurrentItem = null;
 let radarRoute = '';
+let radarCarry = '';
+let radarLastSeen = '';
+let radarQueryData = null;
 let radarData = null;
 
 function closeRadar(){
@@ -2993,6 +2996,7 @@ async function openRadarItem(id){
   if(!API_BASE){ toast('雷达需要在共享模式/公网地址下使用'); return; }
   if(!id){ toast('没有找到可扫描的条目'); return; }
   radarCurrentItem = id;
+  radarQueryData = null;
   const sh = document.getElementById('radarSheet');
   const sub = document.getElementById('radarSub');
   if(sub) sub.textContent = '正在扫描全站信息…';
@@ -3000,6 +3004,31 @@ async function openRadarItem(id){
   radarLoading('雷达扫描中：读取全站失物与招领…');
   try{
     const data = await Net.radar(id);
+    radarData = data;
+    const qt = document.getElementById('radarQTitle');
+    const qp = document.getElementById('radarQPlace');
+    if(qt && data.item) qt.value = data.item.title || '';
+    if(qp && data.item) qp.value = data.item.place || '';
+    renderRadar(data);
+  }catch(e){
+    radarLoading('扫描失败：' + ((e && e.message) || '请稍后重试'));
+  }
+}
+
+async function scanRadarQuery(){
+  if(!API_BASE){ toast('雷达需要在共享模式/公网地址下使用'); return; }
+  const title = (document.getElementById('radarQTitle').value || '').trim();
+  const place = (document.getElementById('radarQPlace').value || '').trim();
+  const cat = document.getElementById('radarQCat').value || 'other';
+  if(title.length < 2){ toast('先写一下丢了什么，例如「黑色机械键盘」'); return; }
+  const payload = {title:title, place:place, cat:cat, type:'lost'};
+  radarCurrentItem = null;
+  radarQueryData = payload;
+  const sub = document.getElementById('radarSub');
+  if(sub) sub.textContent = '正在扫描全站信息…';
+  radarLoading('雷达扫描中：按你描述的物品查找…');
+  try{
+    const data = await Net.radar(payload);
     radarData = data;
     renderRadar(data);
   }catch(e){
@@ -3019,9 +3048,9 @@ function renderRadar(data){
 
   let h = '<div class="rd-summary">' + esc(data.summary || '') + '</div>';
   if(matches.length){
-    matches.forEach(function(m){
+    matches.forEach(function(m, i){
       const it = m.item || {};
-      h += '<div class="rd-match" data-radar-item="' + esc(it.id) + '">' +
+      h += '<div class="rd-match" style="animation-delay:' + (i * 0.06).toFixed(2) + 's" data-radar-item="' + esc(it.id) + '">' +
         '<div class="rd-score">' + esc(m.score) + '%</div>' +
         '<div class="rd-main"><div class="rd-title">' + esc(it.title || '未命名') + '</div>' +
         '<div class="rd-meta">' + esc(it.place || '未填写地点') + ' · ' + fmtTime(it.createdAt) +
@@ -3049,12 +3078,16 @@ function renderRadar(data){
 }
 
 async function openDetective(){
-  if(!radarCurrentItem) return;
+  if(!radarCurrentItem && !radarQueryData) return;
   const sub = document.getElementById('radarSub');
   if(sub) sub.textContent = '侦探正在整理时间线与行动建议…';
   radarLoading('侦探推理中：读取地点、时间与高频区域…');
   try{
-    const data = await Net.detective(radarCurrentItem, radarRoute);
+    const payload = radarCurrentItem ? {itemId:radarCurrentItem} : Object.assign({}, radarQueryData);
+    payload.route = radarRoute || '';
+    payload.carry = radarCarry || '';
+    payload.lastSeen = radarLastSeen || '';
+    const data = await Net.detective(payload);
     renderDetective(data);
   }catch(e){
     radarLoading('推理失败：' + ((e && e.message) || '请稍后重试'));
@@ -3068,16 +3101,20 @@ function renderDetective(data){
   if(!body || !foot) return;
   if(sub) sub.textContent = '侦探推理完成 · 置信度 ' + (data.confidence || '中');
   const t1 = document.querySelector('.ag-title b'); if(t1) t1.textContent = '寻物侦探';
-  let h = '<div class="dt-route"><label for="detRoute">补充你今天的路线（选填）</label>' +
-    '<textarea id="detRoute" maxlength="120" placeholder="例如：图书馆 → 食堂 → 未名湖 → 宿舍 → 快递点">' + esc(radarRoute) + '</textarea>' +
-    '<button type="button" id="detRouteRun">按这条路线重新推理</button></div>';
+  let h = '<div class="dt-route"><label>补充线索，让侦探重新推一次</label>' +
+    '<textarea id="detRoute" maxlength="120" placeholder="今天走过：图书馆 → 食堂 → 未名湖 → 宿舍 → 快递点">' + esc(radarRoute) + '</textarea>' +
+    '<div class="dt-carry"><span>平时放在</span>' +
+      ['口袋','背包','手持'].map(function(c){ return '<button type="button" data-carry="' + c + '" class="' + (radarCarry === c ? 'on' : '') + '">' + c + '</button>'; }).join('') +
+    '</div>' +
+    '<input id="detLastSeen" maxlength="50" placeholder="最后确认还在：例如 15:00 在图书馆" value="' + esc(radarLastSeen) + '">' +
+    '<button type="button" id="detRouteRun">按这些线索重新推理</button></div>';
   h += '<div class="dt-summary">' + esc(data.summary || '') + '</div>';
 
   const actions = data.actions || [];
   if(actions.length){
     h += '<div class="dt-title">建议按这个顺序找</div>';
     actions.forEach(function(a, i){
-      h += '<div class="dt-action" ' + (a.itemId ? 'data-radar-item="' + esc(a.itemId) + '"' : '') + '>' +
+      h += '<div class="dt-action" style="animation-delay:' + (i * 0.07).toFixed(2) + 's" ' + (a.itemId ? 'data-radar-item="' + esc(a.itemId) + '"' : '') + '>' +
         '<span class="dt-num">' + (i + 1) + '</span>' +
         '<span class="dt-act-main"><b>' + esc(a.title || '') + '</b><span>' + esc(a.detail || '') + '</span></span></div>';
     });
@@ -3108,9 +3145,17 @@ function renderDetective(data){
   const run = document.getElementById('detRouteRun');
   if(run) run.onclick = function(){
     const inp = document.getElementById('detRoute');
+    const ls = document.getElementById('detLastSeen');
     radarRoute = inp ? inp.value.trim() : '';
+    radarLastSeen = ls ? ls.value.trim() : '';
     openDetective();
   };
+  document.querySelectorAll('#radarBody [data-carry]').forEach(function(b){
+    b.onclick = function(){
+      radarCarry = b.getAttribute('data-carry') || '';
+      document.querySelectorAll('#radarBody [data-carry]').forEach(function(x){ x.classList.toggle('on', x === b); });
+    };
+  });
 }
 
 async function openRadarForType(type){
@@ -3131,6 +3176,7 @@ async function openRadarForType(type){
 document.getElementById('radarLostBtn') && (document.getElementById('radarLostBtn').onclick = function(){ openRadarForType('lost'); });
 document.getElementById('radarFoundBtn') && (document.getElementById('radarFoundBtn').onclick = function(){ openRadarForType('found'); });
 document.getElementById('radarClose') && (document.getElementById('radarClose').onclick = closeRadar);
+document.getElementById('radarQBtn') && (document.getElementById('radarQBtn').onclick = scanRadarQuery);
 
 document.getElementById('radarBody') && document.getElementById('radarBody').addEventListener('click', function(e){
   const card = e.target.closest('[data-radar-item]');
@@ -3158,7 +3204,7 @@ async function openDetectiveForType(type){
   radarRoute = '';
   radarLoading('侦探推理中：读取地点、时间与高频区域…');
   try{
-    const data = await Net.detective(own.id, radarRoute);
+    const data = await Net.detective({itemId:own.id, route:radarRoute, carry:radarCarry, lastSeen:radarLastSeen});
     radarData = null;
     renderDetective(data);
   }catch(e){
@@ -3208,12 +3254,11 @@ async function createTag(){
   const note = (document.getElementById('tagNote').value || '').trim();
   const modeEl = document.querySelector('input[name="tagMode"]:checked');
   const mode = modeEl ? modeEl.value : 'notify';
-  if(item.length < 1){ toast('先写一下物品名称'); return; }
   if(mode === 'phone' && phone.length < 6){ toast('选择显示电话时，请填写手机号'); return; }
   const btn = document.getElementById('tagCreate');
   btn.disabled = true; btn.textContent = '生成中…';
   try{
-    const d = await Net.createTag({itemName:item, phone:phone, mode:mode, note:note});
+    const d = await Net.createTag({itemName:item || '我的物品', phone:phone, mode:mode, note:note});
     renderTagResult(d);
     btn.textContent = '已生成';
   }catch(e){

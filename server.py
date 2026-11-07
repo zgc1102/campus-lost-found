@@ -1580,7 +1580,9 @@ def _radar_matches(item, items):
             continue
         if x.get("status") not in ("approved", "claimed"):
             continue
-        text_score = match_score(item, x)
+        text_probe = ((item.get("title") or "") * 2) + (item.get("desc") or "")
+        text_cand = ((x.get("title") or "") * 2) + (x.get("desc") or "")
+        text_score = _cosine(_bigrams(text_probe), _bigrams(text_cand))
         x_group = _place_group(x.get("place"))
         same_place = bool(base_group and base_group != "未填写地点" and base_group == x_group)
         same_cat = bool(item.get("cat") and item.get("cat") == x.get("cat"))
@@ -1588,8 +1590,11 @@ def _radar_matches(item, items):
         if base_time and x.get("createdAt"):
             gap_h = abs(int(base_time) - int(x.get("createdAt"))) / 3600000.0
         time_close = gap_h is not None and gap_h <= 24 * 7
-        score = text_score * 0.55 + (0.18 if same_place else 0) + (0.15 if time_close else 0) + (0.12 if same_cat else 0)
-        if score < 0.18 and text_score < 0.30:
+        # 文字必须有实质重合；地点/时间只能加分，不能单独造出匹配
+        if text_score < 0.12:
+            continue
+        score = text_score * 0.72 + (0.10 if same_place else 0) + (0.08 if time_close else 0) + (0.10 if same_cat else 0)
+        if score < 0.16:
             continue
         reasons = []
         if same_place:
@@ -1767,6 +1772,23 @@ RISK_REASON = {
 }
 
 
+def _probe_item(body):
+    title = str(body.get("title") or "").strip()
+    if not title and isinstance(body.get("query"), dict):
+        title = str(body["query"].get("title") or "").strip()
+    if not title:
+        return None
+    return {
+        "id": "q_" + uuid.uuid4().hex[:8],
+        "type": str(body.get("type") or "lost"),
+        "cat": str(body.get("cat") or "other"),
+        "title": title[:40],
+        "desc": str(body.get("desc") or "")[:200],
+        "place": str(body.get("place") or "")[:40],
+        "eventTime": "", "status": "approved", "createdAt": now_ms(),
+    }
+
+
 def _route_group(stop):
     g = _place_group(stop)
     if "快递" in stop:
@@ -1774,18 +1796,26 @@ def _route_group(stop):
     return g
 
 
-def agent_detective_route(item, items, route):
+def agent_detective_route(item, items, route, carry="", last_seen=""):
     data = agent_detective(item, items)
     stops = _parse_route(route)
-    if not stops:
-        data["routeStops"] = []
-        return data
+    data["routeStops"] = stops
     kind = _item_kind(item)
     ranked = []
+    carry_bonus = {"口袋": .06, "背包": -.02, "手持": .02}.get(carry, 0)
     for i, stop in enumerate(stops):
         g = _route_group(stop)
         risk = RISK.get(kind, RISK["other"]).get(g, 0.42)
+        if carry == "口袋" and g in ("食堂", "宿舍", "快递"):
+            risk += carry_bonus
+        if carry == "背包" and g in ("图书馆", "教学楼"):
+            risk += .04
+        if carry == "手持" and g in ("图书馆", "食堂"):
+            risk += .03
+        risk = min(0.98, risk)
         reason = RISK_REASON.get((kind, g)) or ("你经过%s，%s最可能在这里被放下或滑出口袋。" % (stop, "物品"))
+        if carry:
+            reason += " 你补充：平时放在%s。" % carry
         ranked.append((risk, i, stop, g, reason))
     ranked.sort(key=lambda x: (-x[0], -x[1]))
     route_actions = []
@@ -1795,21 +1825,88 @@ def agent_detective_route(item, items, route):
             "detail": reason + "（路径风险 %d%%）" % int(risk * 100),
             "itemId": "",
         })
-    # 路线上的重点顺序 + 原有地点建议去重
     existing = data.get("actions") or []
-    merged = route_actions + existing
-    data["actions"] = merged[:6]
-    data["routeStops"] = stops
+    data["actions"] = (route_actions + existing)[:6]
     data["routeKind"] = kind
     top = ranked[0] if ranked else None
     if top:
         data["summary"] = "按你今天的路线：%s。结合「%s」这类物品，优先回%s找，原因：%s" % (
             " → ".join(stops), item.get("title") or "失物", top[2], top[4])
+    if last_seen:
+        data["summary"] = "最后确认还在：%s。%s" % (last_seen, data.get("summary") or "")
     tl = data.get("timeline") or []
-    route_tl = [{"time": "路线", "label": " → ".join(stops)}]
+    route_tl = []
+    if stops:
+        route_tl.append({"time": "路线", "label": " → ".join(stops)})
+    if carry:
+        route_tl.append({"time": "携带", "label": carry})
+    if last_seen:
+        route_tl.append({"time": "最后确认", "label": last_seen})
     data["timeline"] = route_tl + tl
     data["disclaimer"] = "路线推测只根据你提供的地点、时间和物品类型，不保证一定找到；找到后请当面核对特征。"
+    ai = _llm_detective(item, data, stops, carry, last_seen)
+    if ai:
+        data["summary"] = ai.get("summary") or data.get("summary")
+        data["actions"] = ai.get("actions") or data.get("actions")
+        data["confidence"] = ai.get("confidence") or data.get("confidence")
+        data["source"] = "llm"
+    else:
+        data["source"] = "rule"
     return data
+
+
+
+
+def _llm_detective(item, data, stops, carry, last_seen):
+    """用大模型把规则结果改写成更像侦探的推理；失败时回退规则。"""
+    cfg = load_ai_config()
+    if not (cfg.get("enabled") and cfg.get("api_key") and cfg.get("base_url")):
+        return None
+    evidence = {
+        "物品": item.get("title") or "",
+        "描述": (item.get("desc") or "")[:160],
+        "丢失地点": item.get("place") or "",
+        "路线": stops,
+        "携带方式": carry,
+        "最后确认": last_seen,
+        "招领候选": [{"标题": m.get("item", {}).get("title"), "分数": m.get("score"), "理由": m.get("reasons")}
+                   for m in (data.get("matches") or [])[:4]],
+        "高频区域": [{"地点": h.get("place"), "数量": h.get("count")} for h in (data.get("hotspots") or [])[:5]],
+        "规则建议": [a.get("title") for a in (data.get("actions") or [])[:6]],
+    }
+    prompt = (
+        "你是清华校园的寻物侦探。根据给定证据，推测物品最可能在哪里，并给出可执行的寻找顺序。\n"
+        "要求：1) 必须结合物品类型、路线、携带方式、最后确认地点；2) 不能断言一定找到；"
+        "3) 建议要具体到地点/窗口/动作；4) 只输出 JSON，不要 markdown。\n"
+        "JSON 格式：{\"summary\":\"不超过80字\",\"confidence\":\"高|中|低\","
+        "\"actions\":[{\"title\":\"不超过18字\",\"detail\":\"不超过60字\"}]}，actions 3到6条。\n"
+        "证据：%s" % json.dumps(evidence, ensure_ascii=False)
+    )
+    try:
+        out = _post_chat(cfg.get("base_url").rstrip("/") + "/chat/completions",
+                         {"model": cfg.get("model") or "deepseek-chat", "temperature": 0.2,
+                          "messages": [{"role": "user", "content": prompt}]},
+                         cfg.get("api_key"), timeout=25)
+        text = out["choices"][0]["message"]["content"] or ""
+        m = re.search(r"\{[\s\S]*\}", text)
+        if not m:
+            return None
+        obj = json.loads(m.group(0))
+        actions = []
+        for a in (obj.get("actions") or [])[:6]:
+            title = str(a.get("title") or "").strip()
+            detail = str(a.get("detail") or "").strip()
+            if title:
+                actions.append({"title": title[:24], "detail": detail[:120], "itemId": ""})
+        if not actions:
+            return None
+        conf = str(obj.get("confidence") or "中").strip()
+        if conf not in ("高", "中", "低"):
+            conf = "中"
+        return {"summary": str(obj.get("summary") or "").strip()[:120],
+                "actions": actions, "confidence": conf}
+    except Exception:
+        return None
 
 
 # ---------- 多模态 ----------
@@ -2666,35 +2763,41 @@ class Handler(BaseHTTPRequestHandler):
             if not owner:
                 return self._json({"error": "请先登录后再申请拾光码"}, 401)
             body = self._read_body()
-            item_name = str(body.get("itemName") or "").strip()[:30]
+            item_name = str(body.get("itemName") or "我的物品").strip()[:30]
             phone = str(body.get("phone") or "").strip()[:20]
             mode = "phone" if body.get("mode") == "phone" else "notify"
             note = str(body.get("note") or "").strip()[:80]
-            if len(item_name) < 1:
-                return self._json({"error": "先写一下物品名称"}, 400)
             if mode == "phone" and not phone:
                 return self._json({"error": "选择展示电话时，需要填写手机号"}, 400)
             with LOCK:
                 tags = load_tags()
-                code = "SG" + uuid.uuid4().hex[:6].upper()
-                while any(x.get("code") == code for x in tags):
+                tag = next((x for x in tags if x.get("owner") == owner), None)
+                if tag:
+                    tag.update({"itemName": item_name, "phone": phone,
+                                "mode": mode, "note": note, "updatedAt": now_ms()})
+                else:
                     code = "SG" + uuid.uuid4().hex[:6].upper()
-                tag = {
-                    "code": code, "owner": owner, "itemName": item_name,
-                    "phone": phone, "mode": mode, "note": note,
-                    "createdAt": now_ms(), "notifyCount": 0,
-                }
-                tags.append(tag)
+                    while any(x.get("code") == code for x in tags):
+                        code = "SG" + uuid.uuid4().hex[:6].upper()
+                    tag = {
+                        "code": code, "owner": owner, "itemName": item_name,
+                        "phone": phone, "mode": mode, "note": note,
+                        "createdAt": now_ms(), "notifyCount": 0,
+                    }
+                    tags.append(tag)
                 save_tags(tags)
             host = self.headers.get("Host") or "127.0.0.1:8000"
             scheme = "https" if self.headers.get("X-Forwarded-Proto") == "https" else "http"
-            return self._json(_tag_public(tag, scheme + "://" + host, with_qr=True))
+            out = _tag_public(tag, scheme + "://" + host, with_qr=True)
+            out["reused"] = True
+            return self._json(out)
 
         if path.startswith("/api/tags/") and path.endswith("/notify"):
             code = path[len("/api/tags/"):-len("/notify")].strip("/")
             body = self._read_body()
             message = str(body.get("message") or "").strip()[:160]
             contact = str(body.get("contact") or "").strip()[:40]
+            found_item = str(body.get("itemName") or "").strip()[:40]
             with LOCK:
                 tags = load_tags()
                 tag = next((x for x in tags if x.get("code") == code), None)
@@ -2703,7 +2806,10 @@ class Handler(BaseHTTPRequestHandler):
                 tag["notifyCount"] = int(tag.get("notifyCount") or 0) + 1
                 save_tags(tags)
                 notices = load_notices()
-                text = "有人扫了你的拾光码「%s」：%s" % (tag.get("itemName") or "", message or "我捡到了，请联系我")
+                text = "有人扫了你的拾光码"
+                if found_item:
+                    text += "，捡到：%s" % found_item
+                text += "：%s" % (message or "我捡到了，请联系我")
                 if contact:
                     text += "（联系方式：%s）" % contact
                 add_notice(notices, tag.get("owner"), "pickup", text, "", "")
@@ -2717,6 +2823,8 @@ class Handler(BaseHTTPRequestHandler):
                 items = load_items()
             item = next((x for x in items if x.get("id") == item_id), None)
             if not item:
+                item = _probe_item(body)
+            if not item:
                 return self._json({"error": "not found"}, 404)
             return self._json(agent_radar(item, items))
 
@@ -2724,12 +2832,16 @@ class Handler(BaseHTTPRequestHandler):
             body = self._read_body()
             item_id = str(body.get("itemId") or "")
             route = str(body.get("route") or "")
+            carry = str(body.get("carry") or "")
+            last_seen = str(body.get("lastSeen") or "")
             with LOCK:
                 items = load_items()
             item = next((x for x in items if x.get("id") == item_id), None)
             if not item:
+                item = _probe_item(body)
+            if not item:
                 return self._json({"error": "not found"}, 404)
-            return self._json(agent_detective_route(item, items, route))
+            return self._json(agent_detective_route(item, items, route, carry, last_seen))
 
         if path == "/api/agent/review":
             owner = self._owner()
