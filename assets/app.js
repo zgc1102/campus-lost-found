@@ -398,6 +398,7 @@ const PHONES = [
 
 /* ============ 导航 ============ */
 const stack = [];
+let backTo = 'home';
 function burstConfetti(){
   const host = document.getElementById('screen-success');
   if(!host) return;
@@ -497,12 +498,27 @@ function activate(name){
 function show(name){
   const cur=document.querySelector('.screen.active');
   if(cur && cur.id==='screen-'+name) return;
+  const curName = cur ? cur.id.replace('screen-','') : '';
+  if(name==='publish' && curName && curName!=='publish') backTo = curName;
+  if(name==='success') backTo = 'home';
   activate(name);
   if(stack[stack.length-1]!==name) stack.push(name);
-  try{ history.pushState({screen:name}, '', '#'+name); }catch(e){}
+  // 用 replaceState：返回只回逻辑上的上一级，不再把每次点击都塞进浏览器历史
+  try{ history.replaceState({screen:name}, '', '#'+name); }catch(e){}
 }
 function back(){
-  history.back();
+  const openSheet = document.querySelector('.sheet.show');
+  if(openSheet){
+    openSheet.classList.remove('show');
+    return;
+  }
+  const cur = document.querySelector('.screen.active');
+  const name = cur ? cur.id.replace('screen-','') : 'home';
+  if(name === 'publish' || name === 'success'){
+    show(backTo || 'home');
+    return;
+  }
+  show('home');
 }
 window.addEventListener('popstate', function(){
   if(activeLayer){
@@ -679,6 +695,7 @@ function goMem(i){
   const n = MEMORIAL_DATA.length || 1;
   memIdx = ((i % n) + n) % n;
   applyMem();
+  startMemorialAuto();
 }
 function renderMemorial(){
   const track=document.getElementById('memTrack');
@@ -723,12 +740,17 @@ function renderMemorial(){
 }
 let memTimer = null;
 function startMemorialAuto(){
-  if(memTimer) clearInterval(memTimer);
-  memTimer = setInterval(function(){
-    if(document.hidden) return;
+  if(memTimer) clearTimeout(memTimer);
+  memTimer = setTimeout(function(){
+    if(document.hidden){
+      startMemorialAuto();
+      return;
+    }
     const home = document.getElementById('screen-home');
-    if(!home || !home.classList.contains('active')) return;
-    if(MEMORIAL_DATA.length < 2) return;
+    if(!home || !home.classList.contains('active') || MEMORIAL_DATA.length < 2){
+      startMemorialAuto();
+      return;
+    }
     goMem(memIdx + 1);
   }, 6500);
 }
@@ -1310,6 +1332,7 @@ document.addEventListener('click', e=>{
   if(nav){ const t=nav.getAttribute('data-nav');
     if(t==='lost'){renderLost();show('lost');return;}
     if(t==='found'){renderFound();show('found');return;}
+    if(t==='notices'){renderNotices();show('notices');return;}
     if(t==='lend'){document.querySelectorAll('#lendTabs span').forEach(s=>s.classList.toggle('on',s.dataset.tab==='lend'));renderLend('lend');show('lend');return;}
     if(t==='borrow'){document.querySelectorAll('#borrowTabs span').forEach(s=>s.classList.toggle('on',s.dataset.tab==='borrow'));renderBorrow('borrow');show('borrow');return;}
     if(t==='map'){show('map');return;}
@@ -1322,6 +1345,7 @@ document.addEventListener('click', e=>{
     if(t==='help'){renderHelp();show('help');return;}
     if(t==='lost'){renderLost();show('lost');return;}
     if(t==='found'){renderFound();show('found');return;}
+    if(t==='notices'){renderNotices();show('notices');return;}
     show(t); return;
   }
   const mem=e.target.closest('[data-mem]');
@@ -2765,7 +2789,7 @@ try{
 
 /* ============ 首次访问引导 ============ */
 let tourIdx = 0;
-const TOUR_KEY = 'sg:tour:v2';
+const TOUR_KEY = 'sg:tour:v3';
 const TOUR_SLIDES = [
   {e:'👋', t:'欢迎来到清华校园拾光里',
    b:'一个 AI 全程把关的校园失物招领与爱心互助平台。\n先花 30 秒，带你逛一圈。'},
@@ -2775,6 +2799,10 @@ const TOUR_SLIDES = [
    b:'游客、新生、家长都能用：访客怎么进校、校园卡丢了怎么办、食堂在哪。\n点首页「初入清华园」，或直接问 AI。'},
   {e:'🤝', t:'爱心 · 求助',
    b:'借用工具、代办跑腿、爱心捐赠、志愿帮忙。\n点「我来帮忙」就能对接，全程 AI 审核。'},
+  {e:'🔖', t:'拾光码：一码通用',
+   b:'生成一张自己的拾光码，可以贴电脑、键盘、校园卡、充电器。\n捡到的人扫码后，可以只发通知，也可以直接看到你的电话。'},
+  {e:'🕵️', t:'寻物侦探：没发布也能用',
+   b:'不用先发帖。填丢了什么、今天走过哪里、平时放口袋还是背包。\nAI 会按校园地图和动作风险，给出下一步去哪找。'},
   {e:'🤖', t:'AI 都在做什么',
    b:'发布：文字 + 图片双审，违规直接拦。\n拍照：自动识别物品并填写。\n认领：AI 核验特征，支持多轮补充。\n问答：校园失物问题随时问。'},
   {e:'🚀', t:'开始你的拾光之旅',
@@ -3059,7 +3087,7 @@ function renderRadar(data){
   if(matches.length){
     matches.forEach(function(m, i){
       const it = m.item || {};
-      h += '<div class="rd-match" style="animation-delay:' + (i * 0.06).toFixed(2) + 's" data-radar-item="' + esc(it.id) + '">' +
+      h += '<div class="rd-match" style="animation-delay:' + (i * 0.12).toFixed(2) + 's" data-radar-item="' + esc(it.id) + '">' +
         '<div class="rd-score">' + esc(m.score) + '%</div>' +
         '<div class="rd-main"><div class="rd-title">' + esc(it.title || '未命名') + '</div>' +
         '<div class="rd-meta">' + esc(it.place || '未填写地点') + ' · ' + fmtTime(it.createdAt) +
@@ -3125,7 +3153,7 @@ function renderDetective(data){
   if(actions.length){
     h += '<div class="dt-title">建议按这个顺序找</div>';
     actions.forEach(function(a, i){
-      h += '<div class="dt-action" style="animation-delay:' + (i * 0.07).toFixed(2) + 's" ' + (a.itemId ? 'data-radar-item="' + esc(a.itemId) + '"' : '') + '>' +
+      h += '<div class="dt-action" style="animation-delay:' + (i * 0.12).toFixed(2) + 's" ' + (a.itemId ? 'data-radar-item="' + esc(a.itemId) + '"' : '') + '>' +
         '<span class="dt-num">' + (i + 1) + '</span>' +
         '<span class="dt-act-main"><b>' + esc(a.title || '') + '</b><span>' + esc(a.detail || '') + '</span></span></div>';
     });

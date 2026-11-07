@@ -763,3 +763,10 @@ body:has(.sheet.show) .bottom-nav{transform:translate(-50%,120%)!important;}
 
 .hp-note{font-size:8.5px;line-height:1.6;color:#A99BB9;padding:0 16px 74px;text-align:center;}
 .dt-ask{width:100%;margin-top:10px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--primary);font-family:inherit;font-size:11px;font-weight:600;padding:10px;cursor:pointer;}
+
+.help-cats .hc-ic{width:36px!important;height:36px!important;background:linear-gradient(145deg,#7A3CB0,#3B1D63)!important;border:0!important;color:#fff!important;border-radius:10px!important;}
+.help-cats .hc-ic svg{width:18px!important;height:18px!important;}
+
+@keyframes cardIn{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+.rd-match,.dt-action{animation:cardIn .5s cubic-bezier(.2,.7,.3,1) both;}
+.dt-title,.rd-section{animation:cardIn .4s ease both;}

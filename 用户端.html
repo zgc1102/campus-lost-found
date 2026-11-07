@@ -67,7 +67,7 @@ setTimeout(function(){
 
       <!-- 中央宣传窗 -->
       <div class="mem-win">
-        <span class="mw-tag">每日更新 · 左右滑动切换</span>
+        <span class="mw-tag" data-nav="notices" style="cursor:pointer">公告通知 · 左右滑动</span>
         <div class="mem-track" id="memTrack"></div>
         <button type="button" class="mw-nav prev" id="memPrev" aria-label="上一条">‹</button>
         <button type="button" class="mw-nav next" id="memNext" aria-label="下一条">›</button>
@@ -344,7 +344,7 @@ setTimeout(function(){
     <div class="scroll">
       <div class="hintline" id="helpHint">同学之间互相搭把手：借个东西、帮取快递、闲置送人、找人帮忙。</div>
       <div class="help-cats">
-        <button type="button" data-help-cat="help_borrow"><span class="hc-ic"><svg viewBox="0 0 80 80" fill="none"><path d="M14 54c0-12 12-20 26-20s26 8 26 20" fill="#C9A7F0"/><path d="M40 46s-11-6.5-11-12a6 6 0 0 1 11-2 6 6 0 0 1 11 2c0 5.5-11 12-11 12Z" fill="#8A52C7"/><path d="M18 58l-8 10M62 58l8 10" stroke="#5B2A91" stroke-width="4" stroke-linecap="round"/></svg></span><div><b>借用工具</b><span>借伞 / 充电宝</span></div></button>
+        <button type="button" data-help-cat="help_borrow"><span class="hc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.3-7-9a4 4 0 0 1 7-2 4 4 0 0 1 7 2c0 4.7-7 9-7 9Z"/><path d="M8 20l-3 2M16 20l3 2"/></svg></span><div><b>借用工具</b><span>借伞 / 充电宝</span></div></button>
         <button type="button" data-help-cat="help_errand"><span class="hc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 18c4 0 4-6 8-6s4-6 7-6"/><circle cx="5" cy="18" r="2"/><path d="M18 3l3 3-3 3"/></svg></span><div><b>代办跑腿</b><span>帮取 / 帮带</span></div></button>
         <button type="button" data-help-cat="help_donate"><span class="hc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h16v10H4z"/><path d="M12 10v10"/><path d="M4 10l2-4h12l2 4"/><path d="M12 6c-2-4-6-2-4 1M12 6c2-4 6-2 4 1"/></svg></span><div><b>爱心捐赠</b><span>闲置送人</span></div></button>
         <button type="button" data-help-cat="help_volunteer"><span class="hc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.3-7-9a4 4 0 0 1 7-2 4 4 0 0 1 7 2c0 4.7-7 9-7 9Z"/><path d="M8 20l-3 2M16 20l3 2"/></svg></span><div><b>志愿帮忙</b><span>找人搭把手</span></div></button>
@@ -729,13 +729,13 @@ setTimeout(function(){
 
 <div class="tour show" id="tourMask">
   <div class="tour-card">
-    <div class="tour-step" id="tourStep">1 / 6</div>
+    <div class="tour-step" id="tourStep">1 / 8</div>
     <div class="tour-emoji" id="tourEmoji">👋</div>
     <div class="tour-title" id="tourTitle">欢迎来到清华校园拾光里</div>
     <div class="tour-body" id="tourBody">一个 AI 全程把关的校园失物招领与爱心互助平台。
 先花 30 秒，带你逛一圈。</div>
-    <div class="tour-dots" id="tourDots"><i class="on"></i><i></i><i></i><i></i><i></i><i></i></div>
-    <div class="tour-progress"><i id="tourBar" style="width:16.7%"></i></div>
+    <div class="tour-dots" id="tourDots"><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="tour-progress"><i id="tourBar" style="width:12.5%"></i></div>
     <div class="tour-acts">
       <button type="button" class="btn ghost" id="tourSkip">跳过</button>
       <button type="button" class="btn" id="tourNext">下一步</button>
@@ -743,7 +743,7 @@ setTimeout(function(){
   </div>
 </div>
 <script>
-try{ if(localStorage.getItem('sg:tour:v2') === '1'){ var _tm = document.getElementById('tourMask'); if(_tm) _tm.classList.remove('show'); } }catch(e){}
+try{ if(localStorage.getItem('sg:tour:v3') === '1'){ var _tm = document.getElementById('tourMask'); if(_tm) _tm.classList.remove('show'); } }catch(e){}
 </script>
 <script src="assets/app.js?v=20261130"></script>
 <div id="imgViewer" class="img-viewer"><img id="imgViewerImg" alt=""><div class="img-viewer-close">✕</div></div>
