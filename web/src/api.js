@@ -2,6 +2,8 @@ const API_BASE = '/api'
 const USER_KEY = 'sg:user:v1'
 
 function owner() {
+  const account = localStorage.getItem('sg:account:v1')
+  if (account) return account
   let id = localStorage.getItem(USER_KEY)
   if (!id) {
     id = 'u_' + Math.random().toString(36).slice(2, 9)
@@ -44,6 +46,12 @@ export const api = {
   },
   mine() {
     return call('/mine')
+  },
+  accountLogin(body) {
+    return call('/account/login', { method: 'POST', body: JSON.stringify(body) })
+  },
+  remove(id) {
+    return call('/items/' + encodeURIComponent(id), { method: 'DELETE' })
   },
   ask(question) {
     return call('/ask', { method: 'POST', body: JSON.stringify({ question }) })
