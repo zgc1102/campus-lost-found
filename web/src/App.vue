@@ -15,6 +15,7 @@ import SearchView from './views/SearchView.vue'
 import InfoView from './views/InfoView.vue'
 import AdminView from './views/AdminView.vue'
 import BottomNav from './components/BottomNav.vue'
+import TourOverlay from './components/TourOverlay.vue'
 
 const params = new URLSearchParams(location.search)
 const initial = params.get('view')
@@ -81,5 +82,6 @@ function publish(type, cat) {
     <SearchView v-else-if="view === 'search'" @nav="go" />
     <AdminView v-else-if="view === 'admin'" />
     <BottomNav v-if="view !== 'admin' && view !== 'map' && view !== 'ask'" :active="view === 'publish' ? (publishType === 'help' ? 'help' : publishType) : view" @nav="go" />
+    <TourOverlay />
   </div>
 </template>
