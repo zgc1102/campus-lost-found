@@ -133,6 +133,7 @@ setTimeout(function(){
     </div>
     <div class="scroll">
       <div class="tip-box">⚠️ 认领提示：认领物品前，请务必核对物品独有特征，请勿仅凭照片认领，谨防冒领。<br>交接请选择公共场所，不要前往偏僻地点，谨慎公开手机号、微信等私人联系方式。</div>
+      <div class="list-meta" id="lostMeta"></div>
       <div class="page-bar">
         <div class="pb-search"><svg class="pb-mag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></svg><input data-filter="lost" placeholder="搜索失物招领"></div>
         <button type="button" class="pb-ico primary" data-publish="lost" title="发布启事">＋</button>
@@ -151,6 +152,7 @@ setTimeout(function(){
     </div>
     <div class="scroll">
       <div class="tip-box">⚠️ 防骗提示：主动联系你并提供“验证码 / 转账 / 付费解锁”的，基本都是骗子。<br>真实认领请当面核对物品细节，平台不会收取任何费用。</div>
+      <div class="list-meta" id="foundMeta"></div>
       <div class="page-bar">
         <div class="pb-search"><svg class="pb-mag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></svg><input data-filter="found" placeholder="搜索寻物启事"></div>
         <button type="button" class="pb-ico primary" data-publish="found" title="发布启事">＋</button>
@@ -294,6 +296,12 @@ setTimeout(function(){
     </div>
     <div class="scroll">
       <div class="hintline" id="helpHint">同学之间互相搭把手：借个东西、帮取快递、闲置送人、找人帮忙。</div>
+      <div class="help-cats">
+        <button type="button" data-help-cat="help_borrow"><b>借用工具</b><span>借伞 / 充电宝</span></button>
+        <button type="button" data-help-cat="help_errand"><b>代办跑腿</b><span>帮取 / 帮带</span></button>
+        <button type="button" data-help-cat="help_donate"><b>爱心捐赠</b><span>闲置送人</span></button>
+        <button type="button" data-help-cat="help_volunteer"><b>志愿帮忙</b><span>找人搭把手</span></button>
+      </div>
       <div class="page-bar">
         <div class="pb-search"><svg class="pb-mag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></svg><input data-filter="help" placeholder="搜索爱心求助"></div>
         <button type="button" class="pb-ico primary" id="pageHelpPub" title="发布求助">＋</button>

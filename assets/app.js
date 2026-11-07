@@ -556,8 +556,20 @@ function renderList(wrap, arr, srcLabel){
   wrap.innerHTML = arr.map(it=>itemHTML(it,srcLabel)).join('') ||
     '<div class="empty">暂无内容</div>';
 }
-function renderLost(){ renderList(document.getElementById('lostWrap'), Store.list({type:'found', statuses:['approved','claimed','closed']}), '招领'); applyFilter('lost'); }
-function renderFound(){ renderList(document.getElementById('foundWrap'), Store.list({type:'lost', statuses:['approved','claimed','closed']}), '寻物'); applyFilter('found'); }
+function renderLost(){
+  const arr = Store.list({type:'found', statuses:['approved','claimed','closed']});
+  renderList(document.getElementById('lostWrap'), arr, '招领');
+  const meta = document.getElementById('lostMeta');
+  if(meta) meta.innerHTML = '<b>' + arr.length + '</b> 条招领 · 捡到的东西在这里等主人';
+  applyFilter('lost');
+}
+function renderFound(){
+  const arr = Store.list({type:'lost', statuses:['approved','claimed','closed']});
+  renderList(document.getElementById('foundWrap'), arr, '寻物');
+  const meta = document.getElementById('foundMeta');
+  if(meta) meta.innerHTML = '<b>' + arr.length + '</b> 条寻物 · 看到的同学可以帮一把';
+  applyFilter('found');
+}
 
 /* 子页面搜索过滤 */
 const filterQueries = {};
