@@ -75,6 +75,12 @@ async function load() {
   try {
     const list = await api.items()
     if (Array.isArray(list)) items.value = list
+    const focus = sessionStorage.getItem('sg:focusItem')
+    if (focus) {
+      sessionStorage.removeItem('sg:focusItem')
+      const hit = items.value.find((x) => x.id === focus)
+      if (hit) openDetail(hit)
+    }
   } catch (_) {
     items.value = []
   } finally {

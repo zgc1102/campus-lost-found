@@ -59,6 +59,10 @@ async function runDetective() {
 function askCampus() {
   location.href = oldUrl('ask')
 }
+function openMatch(m) {
+  sessionStorage.setItem('sg:focusItem', m.item.id)
+  emit('nav', m.item.type === 'lost' ? 'found' : 'lost')
+}
 </script>
 
 <template>
@@ -92,7 +96,7 @@ function askCampus() {
 
       <template v-if="matches.length">
         <div v-if="radarSummary" class="rd-summary">{{ radarSummary }}</div>
-        <article v-for="(m, i) in matches" :key="m.item.id" class="rd-match" :style="{ animationDelay: (i * 0.12) + 's' }">
+        <article v-for="(m, i) in matches" :key="m.item.id" class="rd-match" :style="{ animationDelay: (i * 0.12) + 's' }" @click="openMatch(m)">
           <div class="rd-score">{{ m.score }}%</div>
           <div class="rd-main">
             <div class="rd-title">{{ m.item.title }}</div>

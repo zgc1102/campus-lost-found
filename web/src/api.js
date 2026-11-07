@@ -95,6 +95,9 @@ export const api = {
   adminAnnouncements(token) {
     return call('/admin/announcements', { headers: { 'X-Admin-Token': token } })
   },
+  adminCreateAnnouncement(body, token) {
+    return call('/admin/announcements', { method: 'POST', headers: { 'X-Admin-Token': token }, body: JSON.stringify(body) })
+  },
   adminDeployLog(token) {
     return call('/admin/deploy-log', { headers: { 'X-Admin-Token': token } })
   },

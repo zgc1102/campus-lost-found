@@ -14,6 +14,8 @@ const config = ref(null)
 const accounts = ref([])
 const announcements = ref([])
 const deployLog = ref([])
+const annTitle = ref('')
+const annBody = ref('')
 
 onMounted(() => { if (token.value) load() })
 
@@ -75,6 +77,21 @@ async function switchTab(t) {
     } catch (e) { error.value = e.message }
   }
 }
+
+async function createAnnouncement() {
+  if (annTitle.value.trim().length < 2 || annBody.value.trim().length < 5) {
+    error.value = '标题或正文太短'
+    return
+  }
+  try {
+    await api.adminCreateAnnouncement({ title: annTitle.value.trim(), body: annBody.value.trim(), publish: true }, token.value)
+    annTitle.value = ''
+    annBody.value = ''
+    await switchTab('announcements')
+  } catch (e) {
+    error.value = e.message || '发布失败'
+  }
+}
 </script>
 
 <template>
@@ -118,6 +135,9 @@ async function switchTab(t) {
         </div>
         <div v-else-if="tab === 'announcements'" class="form-card">
           <div class="fc-title">公告</div>
+          <input v-model="annTitle" maxlength="60" placeholder="公告标题" style="width:100%;box-sizing:border-box;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:10px;padding:9px;margin:7px 0;font-family:inherit;font-size:11px">
+          <textarea v-model="annBody" maxlength="2000" placeholder="公告正文" style="width:100%;box-sizing:border-box;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:10px;padding:9px;margin-bottom:7px;font-family:inherit;font-size:11px;min-height:70px"></textarea>
+          <button type="button" class="btn" style="width:100%;margin-bottom:10px" @click="createAnnouncement">发布公告</button>
           <div v-for="a in announcements" :key="a.id || a.title" class="sa" style="padding:7px 0;border-bottom:1px solid var(--line)">
             <b>{{ a.title }}</b><br>{{ a.body || a.text || '' }}
           </div>
