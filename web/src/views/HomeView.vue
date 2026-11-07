@@ -94,6 +94,9 @@ async function load() {
 
 onMounted(load)
 onUnmounted(() => clearTimeout(timer))
+function replayTour() {
+  window.dispatchEvent(new Event('sg:tour'))
+}
 </script>
 
 <template>
@@ -110,7 +113,7 @@ onUnmounted(() => clearTimeout(timer))
         <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></svg>
       </button>
       <div class="t">清华校园拾光里</div>
-      <button type="button" class="help-btn" title="使用引导" @click="$emit('nav', 'guide')">?</button>
+      <button type="button" class="help-btn" title="使用引导" @click="replayTour">?</button>
       <div class="bell" title="通知" @click="$emit('nav', 'notices')">🔔</div>
       <div class="login" title="我的发布" @click="$emit('nav', 'mine')">
         <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" width="18" height="18"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
@@ -213,7 +216,7 @@ onUnmounted(() => clearTimeout(timer))
         <div class="flinks">
           <span @click="$emit('nav', 'mine')">我的发布</span>
           <span @click="$emit('nav', 'legacy', 'about')">平台简介</span>
-          <span @click="$emit('nav', 'guide')">使用引导</span>
+          <span @click="replayTour">使用引导</span>
           <span @click="$emit('nav', 'legacy', 'contact')">联系方式</span>
           <span @click="$emit('nav', 'legacy', 'legal')">法律声明</span>
           <span @click="$emit('nav', 'legacy', 'privacy')">隐私权保护</span>
