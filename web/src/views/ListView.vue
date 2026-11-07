@@ -13,8 +13,8 @@ const query = ref('')
 const selected = ref(null)
 
 const copy = computed(() => props.type === 'lost'
-  ? { title: '失物招领', kicker: 'LOST & FOUND', hint: '捡到的东西在这里等主人', other: '寻物启事', publish: '发布招领' }
-  : { title: '寻物启事', kicker: 'LOST & FOUND', hint: '看到的同学可以帮一把', other: '失物招领', publish: '发布寻物' })
+  ? { title: '失物招领', kicker: 'LOST & FOUND', hint: '捡到的东西在这里等主人', other: '寻物启事', publish: '发布启事' }
+  : { title: '寻物启事', kicker: 'LOST & FOUND', hint: '看到的同学可以帮一把', other: '失物招领', publish: '发布启事' })
 
 const visible = computed(() => {
   const target = props.type === 'lost' ? 'found' : 'lost'
@@ -48,6 +48,17 @@ function fmt(ts) {
 function label(x) {
   return x.type === 'found' ? '招领' : '寻物'
 }
+function thumbText(x) {
+  const text = (x.title || '') + (x.cat || '')
+  if (text.includes('伞')) return '🌂'
+  if (text.includes('卡')) return '💳'
+  if (text.includes('钥匙')) return '🔑'
+  if (text.includes('电脑') || text.includes('键盘')) return '💻'
+  if (text.includes('耳机')) return '🎧'
+  if (text.includes('杯')) return '🥤'
+  if (text.includes('包')) return '🎒'
+  return '📦'
+}
 function openOldPublish() {
   location.href = oldUrl('home', 'open=publish&type=' + props.type)
 }
@@ -62,20 +73,21 @@ function openOldHelp() {
 <style scoped>
 .vue-list .item {
   position: relative;
-  padding-bottom: 40px;
+  padding-bottom: 0;
+  align-items: center;
 }
 .vue-list .item .btn {
-  position: absolute;
-  right: 11px;
-  bottom: 10px;
-  width: 38px;
-  height: 38px;
-  min-width: 38px;
-  padding: 0;
-  border-radius: 50% !important;
-  font-size: 9px;
+  position: static;
+  width: auto;
+  min-width: 0;
+  height: 28px;
+  padding: 6px 12px;
+  border-radius: 99px !important;
+  font-size: 10.5px;
   line-height: 1;
-  display: flex;
+  flex: 0 0 auto;
+  align-self: center;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
 }
@@ -145,6 +157,9 @@ function openOldHelp() {
           <input v-model="query" :placeholder="'搜索' + copy.title">
         </div>
         <button type="button" class="pb-ico primary" title="发布" @click="openOldPublish">＋</button>
+        <button type="button" class="pb-ico" title="拍照发布" @click="openOldPublish">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7h4l1.6-2h6.8L17 7h4v12H3z"/><circle cx="12" cy="13" r="3.4"/></svg>
+        </button>
         <button type="button" class="pb-ico" title="问一问" @click="openOldHelp">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12a8 8 0 0 1-8 8H7l-4 3v-6a8 8 0 1 1 18-5z"/></svg>
         </button>
@@ -156,13 +171,15 @@ function openOldHelp() {
         <article v-for="it in visible" :key="it.id" class="item" @click="selected = it">
           <div class="thumb" :style="it.photoUrl ? 'padding:0;overflow:hidden' : ''">
             <img v-if="it.photoUrl" :src="it.photoUrl" alt="" loading="lazy">
-            <span v-else>{{ (it.title || '物').slice(0, 1) }}</span>
+            <span v-else>{{ thumbText(it) }}</span>
           </div>
           <div style="flex:1;min-width:0">
+            <span class="src-tag">{{ label(it) }}</span>
             <div class="tt">{{ it.title || '未命名物品' }}</div>
             <div class="dd">{{ it.desc || '暂无描述' }}</div>
             <div class="chips">
-              <span class="chip">{{ label(it) }}</span>
+              <span v-if="it.fields && it.fields.color" class="chip">{{ it.fields.color }}</span>
+              <span v-if="it.fields && it.fields.condition" class="chip">{{ it.fields.condition }}</span>
               <span class="chip">{{ it.place || '未填写地点' }}</span>
             </div>
             <div class="meta">📍 {{ it.place || '未填写地点' }} · {{ fmt(it.createdAt) }}</div>
@@ -176,7 +193,7 @@ function openOldHelp() {
       <button type="button" class="sheet-x" @click="selected = null">收起</button>
       <div class="big-thumb">
         <img v-if="selected.photoUrl" :src="selected.photoUrl" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:16px">
-        <span v-else>{{ (selected.title || '物').slice(0, 1) }}</span>
+        <span v-else>{{ thumbText(selected) }}</span>
       </div>
       <div class="sh">{{ selected.title || '未命名物品' }}</div>
       <div class="sa">{{ selected.desc || '暂无描述' }}</div>
