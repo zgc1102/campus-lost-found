@@ -41,11 +41,11 @@ function copyLink() {
 
 <template>
   <section class="screen active" id="screen-tag">
-    <div class="topbar">
-      <div class="back" @click="$emit('nav', 'home')">‹</div>
-      <div class="t">拾光码</div>
+    <div class="tag-top">
+      <button type="button" class="tag-back" aria-label="返回" @click="$emit('nav', 'home')">‹</button>
+      <div class="tag-title"><b>拾光码</b><span>给失物一张身份证</span></div>
     </div>
-    <div class="scroll">
+    <div class="scroll tag-body">
       <div class="tag-intro">
         一个拾光码可以贴在任何物品上：电脑、键盘、校园卡、充电器都行。捡到的人扫码后，可以只给你发通知，也可以直接看到你的电话。
       </div>

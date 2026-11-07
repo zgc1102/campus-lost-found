@@ -61,32 +61,32 @@ function askCampus() {
 
 <template>
   <section class="screen active" id="screen-radar">
-    <div class="topbar">
-      <div class="back" @click="$emit('nav', 'home')">‹</div>
-      <div class="t">{{ detective ? '寻物侦探' : 'AI 寻物雷达' }}</div>
+    <div class="ag-top">
+      <button type="button" class="ag-back" aria-label="返回" @click="$emit('nav', 'home')">‹</button>
+      <div class="ag-title"><b>AI 寻物雷达</b><span>{{ loading ? '正在扫描全站信息…' : '不用先发布，也可以直接查' }}</span></div>
     </div>
 
     <div class="scroll">
-      <div class="radar-form">
-        <div class="rf-kicker">NO POST? NO PROBLEM</div>
-        <div class="rf-title">不用先发布，填线索就能推</div>
-        <label>丢了什么 <b>*</b></label>
-        <input v-model="title" maxlength="40" placeholder="例如：校园卡 / 黑色键盘 / 雨伞">
-        <label>在哪丢的 <i>选填</i></label>
-        <input v-model="place" maxlength="40" placeholder="例如：图书馆三楼">
-        <label>物品类型</label>
-        <select v-model="cat">
-          <option value="other">自动判断</option>
-          <option value="card">校园卡</option>
-          <option value="keys">钥匙</option>
-          <option value="electronics">手机 / 电脑</option>
-          <option value="umbrella">雨伞</option>
-          <option value="bottle">水杯</option>
-        </select>
-        <button type="button" class="rf-run" :disabled="loading" @click="scan">{{ loading ? '扫描中…' : '扫描全站' }}</button>
+      <div class="radar-query">
+        <input v-model="title" maxlength="40" placeholder="丢了什么？例如：黑色机械键盘">
+        <div class="rq-row">
+          <input v-model="place" maxlength="30" placeholder="在哪丢的（选填）">
+          <select v-model="cat">
+            <option value="other">自动判断</option>
+            <option value="card">校园卡</option>
+            <option value="keys">钥匙</option>
+            <option value="electronics">手机/电脑</option>
+            <option value="umbrella">雨伞</option>
+            <option value="bottle">水杯</option>
+          </select>
+          <button type="button" :disabled="loading" @click="scan">{{ loading ? '扫描中…' : '扫描' }}</button>
+        </div>
+        <div class="rq-tip">不用先发布，也可以直接查任意物品</div>
       </div>
 
       <div v-if="error" class="warn-box" style="margin-bottom:10px">{{ error }}</div>
+      <div v-if="loading" class="ag-loading">雷达扫描中…</div>
+      <div v-else-if="!matches.length && !scanned" class="ag-loading">填好线索，点「扫描」开始</div>
 
       <template v-if="matches.length">
         <div class="rd-section-title">可能相关的招领 · {{ matches.length }} 条</div>
