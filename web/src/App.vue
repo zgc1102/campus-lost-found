@@ -14,6 +14,7 @@ import NoticesView from './views/NoticesView.vue'
 import SearchView from './views/SearchView.vue'
 import LegacyStatic from './views/LegacyStatic.vue'
 import SuccessView from './views/SuccessView.vue'
+import ToolsView from './views/ToolsView.vue'
 import InfoView from './views/InfoView.vue'
 import AdminView from './views/AdminView.vue'
 import BottomNav from './components/BottomNav.vue'
@@ -22,7 +23,7 @@ import TourOverlay from './components/TourOverlay.vue'
 const params = new URLSearchParams(location.search)
 const initial = params.get('view')
 const isAdmin = location.pathname.replace(/\/+$/, '') === '/admin'
-const initialView = isAdmin ? 'admin' : ['lost', 'found', 'help', 'publish', 'radar', 'tag', 'mine', 'guide', 'map', 'ask', 'notices', 'info', 'search', 'admin', 'legacy', 'success'].includes(initial) ? initial : 'home'
+const initialView = isAdmin ? 'admin' : ['lost', 'found', 'help', 'publish', 'radar', 'tag', 'mine', 'guide', 'map', 'ask', 'notices', 'info', 'search', 'admin', 'legacy', 'success', 'lend', 'borrow'].includes(initial) ? initial : 'home'
 const view = ref(initialView)
 const publishType = ref(params.get('type') || 'lost')
 const helpCat = ref(params.get('cat') || 'help_borrow')
@@ -51,7 +52,7 @@ function go(target, arg) {
     publish('lost')
     return
   }
-  if (target === 'lost' || target === 'found' || target === 'help') {
+  if (target === 'lost' || target === 'found' || target === 'help' || target === 'lend' || target === 'borrow') {
     view.value = target
     history.replaceState({}, '', location.pathname + '?view=' + target)
     return
@@ -95,6 +96,7 @@ function publish(type, cat) {
     <SearchView v-else-if="view === 'search'" @nav="go" />
     <LegacyStatic v-else-if="view === 'legacy'" :name="legacyName" @nav="go" />
     <SuccessView v-else-if="view === 'success'" @nav="go" />
+    <ToolsView v-else-if="view === 'lend' || view === 'borrow'" :mode="view" @nav="go" />
     <AdminView v-else-if="view === 'admin'" />
     <BottomNav v-if="view !== 'admin' && view !== 'map' && view !== 'ask'" :active="view === 'publish' ? (publishType === 'help' ? 'help' : publishType) : view" @nav="go" />
     <TourOverlay />
