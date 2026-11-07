@@ -20,9 +20,7 @@ const memo = computed(() => {
         <div class="mdh-sub">{{ memo.sub || '清华校园拾光里' }}</div>
       </div>
       <div class="form-card" style="padding:16px">
-        <p style="font-size:12px;line-height:1.9;color:var(--ink)">
-          这是中央宣传窗的公告详情。公告会同步到首页轮播；如果你看到的是失物招领点调整，请以现场指示为准。
-        </p>
+        <p style="font-size:12px;line-height:1.9;color:var(--ink);white-space:pre-wrap">{{ memo.body || '这是中央宣传窗的公告详情。公告会同步到首页轮播；如果你看到的是失物招领点调整，请以现场指示为准。' }}</p>
       </div>
     </div>
   </section>

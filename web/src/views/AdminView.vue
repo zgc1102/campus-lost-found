@@ -206,10 +206,11 @@ async function toggleBan(a) {
           </div>
         </div>
         <div v-else-if="tab === 'deploy'" class="form-card">
-          <div class="fc-title">部署日志</div>
+          <div class="fc-title" style="display:flex;justify-content:space-between;align-items:center">部署日志 <button type="button" class="btn ghost" @click="switchTab('deploy')">刷新</button></div>
           <div v-for="(l, i) in deployLog" :key="i" class="sa" style="padding:6px 0;border-bottom:1px solid var(--line)">
             {{ l.time || l.at || '' }} {{ l.text || l.msg || JSON.stringify(l) }}
           </div>
+          <div v-if="!deployLog.length" class="sa">暂无日志</div>
         </div>
         <template v-else>
           <div v-if="loading" class="empty">正在读取…</div>

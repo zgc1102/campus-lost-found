@@ -79,7 +79,8 @@ async function load() {
       const annSlides = anns.slice(0, 2).map((a) => ({
         star: a.pinned ? '📌' : '📢',
         name: a.title,
-        sub: '校园公告 · ' + new Date(a.publishedAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+        sub: '校园公告 · ' + new Date(a.publishedAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }),
+        body: a.body || ''
       }))
       slides.value = annSlides.concat(defaultSlides).slice(0, 5)
       slideIndex.value = 0

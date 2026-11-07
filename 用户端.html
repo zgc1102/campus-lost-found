@@ -743,7 +743,7 @@ setTimeout(function(){
   </div>
 </div>
 <script>
-try{ if(localStorage.getItem('sg:tour:v3') === '1'){ var _tm = document.getElementById('tourMask'); if(_tm) _tm.classList.remove('show'); } }catch(e){}
+try{ if(localStorage.getItem('sg:tour:v3') === '1' || location.search.indexOf('tour=off') >= 0){ var _tm = document.getElementById('tourMask'); if(_tm) _tm.classList.remove('show'); } }catch(e){}
 </script>
 <script src="assets/app.js?v=20261130"></script>
 <div id="imgViewer" class="img-viewer"><img id="imgViewerImg" alt=""><div class="img-viewer-close">✕</div></div>
