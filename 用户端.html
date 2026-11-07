@@ -3,8 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>清华校园拾光里 v3.2 · 校园互助服务平台</title>
+<title>清华校园拾光里 · 校园互助与失物招领</title>
 <link rel="stylesheet" href="assets/styles.css?v=20261125">
+<link rel="stylesheet" href="assets/refresh.css?v=20261107">
 </head>
 <body>
 <div id="bootGuard" style="position:fixed;inset:0;z-index:3000;background:#1b0b2e;color:#fff;display:flex;align-items:center;justify-content:center;flex-direction:column;font:14px/1.9 'Microsoft YaHei',system-ui,sans-serif;text-align:center;padding:24px">
@@ -51,7 +52,6 @@ setTimeout(function(){
 
   <!-- ============ 首页 ============ -->
   <section class="screen active" id="screen-home">
-    <div class="ticker"><div class="ticker-track"><span>绿色能源 · 智慧矿山 · 红色引领 · 爱国爱岗 · 孝道 · 清华校园拾光里 · 有温度的服务</span><span>绿色能源 · 智慧矿山 · 红色引领 · 爱国爱岗 · 孝道 · 清华校园拾光里 · 有温度的服务</span></div></div>
     <div class="topbar"><button type="button" class="top-search" id="homeSearchBtn" title="搜索"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></svg></button><div class="t">清华校园拾光里</div><button type="button" class="help-btn" id="tourBtn" title="使用引导">?</button><div class="bell" id="bellBtn" title="通知">🔔<i id="bellDot" style="display:none">0</i></div><div class="login" id="loginBtn" title="我的发布">
       <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" width="18" height="18"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
     </div></div>
@@ -61,12 +61,41 @@ setTimeout(function(){
       <div class="tb-go">开始 ›</div>
     </div>
     <div class="scroll">
+      <section class="home-head">
+        <div class="home-head-row">
+          <div>
+            <div class="hh-kicker">清华校园 · 失物与互助</div>
+            <h1>今天想找什么？</h1>
+          </div>
+          <div class="hh-badge">公益</div>
+        </div>
+        <button type="button" class="home-search" data-nav="search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></svg>
+          <span>搜物品、地点、失物…</span>
+          <i>搜索</i>
+        </button>
+        <div class="hh-stats">
+          <span class="stat-pill s-open"><b id="statOpen">—</b> 条在找</span>
+          <span class="stat-pill s-done"><b id="statClosed">—</b> 件已找回</span>
+          <span class="stat-pill s-free">免费使用</span>
+        </div>
+      </section>
+      <div class="quick-v2">
+        <button type="button" data-publish="lost"><b>寻物</b><span>我丢东西了</span></button>
+        <button type="button" data-publish="found"><b>招领</b><span>我捡到东西</span></button>
+        <button type="button" data-nav="ask"><b>问一句</b><span>校园问答</span></button>
+        <button type="button" class="js-quick-photo" data-photo-context="found"><b>拍照</b><span>拍一张再填</span></button>
+      </div>
+      <section class="home-latest" id="homeLatestWrap">
+        <div class="hl-head"><span>刚刚发生</span><button type="button" data-nav="lost">全部 ›</button></div>
+        <div class="hl-grid" id="homeLatest"></div>
+      </section>
       <button type="button" id="quickPhotoBtn" style="display:none"></button>
       <input type="file" id="quickPhotoInput" accept="image/*" capture="environment" style="display:none">
 
       <!-- 中央宣传窗 -->
       <div class="mem-win">
-        <span class="mw-tag">每日更新 · 左右滑动切换</span>
+        <span class="mw-tag">本期公告 · 左右滑动</span>
         <div class="mem-track" id="memTrack"></div>
         <button type="button" class="mw-nav prev" id="memPrev" aria-label="上一条">‹</button>
         <button type="button" class="mw-nav next" id="memNext" aria-label="下一条">›</button>
@@ -74,28 +103,28 @@ setTimeout(function(){
       </div>
 
       <div class="cat-group g-b">
-        <div class="cg-title"><span class="cg-dot"></span>爱心 · 求助</div>
+        <div class="cg-title"><span class="cg-seq">01</span>互助<span class="cg-en">MUTUAL AID</span></div>
         <div class="grid">
-          <div class="fn" data-help-cat="help_borrow"><div class="ic">🛠️</div><div class="lb">借用工具</div><div class="lb-sub">借个东西</div></div>
-          <div class="fn" data-help-cat="help_errand"><div class="ic">🏃</div><div class="lb">代办跑腿</div><div class="lb-sub">帮取帮带</div></div>
-          <div class="fn" data-help-cat="help_donate"><div class="ic">🎁</div><div class="lb">爱心捐赠</div><div class="lb-sub">闲置送人</div></div>
-          <div class="fn" data-help-cat="help_volunteer"><div class="ic">🤝</div><div class="lb">志愿帮忙</div><div class="lb-sub">找人搭把手</div></div>
+          <div class="fn" data-help-cat="help_borrow"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 12a9 9 0 0 1 18 0H3Z"/><path d="M12 12v6a2 2 0 0 0 4 0"/></svg></div><div class="lb">借用工具</div><div class="lb-sub">借伞 / 充电宝</div></div>
+          <div class="fn" data-help-cat="help_errand"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="13" cy="4" r="1.8"/><path d="M10 21l2-5 3 2 2-5"/><path d="M7 21l2-6-2-4 4-2 3 3"/></svg></div><div class="lb">代办跑腿</div><div class="lb-sub">帮取帮带</div></div>
+          <div class="fn" data-help-cat="help_donate"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="8" width="18" height="12" rx="1"/><path d="M3 12h18M12 8v12"/><path d="M12 8c-2-4-6-3-5 0M12 8c2-4 6-3 5 0"/></svg></div><div class="lb">爱心捐赠</div><div class="lb-sub">闲置送人</div></div>
+          <div class="fn" data-help-cat="help_volunteer"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 20s-7-4.3-7-9a4 4 0 0 1 7-2 4 4 0 0 1 7 2c0 4.7-7 9-7 9Z"/></svg></div><div class="lb">志愿帮忙</div><div class="lb-sub">找人搭把手</div></div>
         </div>
       </div>
 
       <div class="cat-group g-a">
-        <div class="cg-title"><span class="cg-dot"></span>失物 · 寻物</div>
+        <div class="cg-title"><span class="cg-seq">02</span>失物<span class="cg-en">LOST &amp; FOUND</span></div>
         <div class="grid">
-          <div class="fn" data-nav="lost"><div class="ic">🔎</div><div class="lb">失物招领</div></div>
-          <div class="fn" data-nav="found"><div class="ic">📣</div><div class="lb">寻物启事</div></div>
+          <div class="fn" data-nav="lost"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></svg></div><div class="lb">失物招领</div><div class="lb-sub">捡到的东西</div></div>
+          <div class="fn" data-nav="found"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 10v4l10 5V5L4 10Z"/><path d="M14 8h3a3 3 0 0 1 0 6h-3"/></svg></div><div class="lb">寻物启事</div><div class="lb-sub">丢了的东西</div></div>
         </div>
       </div>
 
-      <div class="sectitle">给初来清华的人 · 游客 / 新生 / 家长</div>
+      <div class="sectitle">03　给初来清华的人 · 游客 / 新生 / 家长</div>
       <div class="guide-banner" data-nav="guideHome">
         <div class="gb-text">
           <div class="gb-t1">初入清华园，你想问什么？</div>
-          <div class="gb-t2">访客怎么进校？校园卡丢了怎么办？食堂在哪？一键问 AI 或学长学姐。</div>
+          <div class="gb-t2">访客怎么进校？校园卡丢了怎么办？食堂在哪？问一句，少走弯路。</div>
         </div>
         <div class="gb-arrow">›</div>
       </div>
@@ -110,7 +139,7 @@ setTimeout(function(){
         <div class="flinks">
           <span data-nav="mine">我的发布</span><span data-nav="about">平台简介</span><span id="tourReplay">使用引导</span><span data-nav="contact">联系方式</span><span data-nav="legal">法律声明</span><span data-nav="privacy">隐私权保护</span>
         </div>
-        <div class="flic">测试版 · 暂未备案 · 仅用于校园公益</div>
+        <div class="flic">校园公益 · 暂未备案 · 免费使用</div>
         <div class="fcopy">Copyright © 2025-2026 清城牧羊 版权所有</div>
         <div class="ver">v3.2 · 2026-10-26 · 本机 / 同 Wi-Fi / 公网 三种模式自动切换</div>
       </div>
@@ -131,7 +160,7 @@ setTimeout(function(){
       <button class="btn" data-publish="lost">发布启事</button>
     </div>
     <div class="scroll">
-      <div class="tip-box">⚠️ 认领提示：认领物品前，请务必核对物品独有特征，请勿仅凭照片认领，谨防冒领。<br>交接请选择公共场所，不要前往偏僻地点，谨慎公开手机号、微信等私人联系方式。</div>
+      <div class="tip-box">认领提示：认领物品前，请务必核对物品独有特征，请勿仅凭照片认领，谨防冒领。<br>交接请选择公共场所，不要前往偏僻地点，谨慎公开手机号、微信等私人联系方式。</div>
       <div class="page-bar">
         <div class="pb-search"><svg class="pb-mag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></svg><input data-filter="lost" placeholder="搜索失物招领"></div>
         <button type="button" class="pb-ico primary" data-publish="lost" title="发布启事">＋</button>
@@ -149,7 +178,7 @@ setTimeout(function(){
       <button class="btn" data-publish="found">发布启事</button>
     </div>
     <div class="scroll">
-      <div class="tip-box">⚠️ 防骗提示：主动联系你并提供“验证码 / 转账 / 付费解锁”的，基本都是骗子。<br>真实认领请当面核对物品细节，平台不会收取任何费用。</div>
+      <div class="tip-box">防骗提示：主动联系你并提供“验证码 / 转账 / 付费解锁”的，基本都是骗子。<br>真实认领请当面核对物品细节，平台不会收取任何费用。</div>
       <div class="page-bar">
         <div class="pb-search"><svg class="pb-mag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></svg><input data-filter="found" placeholder="搜索寻物启事"></div>
         <button type="button" class="pb-ico primary" data-publish="found" title="发布启事">＋</button>
@@ -166,10 +195,10 @@ setTimeout(function(){
     <div class="scroll">
       <div class="pub-head">
         <div class="ph-t">发布一条启事</div>
-        <div class="ph-s">AI 先审文字和图片，违规内容发不出去</div>
-        <div class="ph-steps"><span>1 填写</span><i></i><span>2 AI 审核</span><i></i><span>3 上架</span></div>
+        <div class="ph-s">发布前先审文字和图片，违规内容发不出去</div>
+        <div class="ph-steps"><span>1 填写</span><i></i><span>2 内容审核</span><i></i><span>3 上架</span></div>
       </div>
-      <div class="warn-box">❗禁止发布现金、贵重物品、危险品、药品；虚假信息会被下架并限制发布权限。</div>
+      <div class="warn-box"><b>发布须知</b>：禁止发布现金、贵重物品、危险品、药品；虚假信息会被下架并限制发布权限。</div>
 
       <div class="type-tab">
         <div class="active" id="pubTabLost">我要寻物（东西丢了）</div>
@@ -221,8 +250,8 @@ setTimeout(function(){
           <label>物品描述 <span class="req">*</span></label>
           <textarea name="desc" maxlength="300" placeholder="颜色、划痕、标记……越具体越容易核对"></textarea>
           <div class="tip-small"><span id="descCount">0</span>/300 · 超过 60 字建议让 AI 精简</div>
-          <div class="tip-small" id="descWarn" style="display:none;color:#a15c00;margin-top:4px">字数较多，可能影响阅读，建议点上方「AI 帮我整理成模板」精简一下</div>
-          <button type="button" class="btn ghost" id="aiFormatBtn" style="width:100%;margin-top:8px">✨ AI 帮我整理成模板</button>
+          <div class="tip-small" id="descWarn" style="display:none;color:#a15c00;margin-top:4px">字数较多，可能影响阅读，建议点上方「帮我整理成模板」精简一下</div>
+          <button type="button" class="btn ghost" id="aiFormatBtn" style="width:100%;margin-top:8px">帮我整理成模板</button>
           <div class="errmsg"></div>
         </div>
 
@@ -276,7 +305,7 @@ setTimeout(function(){
         </div>
 
         <div class="pub-submit">
-        <button class="submit-btn" type="submit" id="submitBtn">提交发布 · AI 先审核</button>
+        <button class="submit-btn" type="submit" id="submitBtn">提交发布 · 先审后发</button>
         <div class="pub-note">提交后先审文字和图片，通过后同学才能看到</div>
         <button type="button" class="btn ghost" id="fillDemo" style="width:100%;margin:10px 0 20px;padding:11px">一键填入示例，快速体验</button>
         </div>
@@ -425,9 +454,9 @@ setTimeout(function(){
   <section class="screen" id="screen-guideHome">
     <div class="topbar"><div class="back" data-back>‹</div><div class="t">清华园指路</div></div>
     <div class="scroll">
-      <div class="hero"><h1>初入清华园，你想问什么？</h1><p>游客、新生、家长都能用：一键问 AI，或让学长学姐为你指路。</p></div>
+      <div class="hero"><h1>初入清华园，你想问什么？</h1><p>游客、新生、家长都能用：问一句，少走弯路。</p></div>
       <div class="guide-ai">
-        <div class="gai-t">🤖 问 AI · 进校、吃饭、丢东西，什么都能问</div>
+        <div class="gai-t"> 问一句 · 进校、吃饭、丢东西，都可以</div>
         <div class="gai-row">
           <input id="guideAskInput" maxlength="60" placeholder="例如：访客怎么进校？校园卡丢了怎么办？">
           <button class="btn" id="guideAskBtn">问 AI</button>
@@ -441,12 +470,12 @@ setTimeout(function(){
       </div>
       <div class="sectitle">选择你想用的服务</div>
       <div class="g-card" data-nav="map" style="background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px 16px;margin-bottom:12px;display:flex;align-items:center;gap:14px;cursor:pointer;">
-        <div style="width:52px;height:52px;border-radius:14px;background:var(--purple-ll);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;">🗺️</div>
+        <div style="width:52px;height:52px;border-radius:14px;background:var(--purple-ll);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;">图</div>
         <div><div style="font-size:16px;font-weight:700;">清华大学全景地图</div><div style="font-size:12.5px;color:var(--sub);margin-top:3px;">文旅图风格全图导览，地标一目了然</div></div>
         <div style="margin-left:auto;color:var(--purple);font-size:22px;font-weight:700;">›</div>
       </div>
       <div class="g-card" data-nav="faqList" style="background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px 16px;margin-bottom:12px;display:flex;align-items:center;gap:14px;cursor:pointer;">
-        <div style="width:52px;height:52px;border-radius:14px;background:var(--purple-ll);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;">❓</div>
+        <div style="width:52px;height:52px;border-radius:14px;background:var(--purple-ll);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;">问</div>
         <div><div style="font-size:16px;font-weight:700;">来清华大学常问的问题</div><div style="font-size:12.5px;color:var(--sub);margin-top:3px;">图文结合的答案，新生/访客必看</div></div>
         <div style="margin-left:auto;color:var(--purple);font-size:22px;font-weight:700;">›</div>
       </div>
@@ -535,7 +564,7 @@ setTimeout(function(){
       <button class="btn" id="claimSend" style="width:100%">发送认领申请</button>
       <div class="close" id="claimCancel" style="margin-top:6px">取消</div>
     </div>
-    <div class="close" id="isReport" style="display:none;color:#c0392b;margin-top:8px">🚩 举报这条信息</div>
+    <div class="close" id="isReport" style="display:none;color:#c0392b;margin-top:8px">举报这条信息</div>
     <div class="tip-small" id="reportHint" style="display:none;margin-top:4px;line-height:1.6">
       遇到索要验证码、要求转账、发送陌生链接等诈骗行为，请直接拨打 <b>110</b> 报警，并保留聊天记录。
     </div>
@@ -552,7 +581,7 @@ setTimeout(function(){
     <div class="cs-scan" id="csScan" style="display:none"></div>
     <div class="cs-tip" id="csTip">只有细节真的对得上，才点「通过」。通过后双方才会看到联系方式。</div>
     <div id="csAgentWrap" style="margin:10px 0 12px">
-      <button class="btn ghost" id="csAgentBtn" style="width:100%">🔍 让 AI 帮我核验一下</button>
+      <button class="btn ghost" id="csAgentBtn" style="width:100%">让 AI 核验一下</button>
       <div class="agent-box" id="csAgentBox" style="display:none">
         <div class="agent-title">AI 核验过程</div>
         <div id="csAgentSteps"></div>
@@ -592,6 +621,12 @@ setTimeout(function(){
       <button class="btn ghost" id="tdBack" style="width:100%;margin-top:8px">返回修改</button>
     </div>
   </div>
+  <nav class="bottom-nav" id="bottomNav">
+    <button type="button" data-nav="home" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg><span>首页</span></button>
+    <button type="button" data-nav="lost"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></svg><span>失物</span></button>
+    <button type="button" data-nav="help"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 20s-7-4.3-7-9a4 4 0 0 1 7-2 4 4 0 0 1 7 2c0 4.7-7 9-7 9Z"/></svg><span>互助</span></button>
+    <button type="button" data-nav="mine"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg><span>我的</span></button>
+  </nav>
 </div>
 
 <div class="tour show" id="tourMask">
