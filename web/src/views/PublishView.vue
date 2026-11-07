@@ -8,7 +8,15 @@ const props = defineProps({
 })
 const emit = defineEmits(['nav'])
 
-const isHelp = computed(() => props.type === 'help')
+const kind = ref(props.type)
+const helpCatLocal = ref(props.helpCat)
+const isHelp = computed(() => kind.value === 'help')
+const helpCats = [
+  { id: 'help_borrow', name: '借用工具' },
+  { id: 'help_errand', name: '代办跑腿' },
+  { id: 'help_donate', name: '爱心捐赠' },
+  { id: 'help_volunteer', name: '志愿帮忙' }
+]
 const form = reactive({
   title: '',
   desc: '',
@@ -42,13 +50,13 @@ function onPhoto(e) {
   reader.readAsDataURL(file)
 }
 
-const typeLabel = computed(() => isHelp.value ? '爱心求助' : (props.type === 'lost' ? '寻物启事' : '失物招领'))
+const typeLabel = computed(() => isHelp.value ? '爱心求助' : (kind.value === 'lost' ? '寻物启事' : '失物招领'))
 const helpName = computed(() => ({
   help_borrow: '借用工具',
   help_errand: '代办跑腿',
   help_donate: '爱心捐赠',
   help_volunteer: '志愿帮忙'
-}[props.helpCat] || '爱心求助'))
+}[helpCatLocal.value] || '爱心求助'))
 
 async function submit() {
   error.value = ''
@@ -57,9 +65,9 @@ async function submit() {
   submitting.value = true
   try {
     const item = {
-      type: isHelp.value ? 'help' : props.type,
-      cat: isHelp.value ? props.helpCat : 'other',
-      helpCat: isHelp.value ? props.helpCat : '',
+      type: isHelp.value ? 'help' : kind.value,
+      cat: isHelp.value ? helpCatLocal.value : 'other',
+      helpCat: isHelp.value ? helpCatLocal.value : '',
       title: form.title.trim(),
       desc: form.desc.trim(),
       place: form.place.trim() || '未填写地点',
@@ -81,22 +89,32 @@ async function submit() {
 <template>
   <section class="screen active" id="screen-publish">
     <div class="topbar">
-      <div class="back" @click="$emit('nav', isHelp ? 'help' : type)">‹</div>
+      <div class="back" @click="$emit('nav', isHelp ? 'help' : kind)">‹</div>
       <div class="t">{{ isHelp ? '发布爱心求助' : '发布启事' }}</div>
     </div>
 
     <div class="scroll">
       <div class="pub-head">
         <div class="ph-t">{{ isHelp ? '发布一条爱心求助' : '发布一条启事' }}</div>
-        <div class="ph-s">{{ isHelp ? helpName : (type === 'lost' ? '寻物启事 · 丢了东西' : '失物招领 · 捡到东西') }}</div>
+        <div class="ph-s">{{ isHelp ? helpName : (kind === 'lost' ? '寻物启事 · 丢了东西' : '失物招领 · 捡到东西') }}</div>
         <div class="ph-steps"><span>1 填写</span><span>2 AI 审核</span><span>3 上架</span></div>
+      </div>
+
+      <div class="type-tab" style="margin-bottom:10px">
+        <button type="button" :class="{ active: kind === 'lost' }" @click="kind = 'lost'">寻物启事</button>
+        <button type="button" :class="{ active: kind === 'found' }" @click="kind = 'found'">失物招领</button>
+        <button type="button" :class="{ active: kind === 'help' }" @click="kind = 'help'">爱心求助</button>
+      </div>
+
+      <div v-if="isHelp" class="help-picker">
+        <button v-for="c in helpCats" :key="c.id" type="button" :class="{ on: helpCatLocal === c.id }" @click="helpCatLocal = c.id">{{ c.name }}</button>
       </div>
 
       <div v-if="result" class="okpanel" style="margin-top:14px">
         <div class="big">✓</div>
         <h2>{{ result.status === 'approved' ? '已发布成功' : result.status === 'rejected' ? '内容被拦截' : '已提交，等待审核' }}</h2>
         <p>{{ result.rejectReason || 'AI 会先审核文字和图片，通过后其他同学才能看到。' }}</p>
-        <button type="button" class="btn" style="width:100%" @click="$emit('nav', isHelp ? 'help' : type)">返回列表</button>
+        <button type="button" class="btn" style="width:100%" @click="$emit('nav', isHelp ? 'help' : kind)">返回列表</button>
       </div>
 
       <template v-else>
@@ -190,4 +208,13 @@ async function submit() {
   text-align: center;
   padding: 4px 8px 20px;
 }
+</style>
+
+<style>
+.type-tab { display: flex; gap: 4px; background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 4px; }
+.type-tab button { flex: 1; border: 0; background: transparent; border-radius: 10px; padding: 9px 4px; font-family: inherit; font-size: 11px; color: var(--sub); }
+.type-tab button.active { background: linear-gradient(135deg, #5B2A91, #7A3CB0); color: #fff; font-weight: 600; }
+.help-picker { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-bottom: 10px; }
+.help-picker button { border: 1px solid var(--line); border-radius: 11px; background: #fff; padding: 9px; font-family: inherit; font-size: 10.5px; color: var(--sub); }
+.help-picker button.on { background: #F4EEFB; border-color: #5B2A91; color: #5B2A91; font-weight: 600; }
 </style>
