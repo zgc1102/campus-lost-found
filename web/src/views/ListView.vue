@@ -16,12 +16,14 @@ const claimPhone = ref('')
 const claimState = ref('')
 const claiming = ref(false)
 const reportState = ref('')
+const claimOpen = ref(false)
 
 function openDetail(it) {
   selected.value = it
   claimMsg.value = ''
   claimPhone.value = ''
   claimState.value = ''
+  claimOpen.value = false
 }
 async function submitClaim() {
   if (!selected.value) return
@@ -109,6 +111,9 @@ function actionLabel(x) {
   if (x.myClaim === 'need_more') return '补充信息'
   if (x.myClaim === 'rejected') return '重新申请'
   return '认领'
+}
+function canClaim(x) {
+  return x.status === 'approved' && !['pending', 'accepted', 'completed'].includes(x.myClaim)
 }
 function openOldPublish() {
   emit('publish', props.type)
@@ -216,10 +221,15 @@ function openOldHelp() {
       <div class="sa">{{ selected.desc || '暂无描述' }}</div>
       <div class="sa" style="margin-top:8px">📍 {{ selected.place || '未填写地点' }} · {{ fmt(selected.createdAt) }}</div>
       <div class="sa" style="margin-top:8px">联系方式：{{ (selected.contact && selected.contact.phone) || '认领时由发布者确认' }}</div>
-      <textarea v-model="claimMsg" maxlength="200" placeholder="写下只有失主知道的细节，例如：伞骨内侧缠过胶带" style="width:100%;box-sizing:border-box;margin-top:10px;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:11px;padding:10px;font-family:inherit;font-size:11px;min-height:70px"></textarea>
-      <input v-model="claimPhone" maxlength="30" placeholder="你的联系方式（手机号 / 微信号）" style="width:100%;box-sizing:border-box;margin-top:7px;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:11px;padding:10px;font-family:inherit;font-size:11px">
-      <div v-if="claimState" class="sa" style="margin-top:6px">{{ claimState }}</div>
-      <button type="button" class="btn" style="width:100%;margin-top:12px" :disabled="claiming" @click="submitClaim">{{ claiming ? '发送中…' : '发送认领申请' }}</button>
+      <button v-if="!claimOpen" type="button" class="btn" style="width:100%;margin-top:14px" :disabled="!canClaim(selected)" @click="canClaim(selected) && (claimOpen = true)">{{ actionLabel(selected) }}</button>
+      <div v-if="claimOpen" class="claimbox">
+        <div class="tip-small" style="margin:0 0 8px">写下只有失主知道的细节，对方核对后才会通过</div>
+        <textarea v-model="claimMsg" maxlength="200" placeholder="例如：伞骨内侧缠过胶带，伞柄上有一张卡通贴纸" style="width:100%;box-sizing:border-box;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:11px;padding:10px;font-family:inherit;font-size:11px;min-height:70px"></textarea>
+        <input v-model="claimPhone" maxlength="30" placeholder="你的联系方式（手机号 / 微信号）" style="width:100%;box-sizing:border-box;margin-top:7px;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:11px;padding:10px;font-family:inherit;font-size:11px">
+        <div v-if="claimState" class="sa" style="margin-top:6px">{{ claimState }}</div>
+        <button type="button" class="btn" style="width:100%;margin-top:10px" :disabled="claiming" @click="submitClaim">{{ claiming ? '发送中…' : '发送认领申请' }}</button>
+        <div class="close" @click="claimOpen = false">取消</div>
+      </div>
       <div v-if="reportState" class="sa" style="margin-top:6px">{{ reportState }}</div>
       <div class="close" @click="reportItem">🚩 举报这条信息</div>
       <div class="close" @click="selected = null">收起</div>
