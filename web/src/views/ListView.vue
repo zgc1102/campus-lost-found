@@ -29,8 +29,13 @@ async function submitClaim() {
   claiming.value = true
   claimState.value = ''
   try {
-    await api.claim(selected.value.id, { message: claimMsg.value.trim(), contact: claimPhone.value.trim() })
-    claimState.value = '已发送，等对方确认'
+    if (selected.value.myClaim === 'need_more' && selected.value.myClaimId) {
+      await api.supplement(selected.value.myClaimId, { message: claimMsg.value.trim(), contact: claimPhone.value.trim() })
+      claimState.value = '已补充，等对方再看'
+    } else {
+      await api.claim(selected.value.id, { message: claimMsg.value.trim(), contact: claimPhone.value.trim() })
+      claimState.value = '已发送，等对方确认'
+    }
   } catch (e) {
     claimState.value = e.message || '发送失败'
   } finally {
@@ -97,6 +102,13 @@ function thumbText(x) {
 function chipText(x) {
   if (!x.fields) return []
   return Object.values(x.fields).filter(Boolean).slice(0, 3)
+}
+function actionLabel(x) {
+  if (x.myClaim === 'pending') return '已申请'
+  if (x.myClaim === 'accepted' || x.myClaim === 'completed') return '已通过'
+  if (x.myClaim === 'need_more') return '补充信息'
+  if (x.myClaim === 'rejected') return '重新申请'
+  return '认领'
 }
 function openOldPublish() {
   emit('publish', props.type)
@@ -187,7 +199,7 @@ function openOldHelp() {
             </div>
             <div class="row">
               <span class="meta">📍 {{ it.place || '未填写地点' }} · {{ fmt(it.createdAt) }}</span>
-              <button class="btn" type="button" @click.stop="openDetail(it)">认领</button>
+              <button class="btn" type="button" @click.stop="openDetail(it)">{{ actionLabel(it) }}</button>
             </div>
           </div>
         </article>

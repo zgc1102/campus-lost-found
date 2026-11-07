@@ -53,6 +53,9 @@ export const api = {
   claimAction(id, body) {
     return call('/claims/' + encodeURIComponent(id), { method: 'PATCH', body: JSON.stringify(body || {}) })
   },
+  supplement(id, body) {
+    return call('/claims/' + encodeURIComponent(id) + '/supplement', { method: 'POST', body: JSON.stringify(body || {}) })
+  },
   mine() {
     return call('/mine')
   },
@@ -88,6 +91,9 @@ export const api = {
   },
   adminAnnouncements(token) {
     return call('/admin/announcements', { headers: { 'X-Admin-Token': token } })
+  },
+  adminDeployLog(token) {
+    return call('/admin/deploy-log', { headers: { 'X-Admin-Token': token } })
   },
   adminPatch(id, body, token) {
     return call('/admin/items/' + encodeURIComponent(id), { method: 'PATCH', headers: { 'X-Admin-Token': token }, body: JSON.stringify(body) })

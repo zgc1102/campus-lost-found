@@ -12,6 +12,8 @@ const error = ref('')
 const tab = ref('pending')
 const config = ref(null)
 const accounts = ref([])
+const announcements = ref([])
+const deployLog = ref([])
 
 onMounted(() => { if (token.value) load() })
 
@@ -63,6 +65,15 @@ async function switchTab(t) {
   if (t === 'accounts') {
     try { accounts.value = await api.adminAccounts(token.value) } catch (e) { error.value = e.message }
   }
+  if (t === 'announcements') {
+    try { announcements.value = await api.adminAnnouncements(token.value) } catch (e) { error.value = e.message }
+  }
+  if (t === 'deploy') {
+    try {
+      const d = await api.adminDeployLog(token.value)
+      deployLog.value = Array.isArray(d) ? d : (d.items || d.logs || [])
+    } catch (e) { error.value = e.message }
+  }
 }
 </script>
 
@@ -94,6 +105,8 @@ async function switchTab(t) {
           <button type="button" :class="{ on: tab === 'all' }" @click="switchTab('all')">全部</button>
           <button type="button" :class="{ on: tab === 'config' }" @click="switchTab('config')">AI</button>
           <button type="button" :class="{ on: tab === 'accounts' }" @click="switchTab('accounts')">账号</button>
+          <button type="button" :class="{ on: tab === 'announcements' }" @click="switchTab('announcements')">公告</button>
+          <button type="button" :class="{ on: tab === 'deploy' }" @click="switchTab('deploy')">部署</button>
         </div>
         <div v-if="tab === 'config'" class="form-card">
           <div class="fc-title">AI 配置</div>
@@ -102,6 +115,18 @@ async function switchTab(t) {
         <div v-else-if="tab === 'accounts'" class="form-card">
           <div class="fc-title">账号</div>
           <div v-for="a in accounts" :key="a.id" class="sa" style="padding:7px 0;border-bottom:1px solid var(--line)">{{ a.phone }} · {{ a.banned ? '封禁' : '正常' }}</div>
+        </div>
+        <div v-else-if="tab === 'announcements'" class="form-card">
+          <div class="fc-title">公告</div>
+          <div v-for="a in announcements" :key="a.id || a.title" class="sa" style="padding:7px 0;border-bottom:1px solid var(--line)">
+            <b>{{ a.title }}</b><br>{{ a.body || a.text || '' }}
+          </div>
+        </div>
+        <div v-else-if="tab === 'deploy'" class="form-card">
+          <div class="fc-title">部署日志</div>
+          <div v-for="(l, i) in deployLog" :key="i" class="sa" style="padding:6px 0;border-bottom:1px solid var(--line)">
+            {{ l.time || l.at || '' }} {{ l.text || l.msg || JSON.stringify(l) }}
+          </div>
         </div>
         <template v-else>
           <div v-if="loading" class="empty">正在读取…</div>
