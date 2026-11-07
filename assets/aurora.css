@@ -372,3 +372,47 @@ body:has(#helpSheet.show) .bottom-nav{transform:translate(-50%,120%);}
 .tone-slate{background:linear-gradient(150deg,#F1F0FA,#E1DFF1);}
 .tone-violet{background:linear-gradient(150deg,#F3EAFE,#E3D3F7);}
 .tone-blue{background:linear-gradient(150deg,#EEF3FF,#DDE7FA);}
+
+/* 六个入口：纵向档案式重排 */
+.entry-grid{
+  display:block;background:#fff;border:1px solid var(--line);border-radius:20px;
+  overflow:hidden;box-shadow:0 10px 30px rgba(59,19,95,.06);counter-reset:entry;
+}
+.entry-card{
+  position:relative;display:grid;grid-template-columns:26px 1fr 58px 16px;
+  align-items:center;gap:10px;min-height:0;padding:11px 13px;
+  border:0;border-bottom:1px solid var(--line);border-radius:0;
+  background:#fff!important;box-shadow:none;overflow:visible;
+  counter-increment:entry;
+}
+.entry-card:last-child{border-bottom:0;}
+.entry-card:active{background:#FAF6FF!important;}
+.entry-card::before{
+  content:"0" counter(entry);grid-column:1;align-self:start;
+  font-size:9px;letter-spacing:.06em;color:#B4A6C6;padding-top:8px;
+}
+.entry-card .entry-art{
+  grid-column:3;width:58px;height:58px;border-radius:15px;
+  background:#F4EEFB;margin:0;display:flex;align-items:center;justify-content:center;
+}
+.entry-card .entry-art svg{width:48px;height:48px;}
+.entry-card .entry-copy{grid-column:2;align-self:center;}
+.entry-card .entry-copy b{font-size:13.5px;font-weight:600;color:var(--ink);}
+.entry-card .entry-copy i{font-size:9.5px;color:var(--sub);margin-top:2px;}
+.entry-card .entry-arrow{grid-column:4;position:static;font-size:12px;color:#B4A6C6;opacity:1;}
+.entry-card.tone-lilac .entry-art{background:linear-gradient(145deg,#F3E8FF,#E4D2F7);}
+.entry-card.tone-peach .entry-art{background:linear-gradient(145deg,#FFF0E7,#F6DACB);}
+.entry-card.tone-gold .entry-art{background:linear-gradient(145deg,#FFF7E3,#F2E1BC);}
+.entry-card.tone-slate .entry-art{background:linear-gradient(145deg,#F3F1FB,#E2DFF2);}
+.entry-card.tone-violet .entry-art{background:linear-gradient(145deg,#F2E7FF,#E1CFF6);}
+.entry-card.tone-blue .entry-art{background:linear-gradient(145deg,#EEF4FF,#DDE8FA);}
+
+/* 六入口：强制单行排列 */
+.entry-card{display:flex!important;align-items:center;gap:10px;min-height:78px!important;padding:10px 13px!important;}
+.entry-card::before{
+  content:"0" counter(entry);order:0;flex:0 0 24px;width:24px;
+  font-size:9px;letter-spacing:.06em;color:#B4A6C6;align-self:center;padding:0;
+}
+.entry-card .entry-copy{order:2;flex:1;min-width:0;text-align:left;}
+.entry-card .entry-art{order:3;flex:0 0 58px;width:58px!important;height:58px!important;margin:0!important;}
+.entry-card .entry-arrow{order:4;flex:0 0 14px;position:static!important;font-size:12px;color:#B4A6C6;opacity:1;}
