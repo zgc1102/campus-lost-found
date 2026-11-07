@@ -97,6 +97,10 @@ onUnmounted(() => clearTimeout(timer))
 function replayTour() {
   window.dispatchEvent(new Event('sg:tour'))
 }
+function openMemo(s) {
+  sessionStorage.setItem('sg:memo', JSON.stringify(s))
+  emit('nav', 'memorial')
+}
 </script>
 
 <template>
@@ -124,7 +128,7 @@ function replayTour() {
       <div class="mem-win">
         <span class="mw-tag" style="cursor:pointer" @click="$emit('nav', 'notices')">公告通知 · 左右滑动</span>
         <div class="mem-track">
-          <div class="mem-slide">
+          <div class="mem-slide" @click="openMemo(slides[slideIndex])">
             <div class="mem-star">{{ slides[slideIndex].star }}</div>
             <div><div class="mn">{{ slides[slideIndex].name }}</div><div class="ms">{{ slides[slideIndex].sub }}</div></div>
           </div>
