@@ -1,11 +1,11 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
-import { api, oldUrl } from '../api'
+import { api } from '../api'
 
 const props = defineProps({
   type: { type: String, default: 'lost' }
 })
-const emit = defineEmits(['nav'])
+const emit = defineEmits(['nav', 'publish'])
 
 const items = ref([])
 const loading = ref(true)
@@ -64,13 +64,13 @@ function chipText(x) {
   return Object.values(x.fields).filter(Boolean).slice(0, 3)
 }
 function openOldPublish() {
-  location.href = oldUrl('home', 'open=publish&type=' + props.type)
+  emit('publish', props.type)
 }
 function openOldRadar() {
-  location.href = oldUrl('lost')
+  emit('nav', 'radar')
 }
 function openOldHelp() {
-  location.href = oldUrl('help')
+  emit('nav', 'help')
 }
 </script>
 

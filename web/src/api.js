@@ -36,6 +36,12 @@ export const api = {
   announcements() {
     return call('/announcements').catch(() => [])
   },
+  create(item) {
+    return call('/items', { method: 'POST', body: JSON.stringify(item) })
+  },
+  mine() {
+    return call('/mine')
+  },
   radar(body) {
     return call('/agent/radar', { method: 'POST', body: JSON.stringify(body) })
   },
