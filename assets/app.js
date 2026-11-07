@@ -2997,6 +2997,8 @@ async function openRadarItem(id){
   if(!id){ toast('没有找到可扫描的条目'); return; }
   radarCurrentItem = id;
   radarQueryData = null;
+  const rq = document.querySelector('.radar-query');
+  if(rq) rq.style.display = 'block';
   const sh = document.getElementById('radarSheet');
   const sub = document.getElementById('radarSub');
   if(sub) sub.textContent = '正在扫描全站信息…';
@@ -3017,6 +3019,8 @@ async function openRadarItem(id){
 
 async function scanRadarQuery(){
   if(!API_BASE){ toast('雷达需要在共享模式/公网地址下使用'); return; }
+  const rq = document.querySelector('.radar-query');
+  if(rq) rq.style.display = 'block';
   const title = (document.getElementById('radarQTitle').value || '').trim();
   const place = (document.getElementById('radarQPlace').value || '').trim();
   const cat = document.getElementById('radarQCat').value || 'other';
@@ -3195,7 +3199,7 @@ async function openDetectiveForType(type){
   const own = (list || []).filter(function(x){
     return x && x.type === type && x.status !== 'withdrawn' && x.status !== 'rejected';
   }).sort(function(a,b){ return (b.createdAt || 0) - (a.createdAt || 0); })[0];
-  if(!own){ toast('先发一条寻物启事，再让侦探推理'); return; }
+  if(!own){ openBlankDetective(); return; }
   radarCurrentItem = own.id;
   const sh = document.getElementById('radarSheet');
   const sub = document.getElementById('radarSub');
@@ -3211,7 +3215,64 @@ async function openDetectiveForType(type){
     radarLoading('推理失败：' + ((e && e.message) || '请稍后重试'));
   }
 }
-document.getElementById('homeDetectiveBtn') && (document.getElementById('homeDetectiveBtn').onclick = function(){ openDetectiveForType('lost'); });
+function renderDetectiveStart(){
+  const body = document.getElementById('radarBody');
+  const foot = document.getElementById('radarFoot');
+  const sub = document.getElementById('radarSub');
+  const titleEl = document.querySelector('.ag-title b');
+  const rq = document.querySelector('.radar-query');
+  if(rq) rq.style.display = 'none';
+  if(titleEl) titleEl.textContent = '寻物侦探';
+  if(sub) sub.textContent = '没发布也能用：填线索，直接推理';
+  if(foot) foot.style.display = 'none';
+  if(!body) return;
+  body.innerHTML =
+    '<div class="dt-start">' +
+      '<div class="ds-kicker">NO POST? NO PROBLEM</div>' +
+      '<div class="ds-title">不用先发布，填线索就能推</div>' +
+      '<label>丢了什么 <b>*</b></label><input id="dsTitle" maxlength="40" placeholder="例如：校园卡 / 黑色键盘 / 雨伞">' +
+      '<label>在哪丢的</label><input id="dsPlace" maxlength="40" placeholder="例如：图书馆三楼">' +
+      '<label>今天走过</label><textarea id="dsRoute" maxlength="120" placeholder="例如：图书馆 → 食堂 → 未名湖 → 宿舍 → 快递点"></textarea>' +
+      '<div class="dt-carry"><span>平时放在</span>' +
+        ['口袋','背包','手持'].map(function(c){ return '<button type="button" data-ds-carry="' + c + '">' + c + '</button>'; }).join('') +
+      '</div>' +
+      '<label>最后确认还在</label><input id="dsLastSeen" maxlength="50" placeholder="例如：15:00 在图书馆">' +
+      '<button type="button" class="ds-run" id="dsRun">开始推理</button>' +
+    '</div>';
+  let carry = '';
+  document.querySelectorAll('#radarBody [data-ds-carry]').forEach(function(b){
+    b.onclick = function(){
+      carry = b.getAttribute('data-ds-carry') || '';
+      document.querySelectorAll('#radarBody [data-ds-carry]').forEach(function(x){ x.classList.toggle('on', x === b); });
+    };
+  });
+  const run = document.getElementById('dsRun');
+  if(run) run.onclick = function(){
+    const title = (document.getElementById('dsTitle').value || '').trim();
+    if(title.length < 2){ toast('先写一下丢了什么'); return; }
+    const place = (document.getElementById('dsPlace').value || '').trim();
+    radarCurrentItem = null;
+    radarQueryData = {title:title, place:place, cat:'other', type:'lost'};
+    radarRoute = (document.getElementById('dsRoute').value || '').trim();
+    radarCarry = carry;
+    radarLastSeen = (document.getElementById('dsLastSeen').value || '').trim();
+    openDetective();
+  };
+}
+
+function openBlankDetective(){
+  if(!API_BASE){ toast('侦探需要在共享模式/公网地址下使用'); return; }
+  radarCurrentItem = null;
+  radarQueryData = null;
+  radarRoute = '';
+  radarCarry = '';
+  radarLastSeen = '';
+  const sh = document.getElementById('radarSheet');
+  if(sh) sh.classList.add('show');
+  renderDetectiveStart();
+}
+
+document.getElementById('homeDetectiveBtn') && (document.getElementById('homeDetectiveBtn').onclick = openBlankDetective);
 
 /* ============ 拾光码 ============ */
 function openTagSheet(){
