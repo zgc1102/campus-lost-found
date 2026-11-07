@@ -132,11 +132,25 @@ function openMatch(m) {
 
       <template v-if="detective">
         <div class="dt-summary" style="margin-top:12px">{{ detective.summary }}</div>
-        <div class="rd-section-title">建议按这个顺序找</div>
-        <div v-for="(a, i) in detective.actions" :key="i" class="radar-action" :style="{ animationDelay: (i * 0.12) + 's' }">
-          <span class="ra-num">{{ i + 1 }}</span>
-          <span><b>{{ a.title }}</b><i>{{ a.detail }}</i></span>
+        <div class="dt-title">建议按这个顺序找</div>
+        <div v-for="(a, i) in detective.actions" :key="i" class="dt-action" :style="{ animationDelay: (i * 0.12) + 's' }">
+          <span class="dt-num">{{ i + 1 }}</span>
+          <span class="dt-act-main"><b>{{ a.title }}</b><span>{{ a.detail }}</span></span>
         </div>
+        <template v-if="detective.hotspots && detective.hotspots.length">
+          <div class="dt-title">高频区域</div>
+          <div class="rd-hot">
+            <div v-for="h in detective.hotspots" :key="h.place" class="rd-hot-row">
+              <span class="rd-hot-name">{{ h.place }}</span>
+              <span class="rd-bar"><i :style="{ width: Math.max(6, h.share || 0) + '%' }" /></span>
+              <span class="rd-hot-n">{{ h.count }} 条</span>
+            </div>
+          </div>
+        </template>
+        <template v-if="detective.timeline && detective.timeline.length">
+          <div class="dt-title">时间线</div>
+          <div v-for="(t, i) in detective.timeline" :key="i" class="dt-time"><b>{{ t.time }}</b><span>{{ t.label }}</span></div>
+        </template>
         <div class="dt-note">{{ detective.disclaimer }}</div>
         <button type="button" class="dt-ask" @click="askCampus">还拿不准？问校园 AI</button>
       </template>
