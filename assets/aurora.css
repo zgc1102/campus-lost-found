@@ -465,3 +465,35 @@ body:has(#helpSheet.show) .bottom-nav{transform:translate(-50%,120%);}
 .entry-list .entry-card .entry-art svg{width:46px;height:46px;}
 .entry-list .entry-card .entry-arrow{order:4;flex:0 0 14px;position:static!important;font-size:12px;color:#B4A6C6;opacity:1;}
 .entry-list .entry-card:active{background:#FAF6FF;}
+
+/* 两栏并排：01 爱心 / 02 失物 */
+.entry-split{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start;margin:0 0 16px;}
+.entry-split .entry-section{margin:0;}
+.entry-split .entry-head{display:block;padding:0 1px 7px;margin-bottom:8px;}
+.entry-split .eh-kicker{font-size:7px;letter-spacing:.16em;margin-bottom:3px;}
+.entry-split .entry-head h2{font-size:15.5px;line-height:1.2;}
+.entry-split .eh-count{display:inline-block;margin-top:5px;font-size:8px;padding:2px 6px;}
+.entry-split .entry-head::after{font-size:30px;right:2px;bottom:18px;}
+.entry-split .entry-list{border-radius:16px;}
+.entry-split .entry-list .entry-card{min-height:56px!important;padding:7px 8px!important;gap:6px;}
+.entry-split .entry-list .entry-card::before{flex:0 0 16px;width:16px;font-size:8px;}
+.entry-split .entry-list .entry-art{flex:0 0 38px;width:38px!important;height:38px!important;border-radius:11px;}
+.entry-split .entry-list .entry-art svg{width:31px;height:31px;}
+.entry-split .entry-list .entry-copy b{font-size:11px;}
+.entry-split .entry-list .entry-copy i{font-size:8px;margin-top:1px;}
+.entry-split .entry-list .entry-arrow{flex:0 0 10px;font-size:10px;}
+
+/* 隐藏侧边滚动条 */
+html,body{scrollbar-width:none;-ms-overflow-style:none;}
+html::-webkit-scrollbar,body::-webkit-scrollbar{display:none;width:0;height:0;}
+.phone,.scroll,.hp-body{scrollbar-width:none;-ms-overflow-style:none;}
+.phone::-webkit-scrollbar,.scroll::-webkit-scrollbar,.hp-body::-webkit-scrollbar{display:none;width:0;height:0;}
+
+.lost-mini{
+  margin-top:8px;padding:10px 8px;text-align:center;
+  background:linear-gradient(145deg,#F7F0FF,#EEE2FA);
+  border:1px solid #E4D5F4;border-radius:14px;
+}
+.lost-mini b{display:block;font-size:21px;font-weight:600;color:var(--primary);line-height:1.1;}
+.lost-mini span{display:block;font-size:9px;color:var(--sub);margin-top:1px;}
+.lost-mini i{display:block;font-style:normal;font-size:7.5px;color:#A99BB9;margin-top:5px;letter-spacing:.03em;}

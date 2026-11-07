@@ -2949,6 +2949,7 @@ function renderHomeStats(){
   const set = function(id, v){ const el = document.getElementById(id); if(el) el.textContent = v; };
   set('hsTotal', pub.length);
   set('hsClosed', closed.length);
+  set('lostMini', closed.length);
   set('hsToday', today.length);
 }
 
