@@ -1302,6 +1302,7 @@ document.addEventListener('click', e=>{
     if(t==='legal'){show('legal');return;}
     if(t==='privacy'){show('privacy');return;}
     if(t==='mine'){renderMine();show('mine');return;}
+    if(t==='help'){renderHelp();show('help');return;}
     show(t); return;
   }
   const mem=e.target.closest('[data-mem]');
@@ -2834,4 +2835,84 @@ window.openTour = openTour;
     stage.style.transform = 'rotateX(' + (-y * 9) + 'deg) rotateY(' + (x * 12) + 'deg)';
   });
   stage.addEventListener('pointerleave', function(){ stage.style.transform = ''; });
+})();
+
+/* 爱心求助：整页发布 + 底部导航 */
+(function(){
+  const sel = document.getElementById('helpCatSel');
+  const cards = document.getElementById('helpCatCards');
+  function syncCards(){
+    if(!sel || !cards) return;
+    cards.querySelectorAll('[data-hp-cat]').forEach(function(b){
+      b.classList.toggle('on', b.getAttribute('data-hp-cat') === sel.value);
+    });
+  }
+  if(cards && sel){
+    cards.addEventListener('click', function(e){
+      const b = e.target.closest('[data-hp-cat]');
+      if(!b) return;
+      sel.value = b.getAttribute('data-hp-cat');
+      syncCards();
+    });
+    sel.addEventListener('change', syncCards);
+    const pub = document.getElementById('helpPublishBtn');
+    if(pub) pub.addEventListener('click', function(){ setTimeout(syncCards, 0); });
+    syncCards();
+  }
+
+  const nav = document.getElementById('bottomNav');
+  if(nav){
+    const map = {home:'home', lost:'lost', found:'lost', help:'help', mine:'mine'};
+    function sync(){
+      const active = document.querySelector('.screen.active');
+      const id = active ? active.id.replace('screen-','') : 'home';
+      const want = map[id] || '';
+      nav.querySelectorAll('button').forEach(function(b){
+        b.classList.toggle('on', b.getAttribute('data-nav') === want);
+      });
+    }
+    new MutationObserver(sync).observe(document.querySelector('.phone'), {subtree:true,attributes:true,attributeFilter:['class']});
+    sync();
+  }
+})();
+
+/* 求助发布页：照片上传 */
+(function(){
+  const input = document.getElementById('helpPhotoInput');
+  if(!input) return;
+  input.onchange = async function(){
+    const f = this.files && this.files[0];
+    this.value = '';
+    if(!f) return;
+    try{
+      const data = await compressImage(f);
+      pendingHelpPhoto = data;
+      const hp = document.getElementById('helpPhotoPreview');
+      if(hp) hp.innerHTML = '<img src="' + data + '" alt="预览" style="width:100%;max-height:180px;object-fit:cover;border-radius:12px;margin-top:8px">';
+    }catch(e){ toast('图片读取失败，可以重新选一张'); }
+  };
+})();
+
+/* 求助方向对应的提示 */
+(function(){
+  const lead = document.getElementById('helpLead');
+  const title = document.getElementById('helpTitleInput');
+  const desc = document.getElementById('helpDesc');
+  const sel = document.getElementById('helpCatSel');
+  if(!lead || !title || !desc || !sel) return;
+  const meta = {
+    help_borrow:{lead:'借用工具：写清借什么、用多久、怎么还。', title:'例如：想借一把雨伞', desc:'借什么、用多久、在哪里取还，写清楚更容易有人帮。'},
+    help_errand:{lead:'代办跑腿：写清取什么、送到哪、什么时候。', title:'例如：帮取一个快递', desc:'取件地点、送达地点、时间要求，以及是否需要付费。'},
+    help_donate:{lead:'爱心捐赠：写清物品状态、能不能自取。', title:'例如：送一个闲置台灯', desc:'物品新旧、功能是否正常、在哪里自取，最好附一张照片。'},
+    help_volunteer:{lead:'志愿帮忙：写清需要什么帮助、什么时候。', title:'例如：想找人帮忙搬行李', desc:'需要几个人、大概多久、在哪里集合。'}
+  };
+  function sync(){
+    const m = meta[sel.value] || meta.help_borrow;
+    lead.textContent = m.lead;
+    title.placeholder = m.title;
+    desc.placeholder = m.desc;
+  }
+  sel.addEventListener('change', sync);
+  document.getElementById('helpPublishBtn') && document.getElementById('helpPublishBtn').addEventListener('click', function(){ setTimeout(sync, 0); });
+  sync();
 })();

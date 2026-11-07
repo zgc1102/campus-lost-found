@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>清华校园拾光里 v3.2 · 校园互助服务平台</title>
 <link rel="stylesheet" href="assets/styles.css?v=20261125">
-<link rel="stylesheet" href="assets/nocturne.css?v=20261107">
+<link rel="stylesheet" href="assets/aurora.css?v=20261107">
 </head>
 <body>
 <div id="bootGuard" style="position:fixed;inset:0;z-index:3000;background:#1b0b2e;color:#fff;display:flex;align-items:center;justify-content:center;flex-direction:column;font:14px/1.9 'Microsoft YaHei',system-ui,sans-serif;text-align:center;padding:24px">
@@ -304,23 +304,48 @@ setTimeout(function(){
     </div>
   </section>
 
-  <!-- 发布求助 -->
+  <!-- 发布求助（整页） -->
   <div class="sheet" id="helpSheet">
-    <div class="sh">发布爱心求助</div>
-    <select id="helpCatSel">
-      <option value="help_borrow">借用工具 / 借个东西</option>
-      <option value="help_errand">代办跑腿 / 帮取帮带</option>
-      <option value="help_donate">爱心捐赠 / 闲置送人</option>
-      <option value="help_volunteer">志愿帮忙 / 找人搭把手</option>
-    </select>
-    <input id="helpTitleInput" maxlength="30" placeholder="标题，例如：想借一把雨伞">
-    <textarea id="helpDesc" maxlength="200" placeholder="说明你的需求、时间和地点，越具体越容易有人帮"></textarea>
-    <div id="helpPhotoPreview"></div>
-    <input id="helpPlace" maxlength="40" placeholder="地点（可选）">
-    <input id="helpPhone" maxlength="20" placeholder="联系方式（可选，公开展示会打码）">
-    <div class="tip-small" id="helpPhoneHint" style="margin-top:-4px;margin-bottom:8px"></div>
-    <button class="btn" id="helpSubmit" style="width:100%">发布求助</button>
-    <div class="close" id="helpSheetClose">收起</div>
+    <div class="hp-top"><button type="button" class="hp-back" id="helpSheetClose" aria-label="返回">‹</button><b>发布爱心求助</b></div>
+    <div class="hp-body">
+      <div class="hp-lead" id="helpLead">先选一个方向，再把时间、地点说清楚。</div>
+      <div class="hp-cats" id="helpCatCards">
+        <button type="button" class="hp-cat on" data-hp-cat="help_borrow"><b>借用工具</b><span>借伞、充电宝、工具</span></button>
+        <button type="button" class="hp-cat" data-hp-cat="help_errand"><b>代办跑腿</b><span>帮取、帮带、帮买</span></button>
+        <button type="button" class="hp-cat" data-hp-cat="help_donate"><b>爱心捐赠</b><span>闲置物品送人</span></button>
+        <button type="button" class="hp-cat" data-hp-cat="help_volunteer"><b>志愿帮忙</b><span>找人搭把手</span></button>
+      </div>
+      <select id="helpCatSel">
+        <option value="help_borrow">借用工具</option>
+        <option value="help_errand">代办跑腿</option>
+        <option value="help_donate">爱心捐赠</option>
+        <option value="help_volunteer">志愿帮忙</option>
+      </select>
+
+      <div class="hp-sec">
+        <label for="helpTitleInput">一句话标题</label>
+        <input id="helpTitleInput" maxlength="30" placeholder="例如：想借一把雨伞">
+      </div>
+      <div class="hp-sec">
+        <label for="helpDesc">具体说明</label>
+        <textarea id="helpDesc" maxlength="200" placeholder="时间、地点、用途，越具体越容易有人帮"></textarea>
+      </div>
+      <div class="hp-sec">
+        <label>地点与联系方式</label>
+        <div class="hp-row">
+          <input id="helpPlace" maxlength="40" placeholder="地点，例如：紫荆 15 号楼">
+          <input id="helpPhone" maxlength="20" placeholder="手机 / 微信（会打码）">
+        </div>
+        <div class="tip-small" id="helpPhoneHint" style="margin-top:6px"></div>
+      </div>
+      <div class="hp-sec">
+        <label>照片（选填）</label>
+        <label class="hp-photo" for="helpPhotoInput">点击上传一张照片，方便对方判断</label>
+        <input type="file" id="helpPhotoInput" accept="image/*" style="display:none">
+        <div id="helpPhotoPreview"></div>
+      </div>
+    </div>
+    <div class="hp-submit"><button class="btn" id="helpSubmit">发布求助</button></div>
   </div>
 
   <!-- 我来帮忙 -->
@@ -593,6 +618,12 @@ setTimeout(function(){
       <button class="btn ghost" id="tdBack" style="width:100%;margin-top:8px">返回修改</button>
     </div>
   </div>
+  <nav class="bottom-nav" id="bottomNav">
+    <button type="button" data-nav="home" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg><span>首页</span></button>
+    <button type="button" data-nav="lost"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></svg><span>失物</span></button>
+    <button type="button" data-nav="help"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 20s-7-4.3-7-9a4 4 0 0 1 7-2 4 4 0 0 1 7 2c0 4.7-7 9-7 9Z"/></svg><span>互助</span></button>
+    <button type="button" data-nav="mine"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg><span>我的</span></button>
+  </nav>
 </div>
 
 <div class="tour show" id="tourMask">
