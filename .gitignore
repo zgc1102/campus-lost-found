@@ -39,3 +39,9 @@ desktop.ini
 # 网盘同步临时文件
 *.baiduyun.*
 
+
+# 拾光码运行数据与本地临时文件
+tags.json
+tag_qr/
+_local_server.py
+本地二维码*.png
