@@ -107,6 +107,12 @@ setTimeout(function(){
         <span data-gq="校园里哪里可以借雨伞？">借雨伞</span>
       </div>
 
+      <div class="home-stats" id="homeStats">
+        <div><b id="hsTotal">—</b><span>已发布</span></div>
+        <div><b id="hsClosed">—</b><span>已找回</span></div>
+        <div><b id="hsToday">—</b><span>今日新增</span></div>
+      </div>
+
       <div class="foot-b">
         <div class="flinks">
           <span data-nav="mine">我的发布</span><span data-nav="about">平台简介</span><span id="tourReplay">使用引导</span><span data-nav="contact">联系方式</span><span data-nav="legal">法律声明</span><span data-nav="privacy">隐私权保护</span>
@@ -297,10 +303,10 @@ setTimeout(function(){
     <div class="scroll">
       <div class="hintline" id="helpHint">同学之间互相搭把手：借个东西、帮取快递、闲置送人、找人帮忙。</div>
       <div class="help-cats">
-        <button type="button" data-help-cat="help_borrow"><b>借用工具</b><span>借伞 / 充电宝</span></button>
-        <button type="button" data-help-cat="help_errand"><b>代办跑腿</b><span>帮取 / 帮带</span></button>
-        <button type="button" data-help-cat="help_donate"><b>爱心捐赠</b><span>闲置送人</span></button>
-        <button type="button" data-help-cat="help_volunteer"><b>志愿帮忙</b><span>找人搭把手</span></button>
+        <button type="button" data-help-cat="help_borrow"><span class="hc-ic">借</span><div><b>借用工具</b><span>借伞 / 充电宝</span></div></button>
+        <button type="button" data-help-cat="help_errand"><span class="hc-ic">跑</span><div><b>代办跑腿</b><span>帮取 / 帮带</span></div></button>
+        <button type="button" data-help-cat="help_donate"><span class="hc-ic">赠</span><div><b>爱心捐赠</b><span>闲置送人</span></div></button>
+        <button type="button" data-help-cat="help_volunteer"><span class="hc-ic">志</span><div><b>志愿帮忙</b><span>找人搭把手</span></div></button>
       </div>
       <div class="page-bar">
         <div class="pb-search"><svg class="pb-mag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></svg><input data-filter="help" placeholder="搜索爱心求助"></div>

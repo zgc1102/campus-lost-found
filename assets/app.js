@@ -283,7 +283,7 @@ async function netSync(){
       LS.set(STORE_KEY, JSON.stringify(Object.keys(byId).map(function(k){ return byId[k]; })));
       netOnline = true;
       netFails = 0;
-      renderLost(); renderFound(); renderMine();
+      renderLost(); renderFound(); renderMine(); renderHomeStats();
     }
   }catch(e){
     netOnline = false;
@@ -488,6 +488,7 @@ function activate(name){
   el.classList.add('active');
   const sc=el.querySelector('.scroll'); if(sc) sc.scrollTop=0;
   if(name==='map') renderHeat();
+  scheduleLiveRefresh(name);
 }
 function show(name){
   const cur=document.querySelector('.screen.active');
@@ -2928,3 +2929,31 @@ window.openTour = openTour;
   document.getElementById('helpPublishBtn') && document.getElementById('helpPublishBtn').addEventListener('click', function(){ setTimeout(sync, 0); });
   sync();
 })();
+
+/* 页面切换时刷新数据 + 首页统计 */
+let _lastLiveRefresh = 0;
+function scheduleLiveRefresh(name){
+  if(!API_BASE) return;
+  if(['home','lost','found','help','mine'].indexOf(name) < 0) return;
+  const now = Date.now();
+  if(now - _lastLiveRefresh < 1200) return;
+  _lastLiveRefresh = now;
+  netSync().then(function(){ if(name === 'help') renderHelp(); }).catch(function(){});
+}
+
+function renderHomeStats(){
+  const pub = Store.list({statuses:['approved','claimed','closed']});
+  const closed = Store.list({status:'closed'});
+  const start = new Date(); start.setHours(0,0,0,0);
+  const today = pub.filter(function(x){ return (x.createdAt || 0) >= start.getTime(); });
+  const set = function(id, v){ const el = document.getElementById(id); if(el) el.textContent = v; };
+  set('hsTotal', pub.length);
+  set('hsClosed', closed.length);
+  set('hsToday', today.length);
+}
+
+document.addEventListener('visibilitychange', function(){
+  if(!document.hidden && API_BASE){
+    netSync().then(function(){ renderHelp(); }).catch(function(){});
+  }
+});
