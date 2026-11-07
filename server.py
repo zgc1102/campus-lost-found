@@ -131,6 +131,48 @@ def save_items(items):
     os.replace(tmp, DATA_FILE)
 
 
+
+
+# ---------- 拾光码 ----------
+TAGS_FILE = os.path.join(BASE_DIR, "tags.json")
+TAG_QR_DIR = os.path.join(BASE_DIR, "tag_qr")
+
+
+def load_tags():
+    return _load_json(TAGS_FILE, [])
+
+
+def save_tags(data):
+    _save_json(TAGS_FILE, data)
+
+
+def _tag_public(tag, base_url="", with_qr=False):
+    mode = tag.get("mode") or "notify"
+    phone = str(tag.get("phone") or "")
+    out = {
+        "code": tag.get("code"),
+        "itemName": tag.get("itemName"),
+        "note": tag.get("note") or "",
+        "mode": mode,
+        "phoneMasked": re.sub(r"(\d{3})\d{4}(\d{4})", r"\1****\2", phone) if phone else "",
+        "createdAt": tag.get("createdAt"),
+        "notifyCount": tag.get("notifyCount") or 0,
+        "url": (base_url.rstrip("/") + "/拾光码.html?code=" + str(tag.get("code") or "")) if base_url else "",
+    }
+    if mode == "phone":
+        out["phoneFull"] = phone
+    if with_qr and base_url:
+        try:
+            os.makedirs(TAG_QR_DIR, exist_ok=True)
+            path = os.path.join(TAG_QR_DIR, str(tag.get("code")) + ".png")
+            make_qr_png(out["url"], path, box=8, border=3)
+            with open(path, "rb") as f:
+                out["qrData"] = "data:image/png;base64," + base64.b64encode(f.read()).decode("ascii")
+        except Exception as e:
+            out["qrError"] = str(e)[:80]
+    return out
+
+
 # ---------------------------------------------------------------- 认领 / 通知 / 匹配
 
 CLAIMS_FILE = os.path.join(BASE_DIR, "claims.json")
@@ -1666,6 +1708,110 @@ def agent_detective(item, items):
 
 
 
+
+
+# ---------- 寻物侦探：路线推理 ----------
+def _parse_route(route):
+    raw = str(route or "").strip()
+    if not raw:
+        return []
+    parts = re.split(r"[→>\-、,，;；\n]+", raw)
+    out = []
+    for x in parts:
+        x = x.strip()
+        if x and x not in out:
+            out.append(x[:16])
+    return out[:8]
+
+
+def _item_kind(item):
+    text = (item.get("title") or "") + (item.get("desc") or "") + (item.get("summary") or "")
+    if any(k in text for k in ("校园卡", "身份证", "银行卡", "钱包", "卡套")):
+        return "card"
+    if any(k in text for k in ("钥匙", "钥匙扣")):
+        return "keys"
+    if any(k in text for k in ("伞", "雨伞")):
+        return "umbrella"
+    if any(k in text for k in ("电脑", "键盘", "手机", "耳机", "充电宝", "平板")):
+        return "electronics"
+    if any(k in text for k in ("杯", "水壶", "保温杯")):
+        return "bottle"
+    return "other"
+
+
+RISK = {
+    "card": {"食堂": .94, "宿舍": .90, "快递": .80, "图书馆": .58, "教学楼": .54, "操场": .35},
+    "keys": {"操场": .92, "食堂": .82, "宿舍": .78, "快递": .70, "教学楼": .46, "图书馆": .40},
+    "umbrella": {"图书馆": .90, "食堂": .84, "教学楼": .78, "宿舍": .45, "快递": .38},
+    "electronics": {"教学楼": .90, "图书馆": .86, "宿舍": .55, "食堂": .35},
+    "bottle": {"教学楼": .86, "图书馆": .82, "食堂": .62, "操场": .55},
+    "other": {"图书馆": .70, "教学楼": .66, "食堂": .62, "宿舍": .58, "操场": .50, "快递": .48},
+}
+
+RISK_REASON = {
+    ("card", "食堂"): "食堂付款、坐下吃饭时，卡最容易从口袋滑到座位或桌边。",
+    ("card", "宿舍"): "回宿舍躺下、换衣服时，卡容易从口袋掉到床上或地上。",
+    ("card", "快递"): "取快递蹲下、签字时，口袋里的卡容易滑出来。",
+    ("card", "图书馆"): "在图书馆落座、刷卡进馆时，卡可能落在闸机或座位旁。",
+    ("card", "教学楼"): "教室坐下、掏东西时，卡可能从口袋滑到课桌抽屉。",
+    ("keys", "操场"): "跑步、运动时钥匙最容易从口袋甩出，先看跑道边和器材室。",
+    ("keys", "食堂"): "在食堂坐下时，钥匙串容易从口袋滑到座椅缝。",
+    ("keys", "宿舍"): "回宿舍换衣服、放包时，钥匙容易落在桌边或床上。",
+    ("umbrella", "图书馆"): "雨伞最容易落在图书馆门口伞架、座位旁或借还机边。",
+    ("umbrella", "食堂"): "进食堂时伞通常放在门口伞架，先看入口和座位旁。",
+    ("umbrella", "教学楼"): "教学楼门口伞架、教室后排是雨伞最常被忘的地方。",
+    ("electronics", "教学楼"): "键盘、电脑通常落在教室座位、讲台或机房桌下。",
+    ("electronics", "图书馆"): "图书馆插座旁、自习座位是电子设备最常被忘的位置。",
+    ("bottle", "教学楼"): "水杯常落在教室桌角、饮水机旁或窗台。",
+    ("bottle", "图书馆"): "水杯常落在自习桌、借还机旁或窗台。",
+}
+
+
+def _route_group(stop):
+    g = _place_group(stop)
+    if "快递" in stop:
+        return "快递"
+    return g
+
+
+def agent_detective_route(item, items, route):
+    data = agent_detective(item, items)
+    stops = _parse_route(route)
+    if not stops:
+        data["routeStops"] = []
+        return data
+    kind = _item_kind(item)
+    ranked = []
+    for i, stop in enumerate(stops):
+        g = _route_group(stop)
+        risk = RISK.get(kind, RISK["other"]).get(g, 0.42)
+        reason = RISK_REASON.get((kind, g)) or ("你经过%s，%s最可能在这里被放下或滑出口袋。" % (stop, "物品"))
+        ranked.append((risk, i, stop, g, reason))
+    ranked.sort(key=lambda x: (-x[0], -x[1]))
+    route_actions = []
+    for risk, i, stop, g, reason in ranked[:4]:
+        route_actions.append({
+            "title": "回%s找找" % stop,
+            "detail": reason + "（路径风险 %d%%）" % int(risk * 100),
+            "itemId": "",
+        })
+    # 路线上的重点顺序 + 原有地点建议去重
+    existing = data.get("actions") or []
+    merged = route_actions + existing
+    data["actions"] = merged[:6]
+    data["routeStops"] = stops
+    data["routeKind"] = kind
+    top = ranked[0] if ranked else None
+    if top:
+        data["summary"] = "按你今天的路线：%s。结合「%s」这类物品，优先回%s找，原因：%s" % (
+            " → ".join(stops), item.get("title") or "失物", top[2], top[4])
+    tl = data.get("timeline") or []
+    route_tl = [{"time": "路线", "label": " → ".join(stops)}]
+    data["timeline"] = route_tl + tl
+    data["disclaimer"] = "路线推测只根据你提供的地点、时间和物品类型，不保证一定找到；找到后请当面核对特征。"
+    return data
+
+
 # ---------- 多模态 ----------
 def vision_config():
     return {
@@ -1985,6 +2131,28 @@ class Handler(BaseHTTPRequestHandler):
                     cands.append((score, x))
             cands.sort(key=lambda p: p[0], reverse=True)
             return self._json([public_item(x, None) for _, x in cands[:3]])
+
+        if path == "/api/tags/mine":
+            owner = self._owner()
+            if not owner:
+                return self._json([])
+            with LOCK:
+                tags = [x for x in load_tags() if x.get("owner") == owner]
+            tags.sort(key=lambda x: x.get("createdAt") or 0, reverse=True)
+            host = self.headers.get("Host") or "127.0.0.1:8000"
+            scheme = "https" if self.headers.get("X-Forwarded-Proto") == "https" else "http"
+            base = scheme + "://" + host
+            return self._json([_tag_public(x, base, with_qr=True) for x in tags])
+
+        if path.startswith("/api/tags/") and len(path) > len("/api/tags/"):
+            code = path[len("/api/tags/"):].strip("/")
+            with LOCK:
+                tag = next((x for x in load_tags() if x.get("code") == code), None)
+            if not tag:
+                return self._json({"error": "拾光码不存在"}, 404)
+            host = self.headers.get("Host") or "127.0.0.1:8000"
+            scheme = "https" if self.headers.get("X-Forwarded-Proto") == "https" else "http"
+            return self._json(_tag_public(tag, scheme + "://" + host, with_qr=False))
 
         if path == "/api/items":
             owner = self._owner()
@@ -2493,6 +2661,55 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(out)
 
 
+        if path == "/api/tags":
+            owner = self._owner()
+            if not owner:
+                return self._json({"error": "请先登录后再申请拾光码"}, 401)
+            body = self._read_body()
+            item_name = str(body.get("itemName") or "").strip()[:30]
+            phone = str(body.get("phone") or "").strip()[:20]
+            mode = "phone" if body.get("mode") == "phone" else "notify"
+            note = str(body.get("note") or "").strip()[:80]
+            if len(item_name) < 1:
+                return self._json({"error": "先写一下物品名称"}, 400)
+            if mode == "phone" and not phone:
+                return self._json({"error": "选择展示电话时，需要填写手机号"}, 400)
+            with LOCK:
+                tags = load_tags()
+                code = "SG" + uuid.uuid4().hex[:6].upper()
+                while any(x.get("code") == code for x in tags):
+                    code = "SG" + uuid.uuid4().hex[:6].upper()
+                tag = {
+                    "code": code, "owner": owner, "itemName": item_name,
+                    "phone": phone, "mode": mode, "note": note,
+                    "createdAt": now_ms(), "notifyCount": 0,
+                }
+                tags.append(tag)
+                save_tags(tags)
+            host = self.headers.get("Host") or "127.0.0.1:8000"
+            scheme = "https" if self.headers.get("X-Forwarded-Proto") == "https" else "http"
+            return self._json(_tag_public(tag, scheme + "://" + host, with_qr=True))
+
+        if path.startswith("/api/tags/") and path.endswith("/notify"):
+            code = path[len("/api/tags/"):-len("/notify")].strip("/")
+            body = self._read_body()
+            message = str(body.get("message") or "").strip()[:160]
+            contact = str(body.get("contact") or "").strip()[:40]
+            with LOCK:
+                tags = load_tags()
+                tag = next((x for x in tags if x.get("code") == code), None)
+                if not tag:
+                    return self._json({"error": "拾光码不存在"}, 404)
+                tag["notifyCount"] = int(tag.get("notifyCount") or 0) + 1
+                save_tags(tags)
+                notices = load_notices()
+                text = "有人扫了你的拾光码「%s」：%s" % (tag.get("itemName") or "", message or "我捡到了，请联系我")
+                if contact:
+                    text += "（联系方式：%s）" % contact
+                add_notice(notices, tag.get("owner"), "pickup", text, "", "")
+                save_notices(notices)
+            return self._json({"ok": True})
+
         if path == "/api/agent/radar":
             body = self._read_body()
             item_id = str(body.get("itemId") or "")
@@ -2506,12 +2723,13 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/agent/detective":
             body = self._read_body()
             item_id = str(body.get("itemId") or "")
+            route = str(body.get("route") or "")
             with LOCK:
                 items = load_items()
             item = next((x for x in items if x.get("id") == item_id), None)
             if not item:
                 return self._json({"error": "not found"}, 404)
-            return self._json(agent_detective(item, items))
+            return self._json(agent_detective_route(item, items, route))
 
         if path == "/api/agent/review":
             owner = self._owner()

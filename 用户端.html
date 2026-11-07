@@ -116,14 +116,20 @@ setTimeout(function(){
           </button>
         </div>
         <div class="lost-mini"><b id="lostMini">0</b><span>件已找回</span><i>校园互助 · 真实数据</i></div>
-        <button type="button" class="lost-cta" data-publish="lost">
-          <span class="lc-kicker">LOST SOMETHING?</span>
-          <b>发一条寻物启事</b>
-          <i>写清时间地点，看到的人会联系你</i>
-          <span class="lc-plus">＋</span>
+        <button type="button" class="lost-cta detective-cta" id="homeDetectiveBtn">
+          <span class="lc-kicker">LOST DETECTIVE</span>
+          <b>寻物侦探</b>
+          <i>按时间线推测下一步去哪找</i>
+          <span class="lc-plus">→</span>
         </button>
       </div>
       </div>
+
+      <button type="button" class="tag-entry" id="tagEntry">
+        <span class="tag-badge">拾光码</span>
+        <span class="tag-copy"><b>给失物一张身份证</b><i>生成二维码，捡到的人扫码联系你</i></span>
+        <span class="tag-go">申请 →</span>
+      </button>
 
       <div class="sectitle">给初来清华的人 · 游客 / 新生 / 家长</div>
       <div class="guide-banner" data-nav="guideHome">
@@ -602,6 +608,7 @@ setTimeout(function(){
 
   <!-- 物品详情 sheet -->
   <div class="sheet" id="itemSheet">
+    <button type="button" class="sheet-x" data-close-sheet aria-label="收起">收起</button>
     <div class="big-thumb" id="isThumb"></div>
     <div class="sh" id="isTitle"></div>
     <div class="sa" id="isDesc"></div>
@@ -676,6 +683,23 @@ setTimeout(function(){
     <div class="ag-top"><button type="button" class="ag-back" id="radarClose" aria-label="返回">‹</button><div class="ag-title"><b>AI 寻物雷达</b><span id="radarSub">正在扫描全站信息…</span></div></div>
     <div class="ag-body" id="radarBody"><div class="ag-loading">雷达扫描中…</div></div>
     <div class="ag-foot" id="radarFoot" style="display:none"></div>
+  </div>
+
+  <div class="sheet tag-screen" id="tagSheet">
+    <div class="tag-top"><button type="button" class="tag-back" id="tagClose" aria-label="返回">‹</button><div class="tag-title"><b>拾光码</b><span>给失物一张身份证</span></div></div>
+    <div class="tag-body" id="tagBody">
+      <div class="tag-intro">生成一张二维码贴在物品上。捡到的人扫码后，可以只给你发通知，也可以直接看到你的电话。</div>
+      <div class="tag-sec"><label for="tagItem">物品名称</label><input id="tagItem" maxlength="30" placeholder="例如：黑色长柄雨伞"></div>
+      <div class="tag-sec"><label for="tagPhone">手机号</label><input id="tagPhone" maxlength="20" inputmode="tel" placeholder="用于失主联系，可打码展示"></div>
+      <div class="tag-sec">
+        <label>扫码后</label>
+        <label class="tag-mode"><input type="radio" name="tagMode" value="notify" checked> 只给我发通知 <i>推荐，号码不公开</i></label>
+        <label class="tag-mode"><input type="radio" name="tagMode" value="phone"> 直接显示我的手机号 <i>方便对方立刻联系</i></label>
+      </div>
+      <div class="tag-sec"><label for="tagNote">备注（选填）</label><input id="tagNote" maxlength="80" placeholder="例如：捡到请联系我，谢谢"></div>
+      <button class="btn" id="tagCreate" style="width:100%">生成拾光码</button>
+      <div class="tag-result" id="tagResult" style="display:none"></div>
+    </div>
   </div>
 
   <nav class="bottom-nav" id="bottomNav">

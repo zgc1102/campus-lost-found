@@ -235,8 +235,10 @@ const Net = {
   vision(image, mime){ return this.call('/vision/analyze', {method:'POST', body: JSON.stringify({image: image, mime: mime || 'image/jpeg'})}); },
   format(body){ return this.call('/format', {method:'POST', body: JSON.stringify(body)}); },
   notices(){ return this.call('/notices'); },
+  createTag(body){ return this.call('/tags', {method:'POST', body: JSON.stringify(body)}); },
+  tag(code){ return this.call('/tags/' + encodeURIComponent(code)); },
   radar(id){ return this.call('/agent/radar', {method:'POST', body: JSON.stringify({itemId:id})}); },
-  detective(id){ return this.call('/agent/detective', {method:'POST', body: JSON.stringify({itemId:id})}); },
+  detective(id, route){ return this.call('/agent/detective', {method:'POST', body: JSON.stringify({itemId:id, route: route || ''})}); },
   recover(body){ return this.call('/recover', {method:'POST', body: JSON.stringify(body)}); },
   accountLogin(body){ return this.call('/account/login', {method:'POST', body: JSON.stringify(body)}); },
   readNotices(){ return this.call('/notices/read', {method:'POST'}); }
@@ -1262,7 +1264,7 @@ async function renderNotices(){
     if(!r.items.length){ wrap.innerHTML = '<div class="empty">还没有通知</div>'; return; }
     wrap.innerHTML = r.items.map(function(n){
       const t = {match:'🔍 相似物品提醒', claim:'📥 收到认领申请', accepted:'✅ 申请已通过',
-                 rejected:'❌ 申请被拒', done:'🎉 已完成归还'}[n.type] || '通知';
+                 rejected:'❌ 申请被拒', done:'🎉 已完成归还', pickup:'🔖 拾光码提醒'}[n.type] || '通知';
       return '<div class="mini" data-notice-item="' + esc(n.itemId || '') + '"' +
         ' data-notice-claim="' + esc(n.claimId || '') + '"' +
         ' data-notice-type="' + esc(n.type || '') + '">' +
@@ -2972,6 +2974,7 @@ document.addEventListener('visibilitychange', function(){
 
 /* ============ 寻物 Agent：雷达 + 侦探 ============ */
 let radarCurrentItem = null;
+let radarRoute = '';
 let radarData = null;
 
 function closeRadar(){
@@ -3051,7 +3054,7 @@ async function openDetective(){
   if(sub) sub.textContent = '侦探正在整理时间线与行动建议…';
   radarLoading('侦探推理中：读取地点、时间与高频区域…');
   try{
-    const data = await Net.detective(radarCurrentItem);
+    const data = await Net.detective(radarCurrentItem, radarRoute);
     renderDetective(data);
   }catch(e){
     radarLoading('推理失败：' + ((e && e.message) || '请稍后重试'));
@@ -3065,7 +3068,10 @@ function renderDetective(data){
   if(!body || !foot) return;
   if(sub) sub.textContent = '侦探推理完成 · 置信度 ' + (data.confidence || '中');
   const t1 = document.querySelector('.ag-title b'); if(t1) t1.textContent = '寻物侦探';
-  let h = '<div class="dt-summary">' + esc(data.summary || '') + '</div>';
+  let h = '<div class="dt-route"><label for="detRoute">补充你今天的路线（选填）</label>' +
+    '<textarea id="detRoute" maxlength="120" placeholder="例如：图书馆 → 食堂 → 未名湖 → 宿舍 → 快递点">' + esc(radarRoute) + '</textarea>' +
+    '<button type="button" id="detRouteRun">按这条路线重新推理</button></div>';
+  h += '<div class="dt-summary">' + esc(data.summary || '') + '</div>';
 
   const actions = data.actions || [];
   if(actions.length){
@@ -3099,6 +3105,12 @@ function renderDetective(data){
   foot.innerHTML = '<button class="btn" id="radarBackBtn">返回雷达结果</button>';
   const back = document.getElementById('radarBackBtn');
   if(back) back.onclick = function(){ if(radarData) renderRadar(radarData); };
+  const run = document.getElementById('detRouteRun');
+  if(run) run.onclick = function(){
+    const inp = document.getElementById('detRoute');
+    radarRoute = inp ? inp.value.trim() : '';
+    openDetective();
+  };
 }
 
 async function openRadarForType(type){
@@ -3128,3 +3140,90 @@ document.getElementById('radarBody') && document.getElementById('radarBody').add
   closeRadar();
   if(typeof openItem === 'function') openItem(id);
 });
+
+async function openDetectiveForType(type){
+  if(!API_BASE){ toast('寻物侦探需要在共享模式/公网地址下使用'); return; }
+  let list = [];
+  try{ list = await Net.mine(); }catch(e){ list = []; }
+  if(!list || !list.length) list = Store.list({owner: myId()});
+  const own = (list || []).filter(function(x){
+    return x && x.type === type && x.status !== 'withdrawn' && x.status !== 'rejected';
+  }).sort(function(a,b){ return (b.createdAt || 0) - (a.createdAt || 0); })[0];
+  if(!own){ toast('先发一条寻物启事，再让侦探推理'); return; }
+  radarCurrentItem = own.id;
+  const sh = document.getElementById('radarSheet');
+  const sub = document.getElementById('radarSub');
+  if(sub) sub.textContent = '侦探正在整理时间线与行动建议…';
+  if(sh) sh.classList.add('show');
+  radarRoute = '';
+  radarLoading('侦探推理中：读取地点、时间与高频区域…');
+  try{
+    const data = await Net.detective(own.id, radarRoute);
+    radarData = null;
+    renderDetective(data);
+  }catch(e){
+    radarLoading('推理失败：' + ((e && e.message) || '请稍后重试'));
+  }
+}
+document.getElementById('homeDetectiveBtn') && (document.getElementById('homeDetectiveBtn').onclick = function(){ openDetectiveForType('lost'); });
+
+/* ============ 拾光码 ============ */
+function openTagSheet(){
+  const sh = document.getElementById('tagSheet');
+  if(sh) sh.classList.add('show');
+}
+function closeTagSheet(){
+  const sh = document.getElementById('tagSheet');
+  if(sh) sh.classList.remove('show');
+}
+function renderTagResult(d){
+  const box = document.getElementById('tagResult');
+  if(!box) return;
+  const modeText = d.mode === 'phone' ? '扫码后直接显示手机号' : '扫码后只给你发通知';
+  box.innerHTML =
+    '<img src="' + d.qrData + '" alt="拾光码">' +
+    '<div class="tr-item">' + esc(d.itemName || '') + '</div>' +
+    '<div class="tr-code">拾光码 ' + esc(d.code || '') + ' · ' + modeText + '</div>' +
+    '<div class="tr-actions">' +
+    '<a class="primary" download="拾光码-' + esc(d.code || '') + '.png" href="' + d.qrData + '">保存 / 打印</a>' +
+    '<button type="button" id="tagCopy">复制链接</button>' +
+    '</div>' +
+    '<div class="tr-actions"><button type="button" id="tagAgain">重新生成一张</button></div>';
+  box.style.display = 'block';
+  const copy = document.getElementById('tagCopy');
+  if(copy) copy.onclick = function(){
+    const link = d.url || '';
+    if(navigator.clipboard && link){ navigator.clipboard.writeText(link).then(function(){ toast('链接已复制'); }).catch(function(){ toast(link); }); }
+    else { toast(link); }
+  };
+  const again = document.getElementById('tagAgain');
+  if(again) again.onclick = function(){ box.style.display = 'none'; box.innerHTML = ''; };
+  box.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+async function createTag(){
+  if(!API_BASE){ toast('拾光码需要在共享模式/公网地址下使用'); return; }
+  const item = (document.getElementById('tagItem').value || '').trim();
+  const phone = (document.getElementById('tagPhone').value || '').trim();
+  const note = (document.getElementById('tagNote').value || '').trim();
+  const modeEl = document.querySelector('input[name="tagMode"]:checked');
+  const mode = modeEl ? modeEl.value : 'notify';
+  if(item.length < 1){ toast('先写一下物品名称'); return; }
+  if(mode === 'phone' && phone.length < 6){ toast('选择显示电话时，请填写手机号'); return; }
+  const btn = document.getElementById('tagCreate');
+  btn.disabled = true; btn.textContent = '生成中…';
+  try{
+    const d = await Net.createTag({itemName:item, phone:phone, mode:mode, note:note});
+    renderTagResult(d);
+    btn.textContent = '已生成';
+  }catch(e){
+    toast((e && e.message) || '生成失败，稍后再试');
+    btn.textContent = '生成拾光码';
+  }finally{
+    btn.disabled = false;
+  }
+}
+
+document.getElementById('tagEntry') && (document.getElementById('tagEntry').onclick = openTagSheet);
+document.getElementById('tagClose') && (document.getElementById('tagClose').onclick = closeTagSheet);
+document.getElementById('tagCreate') && (document.getElementById('tagCreate').onclick = createTag);

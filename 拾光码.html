@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>拾光码 · 清华校园拾光里</title>
+<style>
+  :root{--ink:#241C2E;--sub:#7D718D;--line:#ECE6F4;--purple:#5B2A91;--deep:#3B1D63;--gold:#C8A96A;--bg:#F7F4FC;}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  body{margin:0;min-height:100vh;background:
+    radial-gradient(700px 500px at 10% 0%,rgba(200,169,106,.14),transparent 60%),
+    radial-gradient(700px 520px at 95% 6%,rgba(138,82,199,.14),transparent 62%),
+    #EDE8F5;
+    font-family:"Microsoft YaHei UI","Microsoft YaHei","PingFang SC",sans-serif;color:var(--ink);}
+  .wrap{max-width:430px;margin:0 auto;min-height:100vh;background:var(--bg);box-shadow:0 0 0 1px #E0D7EC;display:flex;flex-direction:column;}
+  .top{padding:18px 18px 14px;background:linear-gradient(135deg,#3B1D63,#5B2A91 65%,#7A3CB0);color:#fff;}
+  .brand{font-size:11px;letter-spacing:.14em;color:#D9CCEC;}
+  .brand b{display:block;font-size:22px;letter-spacing:.05em;margin-top:3px;color:#fff;}
+  .badge{display:inline-block;margin-top:8px;font-size:9px;border:1px solid rgba(255,255,255,.35);border-radius:99px;padding:3px 8px;color:#E8DCF7;}
+  .body{flex:1;padding:16px;display:flex;flex-direction:column;gap:12px;}
+  .card{background:#fff;border:1px solid var(--line);border-radius:20px;padding:16px;box-shadow:0 10px 28px rgba(59,19,95,.06);}
+  .kicker{font-size:8px;letter-spacing:.18em;color:var(--sub);}
+  .item{font-size:21px;font-weight:600;margin:4px 0 6px;line-height:1.35;}
+  .note{font-size:11px;line-height:1.65;color:var(--sub);}
+  .tip{background:#F6F0FC;border:1px solid #E9DDF6;border-radius:14px;padding:11px;font-size:10px;line-height:1.65;color:#5E536F;}
+  .actions{display:flex;flex-direction:column;gap:8px;margin-top:12px;}
+  button{border:0;border-radius:13px;padding:12px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;}
+  .primary{background:linear-gradient(135deg,#5B2A91,#7A3CB0);color:#fff;}
+  .ghost{background:#fff;border:1px solid var(--line);color:var(--purple);}
+  .phone{display:none;margin-top:10px;padding:11px;border-radius:13px;background:#F6F0FC;text-align:center;font-size:17px;letter-spacing:.08em;color:var(--purple);font-weight:600;}
+  textarea,input{width:100%;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:11px;padding:10px;font-family:inherit;font-size:12px;color:var(--ink);outline:none;resize:vertical;}
+  .muted{font-size:9px;color:var(--sub);line-height:1.6;text-align:center;margin-top:4px;}
+  .ok{display:none;background:#EAF7EE;border:1px solid #CFE9D8;color:#2F7D46;border-radius:12px;padding:10px;font-size:11px;text-align:center;}
+  .loading{padding:40px 0;text-align:center;color:var(--sub);font-size:12px;}
+  .foot{text-align:center;font-size:9px;color:#A99BB9;padding:10px 0 22px;line-height:1.7;}
+  .code{font-size:10px;letter-spacing:.14em;color:var(--sub);margin-top:6px;}
+  @media(min-width:760px){body{padding:24px 0;} .wrap{border-radius:28px;overflow:hidden;min-height:calc(100vh - 48px);}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="brand">TSINGHUA · SHIGUANGLI<b>拾光码</b></div>
+    <div class="badge">给失物一张身份证</div>
+  </div>
+  <div class="body">
+    <div class="card" id="mainCard"><div class="loading">正在读取拾光码…</div></div>
+    <div class="tip">拾光码由失主本人生成。捡到物品时，扫码联系失主；平台不会向你索要验证码、转账或付费。</div>
+    <div class="foot">清华校园拾光里 · 校园公益<br>没有码？也可以直接去「失物招领」发布</div>
+  </div>
+</div>
+<script>
+(function(){
+  var code = new URLSearchParams(location.search).get('code') || '';
+  var card = document.getElementById('mainCard');
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  if(!code){ card.innerHTML = '<div class="kicker">NO CODE</div><div class="item">没有找到拾光码</div><div class="note">请重新扫描物品上的二维码，或让失主重新生成。</div>'; return; }
+  fetch('/api/tags/' + encodeURIComponent(code)).then(function(r){ return r.json(); }).then(function(t){
+    if(!t || t.error){ card.innerHTML = '<div class="kicker">NOT FOUND</div><div class="item">这个拾光码已失效</div><div class="note">' + esc((t && t.error) || '请让失主重新生成。') + '</div>'; return; }
+    var phoneMode = t.mode === 'phone';
+    var h = '<div class="kicker">FOUND SOMETHING?</div>' +
+      '<div class="item">' + esc(t.itemName || '失物') + '</div>' +
+      '<div class="note">' + (t.note ? esc(t.note) : '失主正在等它回家。如果你捡到了，请联系 TA。') + '</div>' +
+      '<div class="code">拾光码 ' + esc(t.code) + '</div>';
+    if(phoneMode){
+      h += '<div class="actions"><button class="primary" id="showPhone">联系失主</button>' +
+        '<div class="phone" id="phoneBox">' + esc(t.phoneFull || t.phoneMasked || '') + '</div></div>';
+    }else{
+      h += '<div class="actions"><textarea id="msg" maxlength="160" placeholder="我捡到了，在……（写清地点/时间）"></textarea>' +
+        '<input id="contact" maxlength="40" placeholder="你的联系方式（选填，方便失主联系你）">' +
+        '<button class="primary" id="send">我捡到了，通知失主</button><div class="ok" id="ok">已通知失主，谢谢你的善意。</div></div>';
+    }
+    card.innerHTML = h;
+    if(phoneMode){
+      document.getElementById('showPhone').onclick = function(){
+        var box = document.getElementById('phoneBox');
+        box.style.display = 'block';
+        this.textContent = '长按号码或点击拨打';
+        this.onclick = function(){ location.href = 'tel:' + (t.phoneFull || ''); };
+      };
+    }else{
+      document.getElementById('send').onclick = function(){
+        var btn = this, msg = document.getElementById('msg').value.trim(), contact = document.getElementById('contact').value.trim();
+        if(msg.length < 2){ msg = '我捡到了，请联系我'; }
+        btn.disabled = true; btn.textContent = '发送中…';
+        fetch('/api/tags/' + encodeURIComponent(code) + '/notify', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({message: msg, contact: contact})
+        }).then(function(r){ return r.json(); }).then(function(res){
+          if(res && res.ok){ document.getElementById('ok').style.display = 'block'; btn.style.display = 'none'; }
+          else { btn.disabled = false; btn.textContent = '发送失败，再试一次'; }
+        }).catch(function(){ btn.disabled = false; btn.textContent = '发送失败，再试一次'; });
+      };
+    }
+  }).catch(function(){
+    card.innerHTML = '<div class="kicker">ERROR</div><div class="item">读取失败</div><div class="note">请检查网络后重新扫码。</div>';
+  });
+})();
+</script>
+</body>
+</html>
