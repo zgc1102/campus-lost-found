@@ -17,6 +17,7 @@ const claimState = ref('')
 const claiming = ref(false)
 const reportState = ref('')
 const claimOpen = ref(false)
+const photoOpen = ref(false)
 
 function openDetail(it) {
   selected.value = it
@@ -24,6 +25,7 @@ function openDetail(it) {
   claimPhone.value = ''
   claimState.value = ''
   claimOpen.value = false
+  photoOpen.value = false
 }
 async function submitClaim() {
   if (!selected.value) return
@@ -219,7 +221,7 @@ function openOldHelp() {
 
     <div v-if="selected" class="sheet vue-sheet show">
       <button type="button" class="sheet-x" @click="selected = null">收起</button>
-      <div class="big-thumb">
+      <div class="big-thumb" @click="selected.photoUrl && (photoOpen = true)">
         <img v-if="selected.photoUrl" :src="selected.photoUrl" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:16px">
         <span v-else>{{ thumbText(selected) }}</span>
       </div>
@@ -239,6 +241,10 @@ function openOldHelp() {
       <div v-if="reportState" class="sa" style="margin-top:6px">{{ reportState }}</div>
       <div class="close" @click="reportItem">🚩 举报这条信息</div>
       <div class="close" @click="selected = null">收起</div>
+    </div>
+    <div v-if="photoOpen && selected && selected.photoUrl" class="img-viewer" style="display:flex" @click="photoOpen = false">
+      <img :src="selected.photoUrl" alt="">
+      <div class="img-viewer-close">✕</div>
     </div>
   </section>
 </template>
