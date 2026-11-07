@@ -60,12 +60,24 @@ function openOldHelp() {
 </script>
 
 <style scoped>
+.vue-list .item {
+  position: relative;
+  padding-bottom: 40px;
+}
 .vue-list .item .btn {
-  align-self: center;
-  height: 34px;
-  padding: 6px 12px;
-  font-size: 11px;
-  border-radius: 99px;
+  position: absolute;
+  right: 11px;
+  bottom: 10px;
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  padding: 0;
+  border-radius: 50% !important;
+  font-size: 9px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .vue-list .item .thumb {
   display: flex;
@@ -73,6 +85,7 @@ function openOldHelp() {
   justify-content: center;
   font-size: 24px;
   color: #5B2A91;
+  flex: 0 0 78px;
 }
 .vue-list .item .thumb img {
   width: 100%;
@@ -154,7 +167,7 @@ function openOldHelp() {
             </div>
             <div class="meta">📍 {{ it.place || '未填写地点' }} · {{ fmt(it.createdAt) }}</div>
           </div>
-          <button class="btn" type="button" @click.stop="selected = it">查看</button>
+          <button class="btn" type="button" @click.stop="selected = it">认领</button>
         </article>
       </div>
     </div>
