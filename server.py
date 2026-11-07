@@ -2167,6 +2167,9 @@ class Handler(BaseHTTPRequestHandler):
         path = unquote(urlparse(self.path).path)
 
         if path in ("/", "/index.html"):
+            vue_index = os.path.join(BASE_DIR, "web", "dist", "index.html")
+            if os.path.isfile(vue_index):
+                return self._serve_file("web/dist/index.html")
             return self._serve_file("用户端.html")
         # Vue 迁移预览：/web/，不影响线上根路径
         if path in ("/web", "/web/"):
