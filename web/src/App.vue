@@ -38,6 +38,10 @@ function go(target, arg) {
     history.replaceState({}, '', location.pathname + '?view=info&info=' + infoKey.value)
     return
   }
+  if (target === 'publish') {
+    publish('lost')
+    return
+  }
   if (target === 'lost' || target === 'found' || target === 'help') {
     view.value = target
     history.replaceState({}, '', location.pathname + '?view=' + target)

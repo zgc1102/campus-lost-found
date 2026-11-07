@@ -10,7 +10,9 @@ const slideIndex = ref(0)
 const defaultSlides = [
   { star: '📌', name: '失物招领点调整通知', sub: '校园公告 · 11-01 02:34' },
   { star: '📢', name: '校园失物招领与爱心互助', sub: '清华校园 · 公益项目' },
-  { star: '🔖', name: '拾光码：给失物一张身份证', sub: '一码通用 · 可打印' }
+  { star: '🔖', name: '拾光码：给失物一张身份证', sub: '一码通用 · 可打印' },
+  { star: '🔎', name: '失物雷达：主动匹配', sub: '寻物与招领自动配对' },
+  { star: '🕵️', name: '寻物侦探：按路线推理', sub: '没发布也能用' }
 ]
 const slides = ref(defaultSlides.slice())
 let timer = null
@@ -79,7 +81,7 @@ async function load() {
         name: a.title,
         sub: '校园公告 · ' + new Date(a.publishedAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
       }))
-      slides.value = annSlides.concat(defaultSlides).slice(0, 4)
+      slides.value = annSlides.concat(defaultSlides).slice(0, 5)
       slideIndex.value = 0
     }
   } catch (_) {
@@ -109,9 +111,7 @@ onUnmounted(() => clearTimeout(timer))
       </button>
       <div class="t">清华校园拾光里</div>
       <button type="button" class="help-btn" title="使用引导" @click="$emit('nav', 'guide')">?</button>
-      <div class="bell" title="通知" @click="$emit('nav', 'notices')">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
-      </div>
+      <div class="bell" title="通知" @click="$emit('nav', 'notices')">🔔</div>
       <div class="login" title="我的发布" @click="$emit('nav', 'mine')">
         <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" width="18" height="18"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
       </div>
@@ -220,7 +220,9 @@ onUnmounted(() => clearTimeout(timer))
         </div>
         <div class="flic">测试版 · 暂未备案 · 仅用于校园公益</div>
         <div class="fcopy">Copyright © 2025-2026 清城牧羊 版权所有</div>
+        <div class="ver">v3.2 · 2026-10-26 · 本机 / 同 Wi-Fi / 公网 三种模式自动切换</div>
       </div>
     </div>
+    <button class="fab-pub" type="button" aria-label="发布启事" @click="$emit('nav', 'publish')">＋</button>
   </section>
 </template>
