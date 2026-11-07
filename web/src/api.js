@@ -98,6 +98,12 @@ export const api = {
   adminCreateAnnouncement(body, token) {
     return call('/admin/announcements', { method: 'POST', headers: { 'X-Admin-Token': token }, body: JSON.stringify(body) })
   },
+  adminPatchAnnouncement(id, body, token) {
+    return call('/admin/announcements/' + encodeURIComponent(id), { method: 'PATCH', headers: { 'X-Admin-Token': token }, body: JSON.stringify(body) })
+  },
+  adminDeleteAnnouncement(id, token) {
+    return call('/admin/announcements/' + encodeURIComponent(id), { method: 'DELETE', headers: { 'X-Admin-Token': token } })
+  },
   adminDeployLog(token) {
     return call('/admin/deploy-log', { headers: { 'X-Admin-Token': token } })
   },

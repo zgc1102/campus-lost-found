@@ -92,6 +92,21 @@ async function createAnnouncement() {
     error.value = e.message || '发布失败'
   }
 }
+
+async function setAnnouncement(a, status) {
+  try {
+    await api.adminPatchAnnouncement(a.id, { status }, token.value)
+    await switchTab('announcements')
+  } catch (e) { error.value = e.message || '操作失败' }
+}
+
+async function removeAnnouncement(a) {
+  if (!confirm('确定删除公告「' + a.title + '」？')) return
+  try {
+    await api.adminDeleteAnnouncement(a.id, token.value)
+    await switchTab('announcements')
+  } catch (e) { error.value = e.message || '删除失败' }
+}
 </script>
 
 <template>
@@ -140,6 +155,10 @@ async function createAnnouncement() {
           <button type="button" class="btn" style="width:100%;margin-bottom:10px" @click="createAnnouncement">发布公告</button>
           <div v-for="a in announcements" :key="a.id || a.title" class="sa" style="padding:7px 0;border-bottom:1px solid var(--line)">
             <b>{{ a.title }}</b><br>{{ a.body || a.text || '' }}
+            <div style="display:flex;gap:5px;margin-top:6px">
+              <button type="button" class="btn" @click="setAnnouncement(a, a.status === 'published' ? 'draft' : 'published')">{{ a.status === 'published' ? '下架' : '发布' }}</button>
+              <button type="button" class="btn ghost" @click="removeAnnouncement(a)">删除</button>
+            </div>
           </div>
         </div>
         <div v-else-if="tab === 'deploy'" class="form-card">
