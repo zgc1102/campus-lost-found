@@ -59,6 +59,10 @@ function thumbText(x) {
   if (text.includes('包')) return '🎒'
   return '📦'
 }
+function chipText(x) {
+  if (!x.fields) return []
+  return Object.values(x.fields).filter(Boolean).slice(0, 3)
+}
 function openOldPublish() {
   location.href = oldUrl('home', 'open=publish&type=' + props.type)
 }
@@ -69,42 +73,6 @@ function openOldHelp() {
   location.href = oldUrl('help')
 }
 </script>
-
-<style scoped>
-.vue-list .item {
-  position: relative;
-  padding-bottom: 0;
-  align-items: center;
-}
-.vue-list .item .btn {
-  position: static;
-  width: auto;
-  min-width: 0;
-  height: 28px;
-  padding: 6px 12px;
-  border-radius: 99px !important;
-  font-size: 10.5px;
-  line-height: 1;
-  flex: 0 0 auto;
-  align-self: center;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-.vue-list .item .thumb {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  color: #5B2A91;
-  flex: 0 0 78px;
-}
-.vue-list .item .thumb img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-</style>
 
 <style>
 .vue-sheet {
@@ -173,18 +141,20 @@ function openOldHelp() {
             <img v-if="it.photoUrl" :src="it.photoUrl" alt="" loading="lazy">
             <span v-else>{{ thumbText(it) }}</span>
           </div>
-          <div style="flex:1;min-width:0">
-            <span class="src-tag">{{ label(it) }}</span>
-            <div class="tt">{{ it.title || '未命名物品' }}</div>
-            <div class="dd">{{ it.desc || '暂无描述' }}</div>
-            <div class="chips">
-              <span v-if="it.fields && it.fields.color" class="chip">{{ it.fields.color }}</span>
-              <span v-if="it.fields && it.fields.condition" class="chip">{{ it.fields.condition }}</span>
-              <span class="chip">{{ it.place || '未填写地点' }}</span>
+          <div class="body">
+            <div class="tt">
+              <span class="src-tag">{{ label(it) }}</span>{{ it.title || '未命名物品' }}
             </div>
-            <div class="meta">📍 {{ it.place || '未填写地点' }} · {{ fmt(it.createdAt) }}</div>
+            <div v-if="it.summary" class="sum">{{ it.summary }}</div>
+            <div class="dd">{{ it.desc || '暂无描述' }}</div>
+            <div v-if="it.fields && chipText(it)" class="chips">
+              <span v-for="c in chipText(it)" :key="c" class="chip">{{ c }}</span>
+            </div>
+            <div class="row">
+              <span class="meta">📍 {{ it.place || '未填写地点' }} · {{ fmt(it.createdAt) }}</span>
+              <button class="btn" type="button" @click.stop="selected = it">认领</button>
+            </div>
           </div>
-          <button class="btn" type="button" @click.stop="selected = it">认领</button>
         </article>
       </div>
     </div>
