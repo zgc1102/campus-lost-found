@@ -74,6 +74,15 @@ export const api = {
   adminStats(token) {
     return call('/admin/stats', { headers: { 'X-Admin-Token': token } })
   },
+  adminConfig(token) {
+    return call('/admin/ai/config', { headers: { 'X-Admin-Token': token } })
+  },
+  adminAccounts(token) {
+    return call('/admin/accounts', { headers: { 'X-Admin-Token': token } })
+  },
+  adminAnnouncements(token) {
+    return call('/admin/announcements', { headers: { 'X-Admin-Token': token } })
+  },
   adminPatch(id, body, token) {
     return call('/admin/items/' + encodeURIComponent(id), { method: 'PATCH', headers: { 'X-Admin-Token': token }, body: JSON.stringify(body) })
   },

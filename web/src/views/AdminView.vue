@@ -10,6 +10,8 @@ const items = ref([])
 const loading = ref(false)
 const error = ref('')
 const tab = ref('pending')
+const config = ref(null)
+const accounts = ref([])
 
 onMounted(() => { if (token.value) load() })
 
@@ -51,6 +53,17 @@ async function review(it, status) {
     error.value = e.message || '操作失败'
   }
 }
+
+async function switchTab(t) {
+  tab.value = t
+  if (!token.value) return
+  if (t === 'config') {
+    try { config.value = await api.adminConfig(token.value) } catch (e) { error.value = e.message }
+  }
+  if (t === 'accounts') {
+    try { accounts.value = await api.adminAccounts(token.value) } catch (e) { error.value = e.message }
+  }
+}
 </script>
 
 <template>
@@ -77,26 +90,38 @@ async function review(it, status) {
           <div><b>{{ stats && stats.byStatus ? (stats.byStatus.approved || 0) : '—' }}</b><span>已上架</span></div>
         </div>
         <div class="lf-tabs" style="padding:0 0 10px">
-          <button type="button" :class="{ on: tab === 'pending' }" @click="tab = 'pending'">待审核</button>
-          <button type="button" :class="{ on: tab === 'all' }" @click="tab = 'all'">全部</button>
+          <button type="button" :class="{ on: tab === 'pending' }" @click="switchTab('pending')">待审核</button>
+          <button type="button" :class="{ on: tab === 'all' }" @click="switchTab('all')">全部</button>
+          <button type="button" :class="{ on: tab === 'config' }" @click="switchTab('config')">AI</button>
+          <button type="button" :class="{ on: tab === 'accounts' }" @click="switchTab('accounts')">账号</button>
         </div>
-        <div v-if="loading" class="empty">正在读取…</div>
-        <div v-else class="vue-list">
-          <article v-for="it in items.filter(x => tab === 'all' || x.status === 'pending')" :key="it.id" class="item">
-            <div class="thumb">{{ it.photoUrl ? '🖼️' : '📦' }}</div>
-            <div class="body">
-              <div class="tt"><span class="src-tag">{{ it.status }}</span>{{ it.title }}</div>
-              <div class="dd">{{ it.desc }}</div>
-              <div class="row">
-                <span class="meta">📍 {{ it.place }} · {{ it.ownerId ? it.ownerId.slice(0, 8) : '' }}</span>
-                <span style="display:flex;gap:4px">
-                  <button type="button" class="btn" @click="review(it, 'approved')">通过</button>
-                  <button type="button" class="btn ghost" @click="review(it, 'rejected')">驳回</button>
-                </span>
+        <div v-if="tab === 'config'" class="form-card">
+          <div class="fc-title">AI 配置</div>
+          <pre style="font-size:10px;line-height:1.6;white-space:pre-wrap">{{ JSON.stringify(config, null, 2) }}</pre>
+        </div>
+        <div v-else-if="tab === 'accounts'" class="form-card">
+          <div class="fc-title">账号</div>
+          <div v-for="a in accounts" :key="a.id" class="sa" style="padding:7px 0;border-bottom:1px solid var(--line)">{{ a.phone }} · {{ a.banned ? '封禁' : '正常' }}</div>
+        </div>
+        <template v-else>
+          <div v-if="loading" class="empty">正在读取…</div>
+          <div v-else class="vue-list">
+            <article v-for="it in items.filter(x => tab === 'all' || x.status === 'pending')" :key="it.id" class="item">
+              <div class="thumb">{{ it.photoUrl ? '🖼️' : '📦' }}</div>
+              <div class="body">
+                <div class="tt"><span class="src-tag">{{ it.status }}</span>{{ it.title }}</div>
+                <div class="dd">{{ it.desc }}</div>
+                <div class="row">
+                  <span class="meta">📍 {{ it.place }} · {{ it.ownerId ? it.ownerId.slice(0, 8) : '' }}</span>
+                  <span style="display:flex;gap:4px">
+                    <button type="button" class="btn" @click="review(it, 'approved')">通过</button>
+                    <button type="button" class="btn ghost" @click="review(it, 'rejected')">驳回</button>
+                  </span>
+                </div>
               </div>
-            </div>
-          </article>
-        </div>
+            </article>
+          </div>
+        </template>
       </template>
     </div>
   </section>
