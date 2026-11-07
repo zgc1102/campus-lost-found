@@ -13,6 +13,7 @@ const loading = ref(false)
 const error = ref('')
 const matches = ref([])
 const hotspots = ref([])
+const radarSummary = ref('')
 const detective = ref(null)
 const scanned = ref(0)
 
@@ -25,6 +26,7 @@ async function scan() {
     const data = await api.radar({ title: title.value.trim(), place: place.value.trim(), cat: cat.value, type: 'lost' })
     matches.value = data.matches || []
     hotspots.value = data.hotspots || []
+    radarSummary.value = data.summary || ''
     scanned.value = data.scanned || 0
   } catch (e) {
     error.value = e.message || '扫描失败'
@@ -89,24 +91,24 @@ function askCampus() {
       <div v-else-if="!matches.length && !scanned" class="ag-loading">填好线索，点「扫描」开始</div>
 
       <template v-if="matches.length">
-        <div class="rd-section-title">可能相关的招领 · {{ matches.length }} 条</div>
-        <article v-for="(m, i) in matches" :key="m.item.id" class="radar-match" :style="{ animationDelay: (i * 0.12) + 's' }">
-          <div class="rm-score">{{ m.score }}%</div>
-          <div class="rm-main">
-            <div class="rm-title">{{ m.item.title }}</div>
-            <div class="rm-meta">{{ m.item.place || '未填写地点' }} · {{ m.confidence }}置信</div>
-            <div class="rm-reasons"><span v-for="r in m.reasons" :key="r">{{ r }}</span></div>
+        <div v-if="radarSummary" class="rd-summary">{{ radarSummary }}</div>
+        <article v-for="(m, i) in matches" :key="m.item.id" class="rd-match" :style="{ animationDelay: (i * 0.12) + 's' }">
+          <div class="rd-score">{{ m.score }}%</div>
+          <div class="rd-main">
+            <div class="rd-title">{{ m.item.title }}</div>
+            <div class="rd-meta">{{ m.item.place || '未填写地点' }}<span class="rd-conf">{{ m.confidence }}置信</span></div>
+            <div class="rd-reasons"><span v-for="r in m.reasons" :key="r">{{ r }}</span></div>
           </div>
         </article>
       </template>
-      <div v-else-if="scanned && !loading" class="empty">暂时没有高置信度匹配，可以看下面的高频区域。</div>
+      <div v-else-if="scanned && !loading" class="rd-summary" style="padding:18px 0;text-align:center">暂时没有高置信度匹配，先看下面的高频区域。</div>
 
-      <div v-if="hotspots.length" class="rd-section-title">校园失物高频区域</div>
-      <div v-if="hotspots.length" class="radar-hot">
-        <div v-for="h in hotspots.slice(0, 5)" :key="h.place" class="rh-row">
-          <span class="rh-name">{{ h.place }}</span>
-          <span class="rh-bar"><i :style="{ width: Math.max(6, h.share || 0) + '%' }" /></span>
-          <span class="rh-n">{{ h.count }} 条</span>
+      <div v-if="hotspots.length" class="rd-section">校园失物高频区域</div>
+      <div v-if="hotspots.length" class="rd-hot">
+        <div v-for="h in hotspots.slice(0, 5)" :key="h.place" class="rd-hot-row">
+          <span class="rd-hot-name">{{ h.place }}</span>
+          <span class="rd-bar"><i :style="{ width: Math.max(6, h.share || 0) + '%' }" /></span>
+          <span class="rd-hot-n">{{ h.count }} 条</span>
         </div>
       </div>
 
