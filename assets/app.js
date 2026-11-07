@@ -2781,6 +2781,7 @@ try{
   const _op = new URLSearchParams(location.search).get('open');
   if(_op === 'tag'){ setTimeout(function(){ if(typeof openTagSheet === 'function') openTagSheet(); }, 900); }
   if(_op === 'detective'){ setTimeout(function(){ if(typeof openBlankDetective === 'function') openBlankDetective(); }, 900); }
+  if(_op === 'publish'){ setTimeout(function(){ if(typeof openPublish === 'function') openPublish((new URLSearchParams(location.search).get('type') || 'lost')); }, 900); }
   if(_op === 'notices'){ setTimeout(function(){ if(typeof renderNotices === 'function') renderNotices(); show('notices'); }, 900); }
   console.log('清华校园拾光里 v3.2 已就绪 · 模式=' + (API_BASE ? '共享' : '本机') + ' · 存储键 ' + STORE_KEY);
 }catch(err){
