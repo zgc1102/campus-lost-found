@@ -13,7 +13,7 @@ const slides = [
   { e: '🚀', t: '开始你的拾光之旅', b: '右上角铃铛看通知，「我的」里管理发布和申请。\n遇到问题，随时找我们。' }
 ]
 const index = ref(0)
-const show = ref(localStorage.getItem(KEY) !== '1')
+const show = ref(localStorage.getItem(KEY) !== '1' && !location.search.includes('tour=off'))
 function close() {
   show.value = false
   localStorage.setItem(KEY, '1')
