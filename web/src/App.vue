@@ -119,11 +119,14 @@ body {
   min-height: 100vh;
 }
 .admin-route {
-  width: 100%;
-  max-width: 100%;
-  flex: 1 1 100%;
-  min-width: 0;
-  min-height: 100vh;
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
   background: #F3EEFA;
+  overscroll-behavior: contain;
 }
 </style>
