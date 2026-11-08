@@ -1,4 +1,7 @@
-# 本项目后端仅使用 Python 标准库，无第三方运行依赖。
+# 本项目后端基础功能仅使用 Python 标准库
+# 拾光码二维码生成依赖（未安装时前端会用备用二维码）
+qrcode[pil]>=7.4
+Pillow>=10.0
 # 若后续引入（如 requests、pytest），在此追加，例如：
 # requests>=2.31
 # pytest>=8.0
