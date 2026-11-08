@@ -7,7 +7,7 @@ const token = ref(localStorage.getItem(TOKEN_KEY) || '')
 const password = ref('')
 const loading = ref(false)
 const error = ref('')
-const tab = ref('pending')
+const tab = ref('all')
 const search = ref('')
 
 const stats = ref(null)
@@ -65,7 +65,7 @@ async function loadAll() {
     announcements.value = Array.isArray(anns) ? anns : []
     specials.value = Array.isArray(sp) ? sp : []
     config.value = cfg
-    deployLog.value = Array.isArray(dep) ? dep : (dep.items || dep.logs || [])
+    deployLog.value = Array.isArray(dep) ? dep : (dep.log ? String(dep.log).split('\n').filter(Boolean).map((x) => ({ text: x })) : (dep.items || dep.logs || []))
   } catch (e) {
     error.value = e.message || '读取失败'
     if (String(e.message).includes('登录') || String(e.message).includes('401')) logout()
@@ -169,6 +169,10 @@ function fmt(ts) {
   const p = (n) => String(n).padStart(2, '0')
   return `${d.getMonth() + 1}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
 }
+function specialName(s) {
+  if (typeof s === 'string') return s
+  return s.phone || s.number || s.id || JSON.stringify(s)
+}
 function statusText(s) {
   return ({ pending: '待审核', approved: '已上架', rejected: '已驳回', claimed: '已认领', closed: '已闭环', removed: '已下架' })[s] || s
 }
@@ -254,8 +258,8 @@ function statusClass(s) {
           <template v-else-if="tab === 'phone'">
             <div class="panel">
               <h3>号码白名单 · {{ specials.length }}</h3>
-              <div class="user-row" v-for="s in specials" :key="s.id || s.phone || s.number">
-                <div><b>{{ s.phone || s.number || s.id }}</b><span>{{ s.reason || s.note || '特殊号码' }}</span></div>
+              <div class="user-row" v-for="s in specials" :key="specialName(s)">
+                <div><b>{{ specialName(s) }}</b><span>{{ s.reason || s.note || '特殊号码' }}</span></div>
               </div>
             </div>
           </template>
