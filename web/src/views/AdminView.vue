@@ -311,6 +311,11 @@ function specialName(s) {
   if (typeof s === 'string') return s
   return s.phone || s.number || s.id || JSON.stringify(s)
 }
+function photoSrc(url) {
+  if (!url) return ''
+  if (!token.value) return url
+  return url + (url.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(token.value)
+}
 function statusText(s) {
   return ({ pending: '待审核', approved: '已上架', rejected: '已驳回', claimed: '已认领', closed: '已闭环', removed: '已下架' })[s] || s
 }
@@ -447,6 +452,8 @@ function statusClass(s) {
                 <label><span>自动通过阈值</span><input v-model.number="config.approve_threshold" type="number" class="field"></label>
                 <label><span>自动驳回阈值</span><input v-model.number="config.reject_threshold" type="number" class="field"></label>
               </div>
+              <label class="check"><input v-model="config.auto_approve" type="checkbox"> 自动通过</label>
+              <label class="check"><input v-model="config.auto_reject" type="checkbox"> 自动驳回</label>
               <button type="button" class="primary" @click="saveConfig">保存 AI 配置</button>
               <button type="button" class="ghost" :disabled="aiTesting" @click="testAi">{{ aiTesting ? '测试中…' : '测试连接' }}</button>
               <div v-if="aiTestMsg" class="test-msg">{{ aiTestMsg }}</div>
@@ -500,13 +507,15 @@ function statusClass(s) {
                 </div>
                 <div v-if="it.secret" class="ai-secret">🔒 核验特征：{{ it.secret }}</div>
                 <div v-if="it.rejectReason" class="ai-secret" style="border-color:#F3CFCF;color:#A12F2F;background:#FDF2F2">{{ it.status === 'removed' ? '下架理由' : '驳回理由' }}：{{ it.rejectReason }}</div>
-                <img v-if="it.photoUrl" :src="it.photoUrl" class="ai-photo" alt="" @click="viewingImage = it.photoUrl">
+                <img v-if="it.photoUrl" :src="photoSrc(it.photoUrl)" class="ai-photo" alt="" @click="viewingImage = photoSrc(it.photoUrl)">
                 <div v-if="it.contact && it.contact.phone" class="ai-phone">📞 联系电话：{{ it.contact.phone }}</div>
                 <div class="ai-actions">
                   <button v-if="it.status === 'pending'" type="button" class="primary" @click="review(it, 'approved')">通过并上架</button>
                   <button v-if="it.status === 'pending'" type="button" class="danger" @click="review(it, 'rejected')">驳回</button>
+                  <button v-if="it.status === 'approved' || it.status === 'claimed'" type="button" class="ghost" @click="review(it, 'approved')">保持上架</button>
                   <button v-if="it.status === 'approved' || it.status === 'claimed'" type="button" class="danger" @click="review(it, 'removed')">下架并填写理由</button>
                   <button v-if="it.status === 'rejected'" type="button" class="primary" @click="review(it, 'approved')">改为通过</button>
+                  <button v-if="it.status === 'removed'" type="button" class="primary" @click="review(it, 'approved')">恢复上架</button>
                   <button v-if="it.phoneStatus === 'yellow' && !it.phoneVerified" type="button" class="ghost" @click="approvePhone(it)">通过号码</button>
                 </div>
               </article>
