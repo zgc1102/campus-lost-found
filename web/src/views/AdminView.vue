@@ -72,7 +72,7 @@ async function loadAll() {
     deployLog.value = Array.isArray(dep) ? dep : (dep.log ? String(dep.log).split('\n').filter(Boolean).map((x) => ({ text: x })) : (dep.items || dep.logs || []))
   } catch (e) {
     error.value = e.message || '读取失败'
-    if (String(e.message).includes('登录') || String(e.message).includes('401')) logout()
+    if (e.status === 401 || /unauthorized|登录/i.test(String(e.message))) logout()
   } finally {
     loading.value = false
   }

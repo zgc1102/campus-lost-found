@@ -28,6 +28,7 @@ async function call(path, options = {}) {
     } catch (_) {}
     const err = new Error(message)
     err.body = body
+    err.status = res.status
     throw err
   }
   const text = await res.text()
