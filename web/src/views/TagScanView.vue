@@ -68,7 +68,7 @@ async function send() {
           <div class="scan-kicker">清华校园拾光里</div>
           <h2>{{ tag.itemName || '这位同学丢了东西' }}</h2>
           <p v-if="tag.note">{{ tag.note }}</p>
-          <p class="scan-phone">失主联系方式：{{ tag.phoneMasked || '已隐藏' }}</p>
+          <p class="scan-phone">失主联系方式：{{ tag.mode === 'phone' && tag.phoneFull ? tag.phoneFull : (tag.phoneMasked || '已隐藏') }}</p>
           <p class="scan-hint">你不需要注册，也不用曝光自己。留一句话，失主会收到通知。</p>
         </div>
 
