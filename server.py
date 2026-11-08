@@ -2808,6 +2808,9 @@ class Handler(BaseHTTPRequestHandler):
             text = str(body.get("body") or "").strip()[:2000]
             if len(title) < 2 or len(text) < 5:
                 return self._json({"error": "标题或正文太短"}, 400)
+            _ok, _why = moderate_text(title + " " + text, "公告")
+            if not _ok:
+                return self._json({"error": "公告未通过审核：" + _why}, 400)
             now = now_ms()
             item = {"id": "a_" + uuid.uuid4().hex[:10], "title": title, "body": text,
                     "pinned": bool(body.get("pinned")), "status": "draft",
@@ -3689,6 +3692,11 @@ class Handler(BaseHTTPRequestHandler):
                 return
             aid = path[len("/api/admin/announcements/"):]
             body = patch
+            _check_text = (str(body.get("title") or "") + " " + str(body.get("body") or "")).strip()
+            if _check_text:
+                _ok, _why = moderate_text(_check_text, "公告")
+                if not _ok:
+                    return self._json({"error": "公告未通过审核：" + _why}, 400)
             with LOCK:
                 arr = load_announcements()
                 target = next((x for x in arr if x.get("id") == aid), None)
