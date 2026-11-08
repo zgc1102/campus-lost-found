@@ -113,11 +113,8 @@ function publish(type, cat) {
 
 <style>
 .admin-route {
-  position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100vh;
-  background: #fff;
-  z-index: 999;
+  width: 100%;
+  min-height: 100vh;
+  background: #F3EEFA;
 }
 </style>
