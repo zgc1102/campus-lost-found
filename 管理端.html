@@ -1,85 +1,14 @@
 <!doctype html>
 <html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>管理后台 · 清华校园拾光里</title>
-<link rel="stylesheet" href="assets/admin.css?v=20261107">
-<link rel="stylesheet" href="assets/aurora.css?v=20261107">
-</head>
-<body>
-<div id="fileWarn" style="display:none;position:fixed;inset:0;z-index:9999;background:#f6f4fb;padding:28px 22px;font-family:system-ui,-apple-system,'Microsoft YaHei',sans-serif;color:#2f2a3a;overflow:auto">
-  <h2 style="margin:0 0 12px;font-size:20px">这个文件不能直接双击运行</h2>
-  <p style="line-height:1.8;font-size:14px">管理端要连着正在运行的服务窗口，双击本地文件是打不开的。请用下面任一方式：</p>
-  <ol style="line-height:2;font-size:14px;padding-left:20px">
-    <li>双击桌面上的 <b>「拾光里-管理端」</b> 快捷方式（每次启动会自动更新地址）</li>
-    <li>打开文件夹里的 <b>公网地址.txt</b>，在网址后面加 <code>/admin</code></li>
-    <li>如果服务就在这台电脑上：<a href="http://127.0.0.1:8000/admin">http://127.0.0.1:8000/admin</a></li>
-  </ol>
-  <p style="margin-top:18px"><a href="http://127.0.0.1:8000/admin" style="display:inline-block;background:#6b4bb3;color:#fff;padding:10px 18px;border-radius:10px;text-decoration:none">试试本机管理端</a></p>
-</div>
-
-<div class="wrap">
-  <header>
-    <h1>管理后台 · 清华校园拾光里</h1>
-    <p>仅管理员可见 · 审核发布内容</p>
-    <div class="hbar" id="hbar" style="display:none">
-      <button id="btnRefresh">刷新</button>
-      <button id="btnDeploy">更新代码</button>
-      <button id="btnAiAll">AI 预审全部</button>
-      <button id="btnReset">重置演示数据</button>
-      <button id="btnLogout">退出登录</button>
-    </div>
-  </header>
-
-  <main id="app">
-    <div class="login" id="loginBox">
-      <h2>管理员登录</h2>
-      <p>密码在服务器文件夹的「管理员密码.txt」里</p>
-      <input id="pwd" type="password" placeholder="输入管理员密码" autocomplete="current-password">
-      <button id="btnLogin">登录</button>
-      <div class="msg" id="loginMsg"></div>
-      <div class="hint">登录后可审核待发布内容、下架违规信息。<br>密码错误会有 1 秒延迟。</div>
-    </div>
-
-    <div id="panel" style="display:none">
-      <div class="aistat" id="aiStat">AI 审核：加载中…</div>
-      <div class="aiconf" id="aiConf">
-        <div class="row"><label>接口地址</label><input id="aiBase" placeholder="https://api.deepseek.com"></div>
-        <div class="row"><label>模型名</label><input id="aiModel" placeholder="deepseek-flash"></div>
-        <div class="row"><label>API Key</label><input id="aiKey" type="password" placeholder="sk-...（只保存在本机 ai.json）"></div>
-        <div class="row"><label>自动放行</label>
-          <div class="auto"><label><input type="checkbox" id="aiAuto" checked> 风险 ≤</label>
-          <input id="aiThreshold" type="number" min="0" max="100" value="20"><label>分自动上架</label></div>
-        </div>
-        <div class="acts">
-          <button class="btn" id="aiSave">保存并启用</button>
-          <button class="btn ghost" id="aiTest">测试连接</button>
-          <button class="btn gray" id="aiCancel">取消</button>
-        </div>
-        <div class="aitest" id="aiTestMsg"></div>
-        <div class="hintline">支持任何 OpenAI 兼容接口（DeepSeek / 通义 / Kimi / 智谱 / OpenAI）。不填也能用，只是走本地规则预审。</div>
-      </div>
-      <div class="stats" id="stats"></div>
-      <div class="tabs" id="tabs">
-        <button data-tab="overview">概览</button>
-        <button data-tab="pending" class="on">待审核</button>
-        <button data-tab="approved">已上架</button>
-        <button data-tab="rejected">已驳回</button>
-        <button data-tab="all">全部</button>
-        <button data-tab="users">注册用户</button>
-        <button data-tab="phone">号码白名单</button>
-        <button data-tab="announce">公告</button>
-      </div>
-      <input class="search" id="search" placeholder="搜索标题 / 地点 / 描述">
-      <div id="list"></div>
-      <div class="foot"><a href="/">← 返回用户端</a></div>
-    </div>
-  </main>
-</div>
-
-<div id="adminImgViewer" class="admin-img-viewer"><img id="adminImgViewerImg" alt=""></div>
-<script src="assets/admin.js?v=20261112"></script>
-<script>if(location.protocol==="file:"){var w=document.getElementById("fileWarn");if(w)w.style.display="block";}</script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#3B1D63" />
+    <title>清华校园拾光里</title>
+    <script type="module" crossorigin src="/web/assets/index-DsmNPVLM.js"></script>
+    <link rel="stylesheet" crossorigin href="/web/assets/index-C6GnJo3a.css">
+  </head>
+  <body>
+    <div id="app"></div>
+  </body>
 </html>
