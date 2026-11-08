@@ -26,6 +26,11 @@ const apiKey = ref('')
 const actionTarget = ref(null)
 const actionStatus = ref('')
 const actionReason = ref('')
+const specialInput = ref('')
+const editingAnnId = ref('')
+const aiTestMsg = ref('')
+const aiTesting = ref(false)
+const viewingImage = ref('')
 
 const tabs = [
   ['pending', '待审核'],
@@ -217,11 +222,65 @@ async function createAnnouncement() {
     return
   }
   try {
-    await api.adminCreateAnnouncement({ title: annTitle.value.trim(), body: annBody.value.trim(), publish: true }, token.value)
+    if (editingAnnId.value) {
+      await api.adminPatchAnnouncement(editingAnnId.value, {
+        title: annTitle.value.trim(),
+        body: annBody.value.trim()
+      }, token.value)
+    } else {
+      await api.adminCreateAnnouncement({ title: annTitle.value.trim(), body: annBody.value.trim(), publish: true }, token.value)
+    }
     annTitle.value = ''
     annBody.value = ''
+    editingAnnId.value = ''
     await loadAll()
   } catch (e) { error.value = e.message || '发布失败' }
+}
+
+function editAnnouncement(a) {
+  editingAnnId.value = a.id
+  annTitle.value = a.title || ''
+  annBody.value = a.body || ''
+}
+
+async function addSpecial() {
+  if (!/^1[3-9]\d{9}$/.test(specialInput.value.trim())) {
+    error.value = '请输入 11 位手机号'
+    return
+  }
+  try {
+    await api.adminSpecialSave(specialInput.value.trim(), false, token.value)
+    specialInput.value = ''
+    await loadAll()
+  } catch (e) { error.value = e.message || '添加失败' }
+}
+
+async function removeSpecial(s) {
+  try {
+    await api.adminSpecialSave(specialName(s), true, token.value)
+    await loadAll()
+  } catch (e) { error.value = e.message || '移除失败' }
+}
+
+async function resetDemo() {
+  if (!confirm('确定重置演示数据？会清空当前内容，恢复演示数据。')) return
+  try {
+    await api.adminReset(token.value)
+    await loadAll()
+  } catch (e) { error.value = e.message || '重置失败' }
+}
+
+async function testAi() {
+  aiTesting.value = true
+  aiTestMsg.value = ''
+  try {
+    const r = await api.adminAiTest({
+      base_url: config.value?.base_url,
+      model: config.value?.model,
+      api_key: apiKey.value
+    }, token.value)
+    aiTestMsg.value = r.ok ? ('连接成功 · ' + (r.model || config.value?.model || '')) : ('连接失败：' + (r.error || r.msg || '未知错误'))
+  } catch (e) { aiTestMsg.value = '连接失败：' + (e.message || '') } finally { aiTesting.value = false }
 }
 
 async function setAnnouncement(a, status) {
@@ -271,6 +330,7 @@ function statusClass(s) {
         <div class="header-actions" v-if="token">
           <button type="button" @click="loadAll">刷新</button>
           <button type="button" @click="preReviewAll">AI 预审全部</button>
+          <button type="button" @click="resetDemo">重置演示数据</button>
           <button type="button" @click="deployCode">更新代码</button>
           <button type="button" @click="logout">退出登录</button>
         </div>
@@ -343,22 +403,29 @@ function statusClass(s) {
           <template v-else-if="tab === 'phone'">
             <div class="panel">
               <h3>号码白名单 · {{ specials.length }}</h3>
+              <div class="inline-add">
+                <input v-model="specialInput" class="field" maxlength="11" placeholder="11 位手机号，如 13311111111">
+                <button type="button" class="primary" @click="addSpecial">添加</button>
+              </div>
               <div class="user-row" v-for="s in specials" :key="specialName(s)">
                 <div><b>{{ specialName(s) }}</b><span>{{ s.reason || s.note || '特殊号码' }}</span></div>
+                <button type="button" class="danger" @click="removeSpecial(s)">移出白名单</button>
               </div>
             </div>
           </template>
 
           <template v-else-if="tab === 'announce'">
             <div class="panel">
-              <h3>发布公告</h3>
+              <h3>{{ editingAnnId ? '编辑公告' : '发布公告' }}</h3>
               <input v-model="annTitle" class="field" maxlength="60" placeholder="公告标题">
               <textarea v-model="annBody" class="field" maxlength="2000" placeholder="公告正文"></textarea>
-              <button type="button" class="primary" @click="createAnnouncement">发布公告</button>
+              <button type="button" class="primary" @click="createAnnouncement">{{ editingAnnId ? '保存修改' : '发布公告' }}</button>
+              <button v-if="editingAnnId" type="button" class="ghost" @click="editingAnnId = ''; annTitle = ''; annBody = ''">取消编辑</button>
               <h3 style="margin-top:22px">公告列表 · {{ announcements.length }}</h3>
               <div class="ann-row" v-for="a in announcements" :key="a.id">
                 <div><b>{{ a.title }}</b><span>{{ a.body }}</span><em>{{ a.status }}</em></div>
                 <div class="row-actions">
+                  <button type="button" class="ghost" @click="editAnnouncement(a)">编辑</button>
                   <button type="button" class="ghost" @click="setAnnouncement(a, a.status === 'published' ? 'draft' : 'published')">{{ a.status === 'published' ? '下架' : '发布' }}</button>
                   <button type="button" class="danger" @click="removeAnnouncement(a)">删除</button>
                 </div>
@@ -378,6 +445,8 @@ function statusClass(s) {
                 <label><span>自动驳回阈值</span><input v-model.number="config.reject_threshold" type="number" class="field"></label>
               </div>
               <button type="button" class="primary" @click="saveConfig">保存 AI 配置</button>
+              <button type="button" class="ghost" :disabled="aiTesting" @click="testAi">{{ aiTesting ? '测试中…' : '测试连接' }}</button>
+              <div v-if="aiTestMsg" class="test-msg">{{ aiTestMsg }}</div>
             </div>
           </template>
 
@@ -428,7 +497,7 @@ function statusClass(s) {
                 </div>
                 <div v-if="it.secret" class="ai-secret">🔒 核验特征：{{ it.secret }}</div>
                 <div v-if="it.rejectReason" class="ai-secret" style="border-color:#F3CFCF;color:#A12F2F;background:#FDF2F2">{{ it.status === 'removed' ? '下架理由' : '驳回理由' }}：{{ it.rejectReason }}</div>
-                <img v-if="it.photoUrl" :src="it.photoUrl" class="ai-photo" alt="">
+                <img v-if="it.photoUrl" :src="it.photoUrl" class="ai-photo" alt="" @click="viewingImage = it.photoUrl">
                 <div v-if="it.contact && it.contact.phone" class="ai-phone">📞 联系电话：{{ it.contact.phone }}</div>
                 <div class="ai-actions">
                   <button v-if="it.status === 'pending'" type="button" class="primary" @click="review(it, 'approved')">通过并上架</button>
@@ -441,6 +510,10 @@ function statusClass(s) {
             </div>
           </template>
         </template>
+      </div>
+      <div v-if="viewingImage" class="image-viewer" @click="viewingImage = ''">
+        <img :src="viewingImage" alt="查看大图">
+        <button type="button" class="image-close" @click.stop="viewingImage = ''">✕</button>
       </div>
       <div v-if="actionTarget" class="admin-modal">
         <div class="modal-card">
@@ -576,5 +649,15 @@ textarea.field { min-height: 78px; resize: vertical; }
 .ai-review-src { margin-top:3px; color:#A99BB9; font-size:9.5px; }
 .ai-review-actions { display:flex; gap:6px; margin-top:7px; }
 .phone-warn { background:#FFF4D6; color:#A97A00; }
+</style>
+
+
+<style scoped>
+.inline-add { display:flex; gap:8px; margin-bottom:10px; }
+.inline-add .field { flex:1; }
+.test-msg { margin-top:8px; font-size:11px; color:#5B2A91; background:#F7F0FF; border-radius:8px; padding:8px 10px; }
+.image-viewer { position:fixed; inset:0; z-index:700; background:rgba(12,5,20,.86); display:flex; align-items:center; justify-content:center; padding:28px; }
+.image-viewer img { max-width:min(92vw,900px); max-height:88vh; border-radius:12px; box-shadow:0 20px 70px rgba(0,0,0,.45); }
+.image-close { position:absolute; top:18px; right:22px; width:36px; height:36px; border:0; border-radius:50%; background:rgba(255,255,255,.16); color:#fff; font-size:16px; cursor:pointer; }
 </style>
 

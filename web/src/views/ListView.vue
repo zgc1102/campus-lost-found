@@ -220,7 +220,7 @@ function openOldHelp() {
       <div v-else-if="!visible.length" class="empty">暂时没有{{ type === 'lost' ? '招领' : '寻物' }}，换个关键词试试</div>
       <div v-else class="vue-list">
         <article v-for="it in visible" :key="it.id" class="item" @click="openDetail(it)">
-          <div class="thumb" :style="it.photoUrl ? 'padding:0;overflow:hidden' : ''">
+          <div class="thumb" :style="it.photoUrl ? 'padding:0;overflow:hidden' : ''" @click.stop="it.photoUrl && (selected = it, photoOpen = true)">
             <img v-if="it.photoUrl" :src="it.photoUrl" alt="" loading="lazy">
             <span v-else>{{ thumbText(it) }}</span>
           </div>

@@ -16,6 +16,8 @@ const goMsg = ref('')
 const goPhone = ref('')
 const goState = ref('')
 const going = ref(false)
+const photoOpen = ref(false)
+const photoSrc = ref('')
 
 const cats = [
   { id: 'help_borrow', title: '借用工具', sub: '借伞 / 充电宝', art: art('<path d="M4 12a8 8 0 0 1 16 0H4Z"/><path d="M12 12v7a2 2 0 0 0 4 0"/><path d="M9 12V9a3 3 0 0 1 6 0v3"/>') },
@@ -120,7 +122,7 @@ async function submitHelp() {
       <div v-else-if="!visible.length" class="empty">这个方向暂时没有求助</div>
       <div v-else class="vue-list">
         <article v-for="it in visible" :key="it.id" class="item" @click="openDetail(it)">
-          <div class="thumb" :style="it.photoUrl ? 'padding:0;overflow:hidden' : ''">
+          <div class="thumb" :style="it.photoUrl ? 'padding:0;overflow:hidden' : ''" @click.stop="it.photoUrl && (photoSrc = it.photoUrl, photoOpen = true)">
             <img v-if="it.photoUrl" :src="it.photoUrl" alt="" loading="lazy">
             <span v-else>{{ thumb(it) }}</span>
           </div>
@@ -139,7 +141,10 @@ async function submitHelp() {
 
     <div v-if="selected" class="sheet vue-sheet show">
       <button type="button" class="sheet-x" @click="selected = null">收起</button>
-      <div class="big-thumb">{{ thumb(selected) }}</div>
+      <div class="big-thumb" @click="selected.photoUrl && (photoSrc = selected.photoUrl, photoOpen = true)">
+        <img v-if="selected.photoUrl" :src="selected.photoUrl" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:16px">
+        <span v-else>{{ thumb(selected) }}</span>
+      </div>
       <div class="sh">{{ selected.title }}</div>
       <div class="sa">{{ selected.desc }}</div>
       <div class="sa" style="margin-top:8px">📍 {{ selected.place || '未填写地点' }}</div>
@@ -149,6 +154,10 @@ async function submitHelp() {
       <div v-if="goState" class="sa" style="margin-top:6px">{{ goState }}</div>
       <button type="button" class="btn" style="width:100%;margin-top:12px" :disabled="going" @click="submitHelp">{{ going ? '发送中…' : '发送' }}</button>
       <div class="close" @click="selected = null">收起</div>
+    </div>
+    <div v-if="photoOpen" class="help-photo-viewer" @click="photoOpen = false">
+      <img :src="photoSrc" alt="查看大图">
+      <button type="button" @click.stop="photoOpen = false">✕</button>
     </div>
   </section>
 </template>
@@ -173,5 +182,12 @@ async function submitHelp() {
   border-color: transparent !important;
   color: #fff !important;
 }
+</style>
+
+
+<style>
+.help-photo-viewer { position:fixed; inset:0; z-index:800; background:rgba(12,5,20,.88); display:flex; align-items:center; justify-content:center; padding:24px; }
+.help-photo-viewer img { max-width:94vw; max-height:88vh; border-radius:12px; }
+.help-photo-viewer button { position:absolute; top:18px; right:20px; width:38px; height:38px; border:0; border-radius:50%; background:rgba(255,255,255,.16); color:#fff; font-size:16px; }
 </style>
 

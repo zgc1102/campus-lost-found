@@ -111,6 +111,15 @@ export const api = {
   adminSpecialNumbers(token) {
     return call('/admin/special-numbers', { headers: { 'X-Admin-Token': token } })
   },
+  adminSpecialSave(phone, remove, token) {
+    return call('/admin/special-numbers', { method: 'POST', headers: { 'X-Admin-Token': token }, body: JSON.stringify({ phone, remove }) })
+  },
+  adminReset(token) {
+    return call('/admin/reset', { method: 'POST', headers: { 'X-Admin-Token': token } })
+  },
+  adminAiTest(body, token) {
+    return call('/admin/ai/test', { method: 'POST', headers: { 'X-Admin-Token': token }, body: JSON.stringify(body) })
+  },
   adminPhoneApprove(id, token) {
     return call('/admin/items/' + encodeURIComponent(id) + '/phone-approve', { method: 'POST', headers: { 'X-Admin-Token': token } })
   },
