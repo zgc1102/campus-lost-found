@@ -226,7 +226,7 @@ function statusClass(s) {
           <div class="brand-mark">拾</div>
           <div>
             <h1>管理后台 · 清华校园拾光里</h1>
-            <p>仅管理员可见 · 审核发布内容 · 管理公告与用户</p>
+            <p>仅管理员可见 · 审核发布内容 · 管理公告与用户 · Vue Admin 2026-11-08</p>
           </div>
         </div>
         <div class="header-actions" v-if="token">
