@@ -39,45 +39,43 @@ function ask() {
 
       <div class="sectitle" style="margin-top:14px">选择你想用的服务</div>
       <button type="button" class="g-card" @click="$emit('nav', 'map')">
-        <div style="width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:22px">🗺️</div>
-        <div><div>清华大写全景地图</div><div class="sa">文旅图风格全景导览，地标一目了然</div></div>
+        <div style="width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px">🗺️</div>
+        <div><div>清华大学全景地图</div><div class="sa">文旅图风格全景导览，地标一目了然</div></div>
         <div class="gb-arrow">›</div>
       </button>
       <button type="button" class="g-card" style="margin-top:8px" @click="$emit('nav', 'faq')">
-        <div style="width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:22px">❓</div>
+        <div style="width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px">❓</div>
         <div><div>来清华常问的问题</div><div class="sa">图文结合的答案，新生 / 访客必看</div></div>
         <div class="gb-arrow">›</div>
       </button>
       <div class="sa" style="text-align:center;padding:16px 0">免登录即可浏览地图与问答</div>
     </div>
-    <button type="button" class="guide-ask-fab" @click="$emit('nav', 'ask')">问</button>
   </section>
 </template>
 
 <style scoped>
-.screen { position: relative; }
-.guide-ask-fab {
-  position: absolute;
-  left: 16px;
-  bottom: 88px;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  border: 0;
-  background: linear-gradient(135deg, #5B2A91, #7A3CB0);
-  color: #fff;
-  font-family: inherit;
-  font-size: 17px;
-  font-weight: 600;
-  box-shadow: 0 8px 20px rgba(59,29,99,.28);
-  z-index: 5;
+.hero {
+  margin: 14px 0 12px;
 }
 .g-card {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 14px;
   width: 100%;
   text-align: left;
+  padding: 18px 16px;
+  border-radius: 16px;
+}
+.g-card > div:nth-child(2) > div:first-child {
+  font-size: 16px;
+  font-weight: 700;
+}
+.g-card .sa {
+  font-size: 12.5px;
+  margin-top: 3px;
+}
+.gai-t {
+  font-size: 12.5px;
 }
 .g-card > div:nth-child(2) {
   flex: 1;
