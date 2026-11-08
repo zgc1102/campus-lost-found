@@ -7,6 +7,7 @@ import HelpPublishView from './views/HelpPublishView.vue'
 import PublishView from './views/PublishView.vue'
 import RadarView from './views/RadarView.vue'
 import TagView from './views/TagView.vue'
+import TagScanView from './views/TagScanView.vue'
 import MineView from './views/MineView.vue'
 import GuideView from './views/GuideView.vue'
 import MapView from './views/MapView.vue'
@@ -26,8 +27,9 @@ import TourOverlay from './components/TourOverlay.vue'
 
 const params = new URLSearchParams(location.search)
 const initial = params.get('view')
+const tagCode = ref(params.get('tag') || params.get('code') || '')
 const isAdmin = location.pathname.replace(/\/+$/, '') === '/admin'
-const initialView = isAdmin ? 'admin' : ['lost', 'found', 'help', 'publish', 'help-publish', 'radar', 'tag', 'mine', 'guide', 'map', 'ask', 'notices', 'info', 'search', 'admin', 'legacy', 'success', 'lend', 'borrow', 'memorial', 'faq', 'phones'].includes(initial) ? initial : 'home'
+const initialView = isAdmin ? 'admin' : (tagCode.value ? 'tag-scan' : ['lost', 'found', 'help', 'publish', 'help-publish', 'radar', 'tag', 'mine', 'guide', 'map', 'ask', 'notices', 'info', 'search', 'admin', 'legacy', 'success', 'lend', 'borrow', 'memorial', 'faq', 'phones'].includes(initial) ? initial : 'home')
 const view = ref(initialView)
 const publishType = ref(params.get('type') || 'lost')
 const helpCat = ref(params.get('cat') || 'help_borrow')
@@ -38,6 +40,7 @@ const legacyName = ref(params.get('screen') || 'about')
 
 function go(target, arg) {
   if (target === 'home') {
+    tagCode.value = ''
     view.value = 'home'
     history.replaceState({}, '', location.pathname)
     return
@@ -110,6 +113,7 @@ function editItem(item) {
     <HelpPublishView v-else-if="view === 'help-publish'" :help-cat="helpPublishCat" @nav="go" />
     <PublishView v-else-if="view === 'publish'" :key="publishType + '-' + helpCat + '-' + (editingItem ? editingItem.id : 'new')" :type="publishType" :help-cat="helpCat" :edit-item="editingItem" @nav="go" />
     <RadarView v-else-if="view === 'radar'" @nav="go" />
+    <TagScanView v-else-if="view === 'tag-scan'" :code="tagCode" @nav="go" />
     <TagView v-else-if="view === 'tag'" @nav="go" />
     <MineView v-else-if="view === 'mine'" @nav="go" @publish="publish" @edit="editItem" />
     <GuideView v-else-if="view === 'guide'" @nav="go" />
@@ -124,8 +128,8 @@ function editItem(item) {
     <MemorialView v-else-if="view === 'memorial'" @nav="go" />
     <FaqView v-else-if="view === 'faq'" @nav="go" />
     <PhonesView v-else-if="view === 'phones'" @nav="go" />
-    <BottomNav v-if="view !== 'map' && view !== 'ask'" :active="view === 'publish' ? (publishType === 'help' ? 'help' : publishType) : view" @nav="go" />
-    <TourOverlay />
+    <BottomNav v-if="view !== 'map' && view !== 'ask' && view !== 'tag-scan'" :active="view === 'publish' ? (publishType === 'help' ? 'help' : publishType) : view" @nav="go" />
+    <TourOverlay v-if="view !== 'tag-scan'" />
   </div>
 </template>
 

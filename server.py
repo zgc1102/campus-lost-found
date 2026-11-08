@@ -157,7 +157,7 @@ def _tag_public(tag, base_url="", with_qr=False):
         "phoneMasked": re.sub(r"(\d{3})\d{4}(\d{4})", r"\1****\2", phone) if phone else "",
         "createdAt": tag.get("createdAt"),
         "notifyCount": tag.get("notifyCount") or 0,
-        "url": (base_url.rstrip("/") + "/拾光码.html?code=" + str(tag.get("code") or "")) if base_url else "",
+        "url": (base_url.rstrip("/") + "/?tag=" + str(tag.get("code") or "")) if base_url else "",
     }
     if mode == "phone":
         out["phoneFull"] = phone
