@@ -145,6 +145,45 @@ async function toggleBan(a) {
   } catch (e) { error.value = e.message || '操作失败' }
 }
 
+function aiLabel(d) {
+  return d === 'approve' ? '建议通过' : d === 'reject' ? '建议驳回' : '建议人工复核'
+}
+function aiSource(a) {
+  if (!a) return ''
+  if (a.source === 'llm') return '大模型 · ' + (a.model || '')
+  if (a.source === 'rule-fallback') return '规则引擎（大模型调用失败）'
+  return '本地规则引擎'
+}
+
+async function runAi(it) {
+  try {
+    await api.adminAiReview(it.id, token.value)
+    await loadAll()
+  } catch (e) { error.value = e.message || 'AI 审核失败' }
+}
+
+async function applyAi(it) {
+  if (!it.ai) return
+  if (it.ai.decision === 'reject') {
+    actionTarget.value = it
+    actionStatus.value = 'rejected'
+    actionReason.value = 'AI 建议驳回：' + (it.ai.reason || '疑似违规内容')
+    return
+  }
+  if (it.ai.decision === 'approve') {
+    await review(it, 'approved')
+  }
+}
+
+async function preReviewAll() {
+  try {
+    error.value = '正在提交 AI 预审…'
+    await api.adminAiReviewAll(token.value)
+    error.value = 'AI 预审已提交，正在后台处理'
+    setTimeout(loadAll, 2500)
+  } catch (e) { error.value = e.message || 'AI 预审失败' }
+}
+
 async function deployCode() {
   try {
     const r = await api.adminDeploy(token.value)
@@ -231,6 +270,7 @@ function statusClass(s) {
         </div>
         <div class="header-actions" v-if="token">
           <button type="button" @click="loadAll">刷新</button>
+          <button type="button" @click="preReviewAll">AI 预审全部</button>
           <button type="button" @click="deployCode">更新代码</button>
           <button type="button" @click="logout">退出登录</button>
         </div>
@@ -363,10 +403,29 @@ function statusClass(s) {
                   <span class="status" :class="statusClass(it.status)">{{ statusText(it.status) }}</span>
                   <span v-if="it.autoApproved" class="status ai-ok">AI 自动通过</span>
                   <span v-if="it.autoRejected" class="status ai-no">AI 自动拦截</span>
+                  <span v-if="it.phoneStatus === 'yellow' && !it.phoneVerified" class="status phone-warn">📞 号码待确认</span>
+                  <span v-if="it.phoneStatus === 'yellow' && it.phoneVerified" class="status ai-ok">号码已确认</span>
+                  <span v-if="it.phoneStatus === 'red'" class="status ai-no">📵 号码无效</span>
                   <b class="ai-title">{{ it.title }}</b>
                 </div>
                 <div class="ai-meta">{{ it.place || '未填写地点' }} · {{ fmt(it.createdAt) }}</div>
                 <div class="ai-desc">{{ it.desc }}</div>
+                <div v-if="it.visionDesc" class="ai-vision">🖼 AI 看图：{{ it.visionDesc }}</div>
+                <div v-if="it.ai" class="ai-review" :class="'ai-' + (it.ai.decision || 'review')">
+                  <div class="ai-review-head">
+                    <b>🤖 AI {{ aiLabel(it.ai.decision) }}</b>
+                    <span>风险 {{ it.ai.score ?? '—' }}/100</span>
+                  </div>
+                  <div class="ai-review-reason">{{ it.ai.reason || '无说明' }}</div>
+                  <div class="ai-review-src">{{ aiSource(it.ai) }}</div>
+                  <div class="ai-review-actions">
+                    <button type="button" class="ghost" @click="applyAi(it)">采纳建议</button>
+                    <button type="button" class="ghost" @click="runAi(it)">重新审核</button>
+                  </div>
+                </div>
+                <div v-else class="ai-review-actions">
+                  <button type="button" class="ghost" @click="runAi(it)">🤖 AI 审核这条</button>
+                </div>
                 <div v-if="it.secret" class="ai-secret">🔒 核验特征：{{ it.secret }}</div>
                 <div v-if="it.rejectReason" class="ai-secret" style="border-color:#F3CFCF;color:#A12F2F;background:#FDF2F2">{{ it.status === 'removed' ? '下架理由' : '驳回理由' }}：{{ it.rejectReason }}</div>
                 <img v-if="it.photoUrl" :src="it.photoUrl" class="ai-photo" alt="">
@@ -504,4 +563,18 @@ textarea.field { min-height: 78px; resize: vertical; }
 .ai-status .dot.on { background:#2F7D46; box-shadow:0 0 0 3px rgba(47,125,70,.12); }
 </style>
 
+
+
+<style scoped>
+.ai-vision { font-size:11px; line-height:1.6; color:#7A5AA8; background:#F7F0FF; border-radius:8px; padding:7px 9px; margin-top:7px; }
+.ai-review { margin-top:8px; border-radius:10px; padding:9px 10px; font-size:11px; line-height:1.6; background:#F8F5FC; border:1px solid #EADDF7; }
+.ai-review.ai-approve { background:#F1FAF4; border-color:#CFE8D6; }
+.ai-review.ai-reject { background:#FDF2F2; border-color:#F3CFCF; }
+.ai-review-head { display:flex; justify-content:space-between; gap:8px; color:#5B2A91; }
+.ai-review-head span { color:#8E7FA3; font-size:10px; }
+.ai-review-reason { margin-top:4px; color:#4E445D; }
+.ai-review-src { margin-top:3px; color:#A99BB9; font-size:9.5px; }
+.ai-review-actions { display:flex; gap:6px; margin-top:7px; }
+.phone-warn { background:#FFF4D6; color:#A97A00; }
+</style>
 

@@ -114,6 +114,12 @@ export const api = {
   adminPhoneApprove(id, token) {
     return call('/admin/items/' + encodeURIComponent(id) + '/phone-approve', { method: 'POST', headers: { 'X-Admin-Token': token } })
   },
+  adminAiReview(id, token) {
+    return call('/admin/ai/review/' + encodeURIComponent(id), { method: 'POST', headers: { 'X-Admin-Token': token } })
+  },
+  adminAiReviewAll(token) {
+    return call('/admin/ai/review-all', { method: 'POST', headers: { 'X-Admin-Token': token } })
+  },
   adminAnnouncements(token) {
     return call('/admin/announcements', { headers: { 'X-Admin-Token': token } })
   },
