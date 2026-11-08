@@ -167,7 +167,7 @@ async function submit() {
     <div class="scroll">
       <div class="pub-head">
         <div class="ph-t">{{ isHelp ? '发布一条爱心求助' : '发布一条启事' }}</div>
-        <div class="ph-s">{{ isHelp ? helpName : (kind === 'lost' ? '寻物启事 · 丢了东西' : '失物招领 · 捡到东西') }}</div>
+        <div class="ph-s">发布前先审文字和图片，违规内容发不出去</div>
         <div class="ph-steps"><span>1 填写</span><i></i><span>2 AI 审核</span><i></i><span>3 上架</span></div>
       </div>
       <div class="warn-box">❗禁止发布现金、贵重物品、危险品、药品；虚假信息会被下架并限制发布权限。</div>
