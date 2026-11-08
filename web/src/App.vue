@@ -138,4 +138,27 @@ body {
   background: #F3EEFA;
   overscroll-behavior: contain;
 }
+@media (max-width: 759px) {
+  html, body, #app {
+    width: 100%;
+    overflow-x: hidden;
+  }
+  body {
+    display: block;
+  }
+  .phone {
+    width: 390px;
+    max-width: 100%;
+    margin: 0 auto;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .bottom-nav {
+    position: fixed;
+    left: 50%;
+    width: 390px;
+    max-width: 100%;
+    transform: translateX(-50%);
+  }
+}
 </style>
