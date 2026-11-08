@@ -86,10 +86,10 @@ onMounted(() => {
 
 <style scoped>
 .ask-hint {
-  font-size: 10.5px;
-  line-height: 1.7;
+  font-size: 12px;
+  line-height: 1.6;
   color: var(--sub);
-  margin: 2px 0 12px;
+  margin: 2px 0 10px;
   max-width: 330px;
 }
 .ask-row {
@@ -140,18 +140,18 @@ onMounted(() => {
   padding: 12px 13px;
 }
 .ask-q {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--sub);
-  margin-bottom: 7px;
+  margin-bottom: 8px;
 }
 .ask-a {
-  font-size: 11.5px;
-  line-height: 1.7;
-  color: var(--ink);
+  font-size: 13.5px;
+  line-height: 1.8;
+  color: #333;
   word-break: break-word;
 }
 .ask-src-title {
-  font-size: 10px;
+  font-size: 11.5px;
   font-weight: 600;
   color: var(--sub);
   margin-bottom: 5px;
@@ -162,14 +162,14 @@ onMounted(() => {
 }
 .ask-src-item b {
   display: block;
-  font-size: 9.5px;
+  font-size: 11px;
   color: var(--primary);
   margin-bottom: 2px;
 }
 .ask-src-item span {
   display: block;
-  font-size: 9px;
-  line-height: 1.55;
+  font-size: 10.5px;
+  line-height: 1.6;
   color: var(--sub);
 }
 </style>
