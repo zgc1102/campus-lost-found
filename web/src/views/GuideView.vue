@@ -24,7 +24,7 @@ function ask() {
       </div>
 
       <div class="guide-ai">
-        <div class="gai-t">问 AI · 进校、吃饭、丢东西，什么都能问</div>
+        <div class="gai-t">🤖 问 AI · 进校、吃饭、丢东西，什么都能问</div>
         <div class="gai-row">
           <input v-model="question" maxlength="120" placeholder="例如：访客怎么进校？校园卡丢了怎么办？">
           <button type="button" class="btn" @click="ask">问 AI</button>
@@ -33,24 +33,19 @@ function ask() {
           <span @click="question = '访客怎么进清华？'">访客进校</span>
           <span @click="question = '校园卡丢了怎么办？'">校园卡丢了</span>
           <span @click="question = '清华哪个食堂好吃？'">食堂推荐</span>
-          <span @click="question = '校园里哪里可以借雨伞？'">借雨伞</span>
+          <span @click="question = '校园里哪里可以借雨伞？'">必看景点</span>
         </div>
       </div>
 
       <div class="sectitle" style="margin-top:14px">选择你想用的服务</div>
       <button type="button" class="g-card" @click="$emit('nav', 'map')">
         <div style="width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:22px">🗺️</div>
-        <div><div>清华大学全景地图</div><div class="sa">文旅图风格全景导览，地标一目了然</div></div>
+        <div><div>清华大写全景地图</div><div class="sa">文旅图风格全景导览，地标一目了然</div></div>
         <div class="gb-arrow">›</div>
       </button>
       <button type="button" class="g-card" style="margin-top:8px" @click="$emit('nav', 'faq')">
         <div style="width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:22px">❓</div>
         <div><div>来清华常问的问题</div><div class="sa">图文结合的答案，新生 / 访客必看</div></div>
-        <div class="gb-arrow">›</div>
-      </button>
-      <button type="button" class="g-card" style="margin-top:8px" @click="$emit('nav', 'phones')">
-        <div style="width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:22px">☎️</div>
-        <div><div>常用电话</div><div class="sa">校医院、保卫部、后勤、招生办</div></div>
         <div class="gb-arrow">›</div>
       </button>
       <div class="sa" style="text-align:center;padding:16px 0">免登录即可浏览地图与问答</div>

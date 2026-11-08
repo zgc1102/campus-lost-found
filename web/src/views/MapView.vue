@@ -43,6 +43,17 @@ function up(i) {
       <div class="t">清华大学全景地图</div>
     </div>
     <div class="scroll">
+      <div class="heat-panel">
+        <div class="heat-head">🔥 失物热力<span>共 73 条发布</span></div>
+        <div class="heat-sub">图书馆最容易丢东西；已闭环 6 条，闭环率 8%。</div>
+        <div class="heat-row"><span class="heat-name">图书馆</span><span class="heat-bar"><i style="width:100%" /></span><span class="heat-n">41</span></div>
+        <div class="heat-row"><span class="heat-name">教学楼</span><span class="heat-bar"><i style="width:34%" /></span><span class="heat-n">14</span></div>
+        <div class="heat-row"><span class="heat-name">食堂</span><span class="heat-bar"><i style="width:17%" /></span><span class="heat-n">7</span></div>
+        <div class="heat-row"><span class="heat-name">其他 / 未填写</span><span class="heat-bar"><i style="width:15%" /></span><span class="heat-n">6</span></div>
+        <div class="heat-row"><span class="heat-name">宿舍</span><span class="heat-bar"><i style="width:10%" /></span><span class="heat-n">4</span></div>
+        <div class="heat-row"><span class="heat-name">运动场</span><span class="heat-bar"><i style="width:6%" /></span><span class="heat-n">1</span></div>
+        <div class="heat-row"><span class="heat-name">校门 / 路上</span><span class="heat-bar"><i style="width:2%" /></span><span class="heat-n">0</span></div>
+      </div>
       <div class="sectitle">点击地标查看简介与实景图（文旅图风格全图，非导航底图）</div>
       <div class="map-wrap">
         <div class="map-title">清华大学全景文旅图</div>

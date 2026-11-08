@@ -172,7 +172,7 @@ function openOldHelp() {
     </div>
 
     <div class="scroll">
-      <div class="warn-box" v-html="copy.warning"></div>
+      <div class="tip-box" v-html="copy.warning"></div>
 
       <div class="list-meta">
         <b>{{ visible.length }}</b> 条{{ type === 'lost' ? '招领' : '寻物' }} · {{ copy.hint }}
