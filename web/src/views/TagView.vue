@@ -102,6 +102,7 @@ function qrError() {
         <img :src="qrSrc" alt="拾光码" @error="qrError">
         <div class="tr-item">{{ result.itemName }}</div>
         <div class="tr-code">拾光码 {{ result.code }} · {{ result.mode === 'phone' ? '扫码后直接显示手机号' : '扫码后只给你发通知' }}</div>
+        <div class="tr-policy">长期有效 · 网站版本更新后仍可扫码</div>
         <div class="tr-actions">
           <a class="primary" :download="'拾光码-' + result.code + '.png'" :href="qrSrc">保存 / 打印</a>
           <button type="button" @click="copyLink">复制链接</button>
@@ -131,5 +132,10 @@ function qrError() {
 
 <style scoped>
 #screen-tag .tag-body { padding-bottom: 104px !important; }
+</style>
+
+
+<style scoped>
+.tr-policy { margin-top:6px; font-size:9.5px; color:#5B2A91; background:#F1E8FB; border-radius:99px; display:inline-block; padding:4px 8px; }
 </style>
 

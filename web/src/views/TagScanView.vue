@@ -70,6 +70,7 @@ async function send() {
           <p v-if="tag.note">{{ tag.note }}</p>
           <p class="scan-phone">失主联系方式：{{ tag.mode === 'phone' && tag.phoneFull ? tag.phoneFull : (tag.phoneMasked || '已隐藏') }}</p>
           <p class="scan-hint">你不需要注册，也不用曝光自己。留一句话，失主会收到通知。</p>
+          <div class="scan-policy">此码长期有效 · 不随网站版本更新失效</div>
         </div>
 
         <div v-if="sent" class="scan-done">
@@ -111,3 +112,8 @@ async function send() {
 .scan-done b { display: block; color: #2F7D46; font-size: 15px; margin-bottom: 6px; }
 .scan-done span { display: block; color: #4F6B57; font-size: 11px; line-height: 1.7; }
 </style>
+
+<style scoped>
+.scan-policy { margin-top:12px; display:inline-block; font-size:9.5px; color:#5B2A91; background:#F1E8FB; border:1px solid #E4D4F7; border-radius:99px; padding:5px 9px; }
+</style>
+

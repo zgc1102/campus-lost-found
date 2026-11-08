@@ -147,6 +147,7 @@ def save_tags(data):
 
 
 def _tag_public(tag, base_url="", with_qr=False):
+    # 契约冻结：二维码只允许使用 /?tag=CODE，不得改成带版本号或临时路径
     mode = tag.get("mode") or "notify"
     phone = str(tag.get("phone") or "")
     out = {
