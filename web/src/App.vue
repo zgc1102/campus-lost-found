@@ -62,8 +62,9 @@ function go(target, arg) {
     return
   }
   if (target === 'lost' || target === 'found' || target === 'help' || target === 'lend' || target === 'borrow') {
+    if (target === 'help' && arg) helpCat.value = arg
     view.value = target
-    history.replaceState({}, '', location.pathname + '?view=' + target)
+    history.replaceState({}, '', location.pathname + '?view=' + target + (target === 'help' ? '&cat=' + helpCat.value : ''))
     return
   }
   if (target === 'mine' || target === 'tag' || target === 'radar' || target === 'detective') {
@@ -109,7 +110,7 @@ function editItem(item) {
   <div v-else class="phone">
     <HomeView v-if="view === 'home'" @nav="go" />
     <ListView v-else-if="view === 'lost' || view === 'found'" :type="view" @nav="go" @publish="publish" />
-    <HelpView v-else-if="view === 'help'" @nav="go" @publish="publish" />
+    <HelpView v-else-if="view === 'help'" :key="helpCat" :initial-cat="helpCat" @nav="go" @publish="publish" />
     <HelpPublishView v-else-if="view === 'help-publish'" :help-cat="helpPublishCat" @nav="go" />
     <PublishView v-else-if="view === 'publish'" :key="publishType + '-' + helpCat + '-' + (editingItem ? editingItem.id : 'new')" :type="publishType" :help-cat="helpCat" :edit-item="editingItem" @nav="go" />
     <RadarView v-else-if="view === 'radar'" @nav="go" />

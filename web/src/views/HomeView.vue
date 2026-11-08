@@ -171,7 +171,7 @@ function openMemo(s) {
               type="button"
               class="entry-card"
               :class="item.tone"
-              @click="$emit('nav', 'help')"
+              @click="$emit('nav', 'help', item.cat)"
             >
               <span class="entry-art" v-html="item.art" />
               <span class="entry-copy"><b>{{ item.title }}</b><i>{{ item.sub }}</i></span>
