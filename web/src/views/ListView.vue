@@ -57,8 +57,14 @@ async function reportItem() {
 }
 
 const copy = computed(() => props.type === 'lost'
-  ? { title: '失物招领', kicker: 'LOST & FOUND', hint: '捡到的东西在这里等主人', other: '寻物启事', publish: '发布启事' }
-  : { title: '寻物启事', kicker: 'LOST & FOUND', hint: '看到的同学可以帮一把', other: '失物招领', publish: '发布启事' })
+  ? {
+      title: '失物招领', kicker: 'LOST & FOUND', hint: '捡到的东西在这里等主人', other: '寻物启事', publish: '发布启事',
+      warning: '⚠️ 认领提示：认领物品前，请务必核对物品独有特征，请勿仅凭照片认领，谨防冒领。<br>交接请选择公共场所，不要前往偏僻地点，谨慎公开手机号、微信等私人联系方式。'
+    }
+  : {
+      title: '寻物启事', kicker: 'LOST & FOUND', hint: '看到的同学可以帮一把', other: '失物招领', publish: '发布启事',
+      warning: '⚠️ 防骗提示：主动联系你并提供“验证码 / 转账 / 付费解锁”的，基本都是骗子。<br>真实认领请当面核对物品细节，平台不会收取任何费用。'
+    })
 
 const visible = computed(() => {
   const target = props.type === 'lost' ? 'found' : 'lost'
@@ -99,15 +105,12 @@ function label(x) {
   return x.type === 'found' ? '招领' : '寻物'
 }
 function thumbText(x) {
-  const text = (x.title || '') + (x.cat || '')
-  if (text.includes('伞')) return '🌂'
-  if (text.includes('卡')) return '💳'
-  if (text.includes('钥匙')) return '🔑'
-  if (text.includes('电脑') || text.includes('键盘')) return '💻'
-  if (text.includes('耳机')) return '🎧'
-  if (text.includes('杯')) return '🥤'
-  if (text.includes('包')) return '🎒'
-  return '📦'
+  return ({
+    bag: '🎒', card: '🪪', watch: '⌚', electronics: '🎧', umbrella: '☂️',
+    key: '🔑', keys: '🔑', book: '📚', sports: '🏀', cup: '🥤', bottle: '🥤',
+    charger: '🔋', repair: '🛠️', life: '🏠', office: '🖨️', outdoor: '⛺',
+    cloth: '🧥', other: '📦'
+  })[x.cat] || '📦'
 }
 function chipText(x) {
   if (!x.fields) return []
@@ -118,7 +121,12 @@ function actionLabel(x) {
   if (x.myClaim === 'accepted' || x.myClaim === 'completed') return '已通过'
   if (x.myClaim === 'need_more') return '补充信息'
   if (x.myClaim === 'rejected') return '重新申请'
-  return '认领'
+  if (x.act) return x.act
+  return x.type === 'lost' ? '提供线索' : '认领'
+}
+function statusChip(x) {
+  const map = { claimed: '已认领', closed: '已闭环', pending: '审核中' }
+  return map[x.status] || ''
 }
 function canClaim(x) {
   return x.status === 'approved' && !['pending', 'accepted', 'completed'].includes(x.myClaim)
@@ -164,10 +172,7 @@ function openOldHelp() {
     </div>
 
     <div class="scroll">
-      <div class="tip-box">
-        ⚠️ 认领提示：认领物品前，请务必核对物品独有特征，请勿仅凭照片认领，谨防冒领。<br>
-        交接请选择公共场所，不要前往偏僻地点，谨慎公开手机号、微信等私人联系方式。
-      </div>
+      <div class="warn-box" v-html="copy.warning"></div>
 
       <div class="list-meta">
         <b>{{ visible.length }}</b> 条{{ type === 'lost' ? '招领' : '寻物' }} · {{ copy.hint }}
@@ -203,7 +208,7 @@ function openOldHelp() {
           </div>
           <div class="body">
             <div class="tt">
-              <span class="src-tag">{{ label(it) }}</span>{{ it.title || '未命名物品' }}
+              <span class="src-tag">{{ label(it) }}</span>{{ it.title || '未命名物品' }}<span v-if="statusChip(it)" class="st" :class="'st-' + it.status">{{ statusChip(it) }}</span>
             </div>
             <div v-if="it.summary" class="sum">{{ it.summary }}</div>
             <div class="dd">{{ it.desc || '暂无描述' }}</div>
