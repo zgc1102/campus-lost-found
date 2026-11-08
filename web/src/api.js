@@ -68,6 +68,9 @@ export const api = {
   remove(id) {
     return call('/items/' + encodeURIComponent(id), { method: 'DELETE' })
   },
+  update(id, item) {
+    return call('/items/' + encodeURIComponent(id), { method: 'PATCH', body: JSON.stringify(item) })
+  },
   ask(question) {
     return call('/ask', { method: 'POST', body: JSON.stringify({ question }) })
   },

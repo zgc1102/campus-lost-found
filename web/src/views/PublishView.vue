@@ -4,7 +4,8 @@ import { api } from '../api'
 
 const props = defineProps({
   type: { type: String, default: 'lost' },
-  helpCat: { type: String, default: 'help_borrow' }
+  helpCat: { type: String, default: 'help_borrow' },
+  editItem: { type: Object, default: null }
 })
 const emit = defineEmits(['nav'])
 
@@ -38,6 +39,19 @@ const aiData = ref(null)
 const aiLoading = ref(false)
 const descCount = computed(() => form.desc.length)
 const fileInput = ref(null)
+if (props.editItem) {
+  const e = props.editItem
+  kind.value = e.type === 'found' ? 'found' : 'lost'
+  form.title = e.title || ''
+  form.desc = e.desc || ''
+  form.place = e.place || ''
+  form.eventTime = e.eventTime || ''
+  form.secret = e.secret || ''
+  form.phone = (e.contact && e.contact.phone) || ''
+  photo.value = e.photoUrl || e.photo || ''
+  const reverse = { card: '证件', electronics: '电子设备', cloth: '衣物', bottle: '水杯', bag: '书包', other: '其他' }
+  form.category = reverse[e.cat] || ''
+}
 
 const catMap = {
   '证件': 'card',
@@ -140,7 +154,9 @@ async function submit() {
       photo: photo.value || null,
       phoneConfirmed: phoneConfirmed.value
     }
-    const saved = await api.create(item)
+    const saved = props.editItem
+      ? await api.update(props.editItem.id, item)
+      : await api.create(item)
     result.value = saved
     try { sessionStorage.setItem('sg:lastResult', JSON.stringify(saved)) } catch (e) {}
     emit('nav', 'success')

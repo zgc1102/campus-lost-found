@@ -32,6 +32,7 @@ const view = ref(initialView)
 const publishType = ref(params.get('type') || 'lost')
 const helpCat = ref(params.get('cat') || 'help_borrow')
 const helpPublishCat = ref('help_borrow')
+const editingItem = ref(null)
 const infoKey = ref(params.get('info') || 'about')
 const legacyName = ref(params.get('screen') || 'about')
 
@@ -77,6 +78,7 @@ function go(target, arg) {
 }
 
 function publish(type, cat) {
+  editingItem.value = null
   if (type === 'help') {
     helpPublishCat.value = cat || 'help_borrow'
     view.value = 'help-publish'
@@ -87,6 +89,13 @@ function publish(type, cat) {
   helpCat.value = cat || helpCat.value
   view.value = 'publish'
   history.replaceState({}, '', location.pathname + '?view=publish&type=' + encodeURIComponent(type))
+}
+
+function editItem(item) {
+  editingItem.value = item
+  publishType.value = item.type === 'found' ? 'found' : 'lost'
+  view.value = 'publish'
+  history.replaceState({}, '', location.pathname + '?view=publish&type=' + publishType.value)
 }
 </script>
 
@@ -99,10 +108,10 @@ function publish(type, cat) {
     <ListView v-else-if="view === 'lost' || view === 'found'" :type="view" @nav="go" @publish="publish" />
     <HelpView v-else-if="view === 'help'" @nav="go" @publish="publish" />
     <HelpPublishView v-else-if="view === 'help-publish'" :help-cat="helpPublishCat" @nav="go" />
-    <PublishView v-else-if="view === 'publish'" :key="publishType + '-' + helpCat" :type="publishType" :help-cat="helpCat" @nav="go" />
+    <PublishView v-else-if="view === 'publish'" :key="publishType + '-' + helpCat + '-' + (editingItem ? editingItem.id : 'new')" :type="publishType" :help-cat="helpCat" :edit-item="editingItem" @nav="go" />
     <RadarView v-else-if="view === 'radar'" @nav="go" />
     <TagView v-else-if="view === 'tag'" @nav="go" />
-    <MineView v-else-if="view === 'mine'" @nav="go" @publish="publish" />
+    <MineView v-else-if="view === 'mine'" @nav="go" @publish="publish" @edit="editItem" />
     <GuideView v-else-if="view === 'guide'" @nav="go" />
     <MapView v-else-if="view === 'map'" @nav="go" />
     <AskView v-else-if="view === 'ask'" @nav="go" />
