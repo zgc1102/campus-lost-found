@@ -143,6 +143,9 @@ export const api = {
   createTag(body) {
     return call('/tags', { method: 'POST', body: JSON.stringify(body) })
   },
+  myTags() {
+    return call('/tags/mine')
+  },
   tag(code) {
     return call('/tags/' + encodeURIComponent(code))
   }

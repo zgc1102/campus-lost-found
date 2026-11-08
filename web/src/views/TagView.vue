@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { api } from '../api'
 
 const emit = defineEmits(['nav'])
@@ -40,6 +40,30 @@ function copyLink() {
 function resetTag() {
   result.value = null
 }
+
+onMounted(async () => {
+  try {
+    const list = await api.myTags()
+    if (Array.isArray(list) && list.length) {
+      result.value = list[0]
+      item.value = list[0].itemName || ''
+      phone.value = list[0].phone || ''
+      mode.value = list[0].mode || 'notify'
+    }
+  } catch (_) {}
+})
+
+const qrSrc = computed(() => {
+  if (!result.value) return ''
+  if (result.value.qrData && String(result.value.qrData).startsWith('data:image')) return result.value.qrData
+  if (result.value.url) return 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(result.value.url)
+  return ''
+})
+function qrError() {
+  if (result.value && result.value.url) {
+    result.value.qrData = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(result.value.url)
+  }
+}
 </script>
 
 <template>
@@ -75,11 +99,11 @@ function resetTag() {
       <button type="button" class="btn" style="width:100%" :disabled="loading" @click="generate">{{ loading ? '生成中…' : '生成我的拾光码' }}</button>
 
       <div v-if="result" class="tag-result" style="display:block">
-        <img :src="result.qrData" alt="拾光码">
+        <img :src="qrSrc" alt="拾光码" @error="qrError">
         <div class="tr-item">{{ result.itemName }}</div>
         <div class="tr-code">拾光码 {{ result.code }} · {{ result.mode === 'phone' ? '扫码后直接显示手机号' : '扫码后只给你发通知' }}</div>
         <div class="tr-actions">
-          <a class="primary" :download="'拾光码-' + result.code + '.png'" :href="result.qrData">保存 / 打印</a>
+          <a class="primary" :download="'拾光码-' + result.code + '.png'" :href="qrSrc">保存 / 打印</a>
           <button type="button" @click="copyLink">复制链接</button>
         </div>
         <div class="tr-actions"><button type="button" @click="resetTag">重新生成一张</button></div>
@@ -104,3 +128,8 @@ function resetTag() {
 .tag-result .tr-actions a, .tag-result .tr-actions button { flex:1; border:1px solid var(--line); border-radius:10px; padding:9px; font-size:10px; background:#F7F2FD; color:var(--primary); text-decoration:none; font-family:inherit; }
 .tag-result .tr-actions .primary { background:linear-gradient(135deg,#5B2A91,#7A3CB0); color:#fff; border:0; }
 </style>
+
+<style scoped>
+#screen-tag .tag-body { padding-bottom: 104px !important; }
+</style>
+
