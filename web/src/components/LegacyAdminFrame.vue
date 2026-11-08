@@ -1,15 +1,13 @@
-<template>
-  <iframe class="legacy-admin-frame" src="/管理端.html" title="拾光里管理端"></iframe>
-</template>
+<script setup>
+import { onMounted } from 'vue'
 
-<style scoped>
-.legacy-admin-frame {
-  position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100vh;
-  border: 0;
-  background: #fff;
-  z-index: 1000;
-}
-</style>
+onMounted(() => {
+  location.replace('/admin')
+})
+</script>
+
+<template>
+  <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:inherit;color:#5B2A91">
+    正在进入管理端…
+  </div>
+</template>
