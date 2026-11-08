@@ -30,6 +30,7 @@ const specialInput = ref('')
 const editingAnnId = ref('')
 const aiTestMsg = ref('')
 const aiTesting = ref(false)
+const aiBusy = ref('')
 const viewingImage = ref('')
 
 const tabs = [
@@ -55,9 +56,9 @@ const filteredItems = computed(() => {
 
 onMounted(() => { if (token.value) loadAll() })
 
-async function loadAll() {
+async function loadAll(silent = false) {
   if (!token.value) return
-  loading.value = true
+  if (!silent) loading.value = true
   error.value = ''
   try {
     const [s, list, accs, anns, sp, cfg, dep] = await Promise.all([
@@ -80,7 +81,7 @@ async function loadAll() {
     error.value = e.message || '读取失败'
     if (e.status === 401 || /unauthorized|登录/i.test(String(e.message))) logout()
   } finally {
-    loading.value = false
+    if (!silent) loading.value = false
   }
 }
 
@@ -92,7 +93,7 @@ async function login() {
     token.value = r.token
     sessionStorage.setItem(TOKEN_KEY, r.token)
     password.value = ''
-    await loadAll()
+    await loadAll(true)
   } catch (e) {
     error.value = e.message || '登录失败'
   } finally {
@@ -114,7 +115,7 @@ async function review(it, status) {
   }
   try {
     await api.adminPatch(it.id, { status, rejectReason: '' }, token.value)
-    await loadAll()
+    await loadAll(true)
   } catch (e) { error.value = e.message || '操作失败' }
 }
 
@@ -132,21 +133,21 @@ async function confirmAction() {
     actionTarget.value = null
     actionReason.value = ''
     actionStatus.value = ''
-    await loadAll()
+    await loadAll(true)
   } catch (e) { error.value = e.message || '操作失败' }
 }
 
 async function approvePhone(it) {
   try {
     await api.adminPhoneApprove(it.id, token.value)
-    await loadAll()
+    await loadAll(true)
   } catch (e) { error.value = e.message || '操作失败' }
 }
 
 async function toggleBan(a) {
   try {
     await api.adminBanAccount(a.id, !a.banned, token.value)
-    await loadAll()
+    await loadAll(true)
   } catch (e) { error.value = e.message || '操作失败' }
 }
 
@@ -161,10 +162,12 @@ function aiSource(a) {
 }
 
 async function runAi(it) {
+  aiBusy.value = it.id
   try {
     await api.adminAiReview(it.id, token.value)
-    await loadAll()
+    await loadAll(true)
   } catch (e) { error.value = e.message || 'AI 审核失败' }
+  finally { aiBusy.value = '' }
 }
 
 async function applyAi(it) {
@@ -212,7 +215,7 @@ async function saveConfig() {
     if (apiKey.value) body.api_key = apiKey.value
     await api.adminSaveConfig(body, token.value)
     apiKey.value = ''
-    await loadAll()
+    await loadAll(true)
   } catch (e) { error.value = e.message || '保存失败' }
 }
 
@@ -233,7 +236,7 @@ async function createAnnouncement() {
     annTitle.value = ''
     annBody.value = ''
     editingAnnId.value = ''
-    await loadAll()
+    await loadAll(true)
   } catch (e) { error.value = e.message || '发布失败' }
 }
 
@@ -251,14 +254,14 @@ async function addSpecial() {
   try {
     await api.adminSpecialSave(specialInput.value.trim(), false, token.value)
     specialInput.value = ''
-    await loadAll()
+    await loadAll(true)
   } catch (e) { error.value = e.message || '添加失败' }
 }
 
 async function removeSpecial(s) {
   try {
     await api.adminSpecialSave(specialName(s), true, token.value)
-    await loadAll()
+    await loadAll(true)
   } catch (e) { error.value = e.message || '移除失败' }
 }
 
@@ -266,7 +269,7 @@ async function resetDemo() {
   if (!confirm('确定重置演示数据？会清空当前内容，恢复演示数据。')) return
   try {
     await api.adminReset(token.value)
-    await loadAll()
+    await loadAll(true)
   } catch (e) { error.value = e.message || '重置失败' }
 }
 
@@ -286,7 +289,7 @@ async function testAi() {
 async function setAnnouncement(a, status) {
   try {
     await api.adminPatchAnnouncement(a.id, { status }, token.value)
-    await loadAll()
+    await loadAll(true)
   } catch (e) { error.value = e.message || '操作失败' }
 }
 
@@ -294,7 +297,7 @@ async function removeAnnouncement(a) {
   if (!confirm('确定删除公告「' + a.title + '」？')) return
   try {
     await api.adminDeleteAnnouncement(a.id, token.value)
-    await loadAll()
+    await loadAll(true)
   } catch (e) { error.value = e.message || '删除失败' }
 }
 
@@ -489,11 +492,11 @@ function statusClass(s) {
                   <div class="ai-review-src">{{ aiSource(it.ai) }}</div>
                   <div class="ai-review-actions">
                     <button type="button" class="ghost" @click="applyAi(it)">采纳建议</button>
-                    <button type="button" class="ghost" @click="runAi(it)">重新审核</button>
+                    <button type="button" class="ghost" @click="runAi(it)">{{ aiBusy === it.id ? '审核中…' : '重新审核' }}</button>
                   </div>
                 </div>
                 <div v-else class="ai-review-actions">
-                  <button type="button" class="ghost" @click="runAi(it)">🤖 AI 审核这条</button>
+                  <button type="button" class="ghost" @click="runAi(it)">🤖 {{ aiBusy === it.id ? '审核中…' : 'AI 审核这条' }}</button>
                 </div>
                 <div v-if="it.secret" class="ai-secret">🔒 核验特征：{{ it.secret }}</div>
                 <div v-if="it.rejectReason" class="ai-secret" style="border-color:#F3CFCF;color:#A12F2F;background:#FDF2F2">{{ it.status === 'removed' ? '下架理由' : '驳回理由' }}：{{ it.rejectReason }}</div>
@@ -660,4 +663,5 @@ textarea.field { min-height: 78px; resize: vertical; }
 .image-viewer img { max-width:min(92vw,900px); max-height:88vh; border-radius:12px; box-shadow:0 20px 70px rgba(0,0,0,.45); }
 .image-close { position:absolute; top:18px; right:22px; width:36px; height:36px; border:0; border-radius:50%; background:rgba(255,255,255,.16); color:#fff; font-size:16px; cursor:pointer; }
 </style>
+
 

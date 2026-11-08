@@ -14,15 +14,15 @@ const account = ref(localStorage.getItem('sg:account:v1') || '')
 const accountPhone = ref(localStorage.getItem('sg:account:phone') || '')
 const origin = location.origin
 
-onMounted(load)
-async function load() {
-  loading.value = true
+onMounted(() => load())
+async function load(silent = false) {
+  if (!silent) loading.value = true
   try {
     const [list, cs] = await Promise.all([api.mine(), api.claims()])
     if (Array.isArray(list)) items.value = list
     claims.value = cs.received || []
   } finally {
-    loading.value = false
+    if (!silent) loading.value = false
   }
 }
 async function login() {
@@ -34,7 +34,7 @@ async function login() {
     account.value = r.accountId
     accountPhone.value = r.phone || phone.value.trim()
     password.value = ''
-    await load()
+    await load(true)
   } catch (e) {
     authMsg.value = e.message || '登录失败'
   }
@@ -44,7 +44,7 @@ function logout() {
   localStorage.removeItem('sg:account:phone')
   account.value = ''
   accountPhone.value = ''
-  load()
+  load(true)
 }
 function maskPhone(p) {
   const s = String(p || '')
@@ -55,7 +55,7 @@ async function withdraw(it) {
   if (!confirm('确定撤回删除「' + it.title + '」？')) return
   try {
     await api.remove(it.id)
-    await load()
+    await load(true)
   } catch (e) {
     authMsg.value = e.message || '撤回失败'
   }
@@ -63,7 +63,7 @@ async function withdraw(it) {
 async function actClaim(c, status) {
   try {
     await api.claimAction(c.id, { status })
-    await load()
+    await load(true)
   } catch (e) {
     authMsg.value = e.message || '操作失败'
   }
@@ -158,3 +158,4 @@ function fmt(ts) {
   color: var(--ink);
 }
 </style>
+
