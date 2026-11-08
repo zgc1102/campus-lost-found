@@ -57,6 +57,9 @@ export const api = {
   claimAction(id, body) {
     return call('/claims/' + encodeURIComponent(id), { method: 'PATCH', body: JSON.stringify(body || {}) })
   },
+  claimComplete(id, body) {
+    return call('/claims/' + encodeURIComponent(id) + '/complete', { method: 'POST', body: JSON.stringify(body || {}) })
+  },
   supplement(id, body) {
     return call('/claims/' + encodeURIComponent(id) + '/supplement', { method: 'POST', body: JSON.stringify(body || {}) })
   },

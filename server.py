@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 清华校园拾光里 · 服务端 v4
@@ -1138,13 +1138,14 @@ def review_item(item):
     return ai
 
 
-def moderate_text(text, title="用户输入"):
+def moderate_text(text, title="用户输入", allow_help=False):
     """所有用户可输入文本的统一 AI 审核；审核服务异常时放行规则结果"""
     text = str(text or "").strip()
     if not text:
         return True, ""
     probe = {
-        "type": "found", "cat": "other",
+        "type": "help" if allow_help else "found",
+        "cat": "help_borrow" if allow_help else "other",
         "title": (title + "：" + text)[:80],
         "desc": text[:800], "place": "", "contact": {}
     }
@@ -1152,7 +1153,7 @@ def moderate_text(text, title="用户输入"):
         ai = review_item(probe)
     except Exception:
         return True, ""
-    if scope_violation(probe) or ai.get("decision") == "reject":
+    if (not allow_help and scope_violation(probe)) or ai.get("decision") == "reject":
         return False, (ai.get("reason") or "内容不符合校园互助规范")[:120]
     return True, ""
 
@@ -3157,7 +3158,7 @@ class Handler(BaseHTTPRequestHandler):
             body = self._read_body()
             message = str(body.get("message") or "").strip()[:200]
             contact = str(body.get("contact") or "").strip()[:30]
-            _ok, _why = moderate_text(message + " " + contact, "认领申请")
+            _ok, _why = moderate_text(message + " " + contact, "认领申请", allow_help=True)
             if not _ok:
                 return self._json({"error": "内容未通过审核：" + _why}, 400)
             _chk = phone_check(contact)
@@ -3229,7 +3230,7 @@ class Handler(BaseHTTPRequestHandler):
             extra = str(body.get("message") or "").strip()[:200]
             if len(extra) < 2:
                 return self._json({"error": "请写一点补充说明"}, 400)
-            _ok, _why = moderate_text(extra, "认领补充")
+            _ok, _why = moderate_text(extra, "认领补充", allow_help=True)
             if not _ok:
                 return self._json({"error": "内容未通过审核：" + _why}, 400)
             with LOCK:
@@ -4139,3 +4140,4 @@ if __name__ == "__main__":
     except Exception:
         pass
     main()
+

@@ -5,6 +5,7 @@ import { api } from '../api'
 const emit = defineEmits(['nav', 'publish', 'edit'])
 const items = ref([])
 const claims = ref([])
+const sentClaims = ref([])
 const tab = ref('mine')
 const loading = ref(true)
 const phone = ref('')
@@ -22,6 +23,7 @@ async function load(silent = false) {
     const [list, cs, tags] = await Promise.all([api.mine(), api.claims(), api.myTags()])
     if (Array.isArray(list)) items.value = list
     claims.value = cs.received || []
+    sentClaims.value = cs.sent || []
     myTag.value = Array.isArray(tags) && tags.length ? tags[0] : null
   } finally {
     if (!silent) loading.value = false
@@ -72,11 +74,23 @@ async function cancelMyTag() {
   }
 }
 
-async function actClaim(c, status) {  try {
+async function actClaim(c, status) {
+  try {
     await api.claimAction(c.id, { status })
     await load(true)
   } catch (e) {
     authMsg.value = e.message || '操作失败'
+  }
+}
+
+async function completeClaim(c) {
+  const code = prompt('请输入对方提供的 6 位取件码')
+  if (!code) return
+  try {
+    await api.claimComplete(c.id, { code: code.trim() })
+    await load(true)
+  } catch (e) {
+    authMsg.value = e.message || '确认失败'
   }
 }
 function status(x) {
@@ -133,9 +147,23 @@ function fmt(ts) {
           <div class="mh">{{ c.itemTitle }}<span class="st">{{ c.status }}</span></div>
           <div class="mmeta">{{ c.message }}</div>
           <div class="mact">
-            <button type="button" class="btn" @click="actClaim(c, 'accepted')">通过</button>
-            <button type="button" class="btn ghost" @click="actClaim(c, 'need_more')">补充</button>
-            <button type="button" class="btn ghost" @click="actClaim(c, 'rejected')">拒绝</button>
+            <template v-if="c.status === 'accepted'">
+              <button type="button" class="btn" @click="completeClaim(c)">确认归还</button>
+            </template>
+            <template v-else>
+              <button type="button" class="btn" @click="actClaim(c, 'accepted')">通过</button>
+              <button type="button" class="btn ghost" @click="actClaim(c, 'need_more')">补充</button>
+              <button type="button" class="btn ghost" @click="actClaim(c, 'rejected')">拒绝</button>
+            </template>
+          </div>
+        </div>
+        <div v-if="sentClaims.length" class="sectitle" style="margin-top:10px">我发出的认领</div>
+        <div v-for="c in sentClaims" :key="'s'+c.id" class="mini">
+          <div class="mh">{{ c.itemTitle }}<span class="st">{{ c.status }}</span></div>
+          <div class="mmeta">{{ c.message }}</div>
+          <div v-if="c.status === 'accepted'" class="mmeta">取件码：{{ c.returnCode || '向对方索取' }}</div>
+          <div v-if="c.status === 'accepted'" class="mact">
+            <button type="button" class="btn" @click="completeClaim(c)">确认归还</button>
           </div>
         </div>
       </div>
