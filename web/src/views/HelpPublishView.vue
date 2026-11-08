@@ -6,11 +6,29 @@ const props = defineProps({ helpCat: { type: String, default: 'help_borrow' } })
 const emit = defineEmits(['nav'])
 
 const cats = [
-  { id: 'help_borrow', name: '借用工具', sub: '借伞、充电宝、工具', icon: '🛠️' },
-  { id: 'help_errand', name: '代办跑腿', sub: '帮取、帮带、帮买', icon: '🏃' },
-  { id: 'help_donate', name: '爱心捐赠', sub: '闲置物品送人', icon: '🎁' },
-  { id: 'help_volunteer', name: '志愿帮忙', sub: '找人搭把手', icon: '🤝' }
+  {
+    id: 'help_borrow', name: '借用工具', sub: '借伞、充电宝、工具',
+    svg: '<svg viewBox="0 0 80 80" fill="none"><path d="M12 40a28 28 0 0 1 56 0H12Z" fill="#8A52C7"/><path d="M12 40c8-8 14-8 20 0 6-8 12-8 20 0 6-8 12-8 16 0" stroke="#C8A96A" stroke-width="3" stroke-linecap="round"/><path d="M40 40v20a8 8 0 0 0 16 0" stroke="#3B1D63" stroke-width="4" stroke-linecap="round"/><circle cx="24" cy="62" r="5" fill="#E8DCF7"/></svg>'
+  },
+  {
+    id: 'help_errand', name: '代办跑腿', sub: '帮取、帮带、帮买',
+    svg: '<svg viewBox="0 0 80 80" fill="none"><rect x="18" y="28" width="32" height="32" rx="6" fill="#E8B4A0"/><path d="M24 28v-6h20v6" stroke="#8A4A33" stroke-width="4" stroke-linecap="round"/><path d="M50 38h9l7 10v10H52V38Z" fill="#C8A96A"/><circle cx="26" cy="64" r="5" fill="#5B2A91"/><circle cx="54" cy="64" r="5" fill="#5B2A91"/><path d="M26 48h14M26 54h9" stroke="#8A4A33" stroke-width="2.5" stroke-linecap="round"/></svg>'
+  },
+  {
+    id: 'help_donate', name: '爱心捐赠', sub: '闲置物品送人',
+    svg: '<svg viewBox="0 0 80 80" fill="none"><rect x="16" y="30" width="48" height="34" rx="5" fill="#E8B4A0"/><rect x="16" y="24" width="48" height="12" rx="4" fill="#C8A96A"/><rect x="36" y="24" width="8" height="40" fill="#FFF4E8"/><path d="M40 50s-9-5.4-9-10a5 5 0 0 1 9-2 5 5 0 0 1 9 2c0 4.6-9 10-9 10Z" fill="#B85A3C"/></svg>'
+  },
+  {
+    id: 'help_volunteer', name: '志愿帮忙', sub: '找人搭把手',
+    svg: '<svg viewBox="0 0 80 80" fill="none"><path d="M14 54c0-12 12-20 26-20s26 8 26 20" fill="#C9A7F0"/><path d="M40 46s-11-6.5-11-12a6 6 0 0 1 11-2 6 6 0 0 1 11 2c0 5.5-11 12-11 12Z" fill="#8A52C7"/><path d="M18 58l-8 10M62 58l8 10" stroke="#5B2A91" stroke-width="4" stroke-linecap="round"/></svg>'
+  }
 ]
+const meta = {
+  help_borrow: { lead: '借用工具：写清借什么、用多久、怎么还。', title: '例如：想借一把雨伞', desc: '借什么、用多久、在哪里取还，写清楚更容易有人帮。' },
+  help_errand: { lead: '代办跑腿：写清取什么、送到哪、什么时候。', title: '例如：帮取一个快递', desc: '取件地点、送达地点、时间要求，以及是否需要付费。' },
+  help_donate: { lead: '爱心捐赠：写清物品状态、能不能自取。', title: '例如：送一个闲置台灯', desc: '物品新旧、功能是否正常、在哪里自取，最好附一张照片。' },
+  help_volunteer: { lead: '志愿帮忙：写清需要什么帮助、什么时候。', title: '例如：想找人帮忙搬行李', desc: '需要几个人、大概多久、在哪里集合。' }
+}
 const active = ref(props.helpCat || 'help_borrow')
 const form = reactive({ title: '', desc: '', place: '', phone: '' })
 const photo = ref('')
@@ -18,6 +36,7 @@ const submitting = ref(false)
 const error = ref('')
 const fileInput = ref(null)
 const current = computed(() => cats.find((c) => c.id === active.value) || cats[0])
+const currentMeta = computed(() => meta[active.value] || meta.help_borrow)
 
 function onPhoto(e) {
   const file = e.target.files && e.target.files[0]
@@ -73,24 +92,21 @@ async function submit() {
     </div>
     <div class="hp-steps"><span class="on">1 选方向</span><i></i><span>2 写清楚</span><i></i><span>3 发布</span></div>
     <div class="hp-body">
-      <div class="hp-lead">先选一个方向，再把时间、地点说清楚。</div>
+      <div class="hp-lead">{{ currentMeta.lead }}</div>
       <div class="hp-cats">
         <button v-for="c in cats" :key="c.id" type="button" class="hp-cat" :class="{ on: active === c.id }" @click="active = c.id">
-          <span class="hc-ic">{{ c.icon }}</span>
+          <span class="hc-ic" v-html="c.svg"></span>
           <div><b>{{ c.name }}</b><span>{{ c.sub }}</span></div>
         </button>
       </div>
-      <select v-model="active" style="width:100%;box-sizing:border-box;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:10px;padding:10px;font-family:inherit;font-size:12px;margin-bottom:10px">
-        <option v-for="c in cats" :key="c.id" :value="c.id">{{ c.name }}</option>
-      </select>
 
       <div class="hp-sec">
         <label>一句话标题</label>
-        <input v-model="form.title" maxlength="30" placeholder="例如：想借一把雨伞">
+        <input v-model="form.title" maxlength="30" :placeholder="currentMeta.title">
       </div>
       <div class="hp-sec">
         <label>具体说明</label>
-        <textarea v-model="form.desc" maxlength="200" placeholder="时间、地点、用途，越具体越容易有人帮"></textarea>
+        <textarea v-model="form.desc" maxlength="200" :placeholder="currentMeta.desc"></textarea>
       </div>
       <div class="hp-sec">
         <label>地点与联系方式</label>
@@ -112,3 +128,15 @@ async function submit() {
     <div class="hp-submit"><button class="btn" type="button" :disabled="submitting" @click="submit">{{ submitting ? '发布中…' : '发布求助' }}</button></div>
   </div>
 </template>
+
+<style scoped>
+.hp-sec label { font-size: 12.5px; font-weight: 600; }
+.hp-sec input, .hp-sec textarea { font-size: 13px !important; }
+.hp-lead { font-size: 12.5px; line-height: 1.7; }
+.hp-cat b { font-size: 13px !important; }
+.hp-cat div span { font-size: 10.5px !important; }
+.hp-cat .hc-ic svg { width: 38px; height: 38px; }
+.hp-note { font-size: 10.5px; }
+.hp-submit .btn { font-size: 14px; }
+</style>
+
