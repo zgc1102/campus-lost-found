@@ -337,3 +337,8 @@ async function submit() {
 .help-picker button { border: 1px solid var(--line); border-radius: 11px; background: #fff; padding: 9px; font-family: inherit; font-size: 10.5px; color: var(--sub); }
 .help-picker button.on { background: #F4EEFB; border-color: #5B2A91; color: #5B2A91; font-weight: 600; }
 </style>
+
+<style>
+.pub-head { margin-top: 8px; }
+</style>
+

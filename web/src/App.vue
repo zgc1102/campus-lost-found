@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import HomeView from './views/HomeView.vue'
 import ListView from './views/ListView.vue'
 import HelpView from './views/HelpView.vue'
+import HelpPublishView from './views/HelpPublishView.vue'
 import PublishView from './views/PublishView.vue'
 import RadarView from './views/RadarView.vue'
 import TagView from './views/TagView.vue'
@@ -26,10 +27,11 @@ import TourOverlay from './components/TourOverlay.vue'
 const params = new URLSearchParams(location.search)
 const initial = params.get('view')
 const isAdmin = location.pathname.replace(/\/+$/, '') === '/admin'
-const initialView = isAdmin ? 'admin' : ['lost', 'found', 'help', 'publish', 'radar', 'tag', 'mine', 'guide', 'map', 'ask', 'notices', 'info', 'search', 'admin', 'legacy', 'success', 'lend', 'borrow', 'memorial', 'faq', 'phones'].includes(initial) ? initial : 'home'
+const initialView = isAdmin ? 'admin' : ['lost', 'found', 'help', 'publish', 'help-publish', 'radar', 'tag', 'mine', 'guide', 'map', 'ask', 'notices', 'info', 'search', 'admin', 'legacy', 'success', 'lend', 'borrow', 'memorial', 'faq', 'phones'].includes(initial) ? initial : 'home'
 const view = ref(initialView)
 const publishType = ref(params.get('type') || 'lost')
 const helpCat = ref(params.get('cat') || 'help_borrow')
+const helpPublishCat = ref('help_borrow')
 const infoKey = ref(params.get('info') || 'about')
 const legacyName = ref(params.get('screen') || 'about')
 
@@ -75,6 +77,12 @@ function go(target, arg) {
 }
 
 function publish(type, cat) {
+  if (type === 'help') {
+    helpPublishCat.value = cat || 'help_borrow'
+    view.value = 'help-publish'
+    history.replaceState({}, '', location.pathname + '?view=help-publish')
+    return
+  }
   publishType.value = type
   helpCat.value = cat || helpCat.value
   view.value = 'publish'
@@ -90,7 +98,8 @@ function publish(type, cat) {
     <HomeView v-if="view === 'home'" @nav="go" />
     <ListView v-else-if="view === 'lost' || view === 'found'" :type="view" @nav="go" @publish="publish" />
     <HelpView v-else-if="view === 'help'" @nav="go" @publish="publish" />
-    <PublishView v-else-if="view === 'publish'" :type="publishType" :help-cat="helpCat" @nav="go" />
+    <HelpPublishView v-else-if="view === 'help-publish'" :help-cat="helpPublishCat" @nav="go" />
+    <PublishView v-else-if="view === 'publish'" :key="publishType + '-' + helpCat" :type="publishType" :help-cat="helpCat" @nav="go" />
     <RadarView v-else-if="view === 'radar'" @nav="go" />
     <TagView v-else-if="view === 'tag'" @nav="go" />
     <MineView v-else-if="view === 'mine'" @nav="go" @publish="publish" />
@@ -117,6 +126,9 @@ html {
 }
 body {
   min-height: 100vh;
+}
+button, input, textarea, select {
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 .admin-route {
   position: fixed;

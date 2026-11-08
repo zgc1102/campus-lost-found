@@ -86,7 +86,7 @@ async function submitHelp() {
     <div class="topbar">
       <div class="back" @click="$emit('nav', 'home')">‹</div>
       <div class="t">爱心求助</div>
-      <button class="btn" type="button" @click="$emit('publish', active)">发布</button>
+      <button class="btn" type="button" @click="$emit('publish', 'help', active)">发布</button>
     </div>
 
     <div class="scroll">
@@ -110,7 +110,7 @@ async function submitHelp() {
           <svg class="pb-mag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></svg>
           <input v-model="query" placeholder="搜索爱心求助">
         </div>
-        <button type="button" class="pb-ico primary" title="发布求助" @click="$emit('publish', active)">＋</button>
+        <button type="button" class="pb-ico primary" title="发布求助" @click="$emit('publish', 'help', active)">＋</button>
         <button type="button" class="pb-ico" title="问一问" @click="$emit('nav', 'ask')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12a8 8 0 0 1-8 8H7l-4 3v-6a8 8 0 1 1 18-5z"/></svg>
         </button>
@@ -162,6 +162,16 @@ async function submitHelp() {
 }
 .help-cats button.on {
   border-color: #5B2A91;
-  background: #F7F0FF;
+  background: #5B2A91;
+}
+.help-cats button.on b,
+.help-cats button.on span {
+  color: #fff;
+}
+.help-cats button.on .hc-ic {
+  background: rgba(255,255,255,.16) !important;
+  border-color: transparent !important;
+  color: #fff !important;
 }
 </style>
+

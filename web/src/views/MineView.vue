@@ -89,6 +89,7 @@ function fmt(ts) {
             <input v-model="password" type="password" placeholder="密码（至少 4 位）">
           </div>
           <button type="button" class="btn" style="width:100%" @click="login">登录 / 注册</button>
+          <div class="sa" style="text-align:center;margin-top:7px">未注册的手机号将直接注册</div>
           <div v-if="authMsg" class="sa" style="margin-top:6px">{{ authMsg }}</div>
         </template>
       </div>
