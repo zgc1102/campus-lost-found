@@ -19,7 +19,7 @@ import MemorialView from './views/MemorialView.vue'
 import FaqView from './views/FaqView.vue'
 import PhonesView from './views/PhonesView.vue'
 import InfoView from './views/InfoView.vue'
-import LegacyAdminFrame from './components/LegacyAdminFrame.vue'
+import AdminView from './views/AdminView.vue'
 import BottomNav from './components/BottomNav.vue'
 import TourOverlay from './components/TourOverlay.vue'
 
@@ -84,7 +84,7 @@ function publish(type, cat) {
 
 <template>
   <div v-if="view === 'admin'" class="admin-route">
-    <LegacyAdminFrame />
+    <AdminView />
   </div>
   <div v-else class="phone">
     <HomeView v-if="view === 'home'" @nav="go" />
@@ -112,8 +112,17 @@ function publish(type, cat) {
 </template>
 
 <style>
+html {
+  scrollbar-gutter: stable;
+}
+body {
+  min-height: 100vh;
+}
 .admin-route {
   width: 100%;
+  max-width: 100%;
+  flex: 1 1 100%;
+  min-width: 0;
   min-height: 100vh;
   background: #F3EEFA;
 }

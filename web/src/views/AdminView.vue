@@ -342,7 +342,7 @@ function statusClass(s) {
 </template>
 
 <style scoped>
-.admin-shell { min-height: 100vh; background: #F3EEFA; color: #241C2E; font-family: inherit; }
+.admin-shell { width: 100%; min-width: 0; min-height: 100vh; background: #F3EEFA; color: #241C2E; font-family: inherit; }
 .admin-header { background: linear-gradient(135deg, #3B1D63, #5B2A91 60%, #7A3CB0); color: #fff; padding: 22px 0 20px; box-shadow: 0 8px 24px rgba(59,29,99,.16); }
 .admin-wrap { width: min(1120px, calc(100% - 48px)); margin: 0 auto; }
 .brand { display: flex; align-items: center; gap: 12px; }
