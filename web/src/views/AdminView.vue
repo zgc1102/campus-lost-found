@@ -3,7 +3,9 @@ import { computed, onMounted, ref } from 'vue'
 import { api } from '../api'
 
 const TOKEN_KEY = 'sg:admin:token'
-const token = ref(localStorage.getItem(TOKEN_KEY) || '')
+const token = ref(sessionStorage.getItem(TOKEN_KEY) || '')
+// 旧版本曾经把 token 存在 localStorage，迁移时清掉，避免无密码直接进后台
+localStorage.removeItem(TOKEN_KEY)
 const password = ref('')
 const loading = ref(false)
 const error = ref('')
@@ -82,7 +84,7 @@ async function login() {
   try {
     const r = await api.adminLogin(password.value)
     token.value = r.token
-    localStorage.setItem(TOKEN_KEY, r.token)
+    sessionStorage.setItem(TOKEN_KEY, r.token)
     password.value = ''
     await loadAll()
   } catch (e) {
@@ -94,7 +96,7 @@ async function login() {
 
 function logout() {
   token.value = ''
-  localStorage.removeItem(TOKEN_KEY)
+  sessionStorage.removeItem(TOKEN_KEY)
 }
 
 async function review(it, status) {
@@ -498,4 +500,5 @@ textarea.field { min-height: 78px; resize: vertical; }
 .ai-status .dot { width:7px; height:7px; border-radius:50%; background:#A99BB9; }
 .ai-status .dot.on { background:#2F7D46; box-shadow:0 0 0 3px rgba(47,125,70,.12); }
 </style>
+
 
