@@ -69,7 +69,7 @@ async function actClaim(c, status) {
   }
 }
 function status(x) {
-  return ({ pending: '审核中', approved: '已上架', rejected: '已驳回', closed: '已闭环', claimed: '已认领' })[x.status] || x.status
+  return ({ pending: '审核中', approved: '已上架', rejected: '已驳回', closed: '已闭环', claimed: '已认领', removed: '已下架' })[x.status] || x.status
 }
 function fmt(ts) {
   if (!ts) return ''
@@ -132,7 +132,7 @@ function fmt(ts) {
             <span class="st" :class="'st-' + it.status">{{ status(it) }}</span>
           </div>
           <div class="mmeta">{{ it.type === 'help' ? '爱心求助' : (it.type === 'lost' ? '寻物启事' : '招领启事') }} · {{ it.place || '' }} · {{ fmt(it.createdAt) }}</div>
-          <div v-if="it.status === 'rejected'" class="reason" style="color:#c0392b;font-size:11px;margin-top:4px">驳回理由：{{ it.rejectReason || '未填写' }}</div>
+          <div v-if="it.status === 'rejected' || it.status === 'removed'" class="reason" style="color:#c0392b;font-size:11px;margin-top:4px">{{ it.status === 'removed' ? '下架理由' : '驳回理由' }}：{{ it.rejectReason || '未填写' }}</div>
           <div class="mact">
             <button type="button" class="btn ghost" @click="$emit('edit', it)">查看</button>
             <button v-if="it.status === 'rejected'" type="button" class="btn" @click="$emit('edit', it)">修改并重新提交</button>

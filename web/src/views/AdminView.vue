@@ -23,8 +23,9 @@ const deployLog = ref([])
 const annTitle = ref('')
 const annBody = ref('')
 const apiKey = ref('')
-const rejectTarget = ref(null)
-const rejectReason = ref('')
+const actionTarget = ref(null)
+const actionStatus = ref('')
+const actionReason = ref('')
 
 const tabs = [
   ['pending', '待审核'],
@@ -100,9 +101,10 @@ function logout() {
 }
 
 async function review(it, status) {
-  if (status === 'rejected') {
-    rejectTarget.value = it
-    rejectReason.value = ''
+  if (status === 'rejected' || status === 'removed') {
+    actionTarget.value = it
+    actionStatus.value = status
+    actionReason.value = ''
     return
   }
   try {
@@ -111,21 +113,22 @@ async function review(it, status) {
   } catch (e) { error.value = e.message || '操作失败' }
 }
 
-async function confirmReject() {
-  if (!rejectTarget.value) return
-  if (rejectReason.value.trim().length < 2) {
-    error.value = '请写一下驳回理由'
+async function confirmAction() {
+  if (!actionTarget.value) return
+  if (actionReason.value.trim().length < 2) {
+    error.value = actionStatus.value === 'removed' ? '请写下架理由' : '请写驳回理由'
     return
   }
   try {
-    await api.adminPatch(rejectTarget.value.id, {
-      status: 'rejected',
-      rejectReason: rejectReason.value.trim()
+    await api.adminPatch(actionTarget.value.id, {
+      status: actionStatus.value,
+      rejectReason: actionReason.value.trim()
     }, token.value)
-    rejectTarget.value = null
-    rejectReason.value = ''
+    actionTarget.value = null
+    actionReason.value = ''
+    actionStatus.value = ''
     await loadAll()
-  } catch (e) { error.value = e.message || '驳回失败' }
+  } catch (e) { error.value = e.message || '操作失败' }
 }
 
 async function approvePhone(it) {
@@ -365,7 +368,7 @@ function statusClass(s) {
                 <div class="ai-meta">{{ it.place || '未填写地点' }} · {{ fmt(it.createdAt) }}</div>
                 <div class="ai-desc">{{ it.desc }}</div>
                 <div v-if="it.secret" class="ai-secret">🔒 核验特征：{{ it.secret }}</div>
-                <div v-if="it.rejectReason" class="ai-secret" style="border-color:#F3CFCF;color:#A12F2F;background:#FDF2F2">驳回理由：{{ it.rejectReason }}</div>
+                <div v-if="it.rejectReason" class="ai-secret" style="border-color:#F3CFCF;color:#A12F2F;background:#FDF2F2">{{ it.status === 'removed' ? '下架理由' : '驳回理由' }}：{{ it.rejectReason }}</div>
                 <img v-if="it.photoUrl" :src="it.photoUrl" class="ai-photo" alt="">
                 <div v-if="it.contact && it.contact.phone" class="ai-phone">📞 联系电话：{{ it.contact.phone }}</div>
                 <div class="ai-actions">
@@ -380,14 +383,14 @@ function statusClass(s) {
           </template>
         </template>
       </div>
-      <div v-if="rejectTarget" class="admin-modal">
+      <div v-if="actionTarget" class="admin-modal">
         <div class="modal-card">
-          <h3>驳回「{{ rejectTarget.title }}」</h3>
-          <p>请填写驳回理由，发布者会在「我的发布」里看到。</p>
-          <textarea v-model="rejectReason" maxlength="200" placeholder="例如：描述过于模糊，请补充物品颜色/划痕等独有特征"></textarea>
+          <h3>{{ actionStatus === 'removed' ? '下架' : '驳回' }}「{{ actionTarget.title }}」</h3>
+          <p>请填写{{ actionStatus === 'removed' ? '下架' : '驳回' }}理由，发布者会在「我的发布」里看到。</p>
+          <textarea v-model="actionReason" maxlength="200" :placeholder="actionStatus === 'removed' ? '例如：信息已过期/已线下找回，申请下架' : '例如：描述过于模糊，请补充物品颜色/划痕等独有特征'"></textarea>
           <div class="modal-actions">
-            <button type="button" class="ghost" @click="rejectTarget = null">取消</button>
-            <button type="button" class="danger" @click="confirmReject">确认驳回</button>
+            <button type="button" class="ghost" @click="actionTarget = null">取消</button>
+            <button type="button" class="danger" @click="confirmAction">确认{{ actionStatus === 'removed' ? '下架' : '驳回' }}</button>
           </div>
         </div>
       </div>
