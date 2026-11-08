@@ -17,6 +17,7 @@ const radarSummary = ref('')
 const detective = ref(null)
 const scanned = ref(0)
 const steps = ref([])
+const detectiveSteps = ref([])
 
 async function scan() {
   error.value = ''
@@ -51,6 +52,7 @@ async function runDetective() {
       lastSeen: lastSeen.value.trim()
     })
     detective.value = data
+    detectiveSteps.value = data.steps || []
   } catch (e) {
     error.value = e.message || '推理失败'
   } finally {
@@ -148,6 +150,8 @@ function openMatch(m) {
 
       <template v-if="detective">
         <div class="dt-summary" style="margin-top:12px">{{ detective.summary }}</div>
+        <div class="dt-tech"><span>Agent 路线推理</span><span>校园地点 RAG</span><span>工具调用</span></div>
+        <div v-for="(s, i) in detectiveSteps" :key="'ds'+i" class="dt-step"><b>{{ s.tool }}</b><span>{{ s.finding }}</span></div>
         <div class="dt-title">建议按这个顺序找</div>
         <div v-for="(a, i) in detective.actions" :key="i" class="dt-action" :style="{ animationDelay: (i * 0.12) + 's' }">
           <span class="dt-num">{{ i + 1 }}</span>
@@ -254,5 +258,13 @@ function openMatch(m) {
 .at-finding { color:#6E607F; }
 .rd-tech { display:flex; gap:4px; flex-wrap:wrap; margin-top:5px; }
 .rd-tech span { font-size:8.5px; color:#7A5AA8; background:#F7F0FF; border-radius:4px; padding:2px 4px; }
+</style>
+
+
+<style scoped>
+.dt-tech { display:flex; gap:4px; flex-wrap:wrap; margin:0 0 8px; }
+.dt-tech span { font-size:8.5px; color:#7A5AA8; background:#F7F0FF; border-radius:4px; padding:3px 5px; }
+.dt-step { font-size:10px; line-height:1.55; color:#6E607F; border-top:1px dashed #EFE8F7; padding:5px 0; }
+.dt-step b { color:#3B1D63; margin-right:5px; }
 </style>
 
