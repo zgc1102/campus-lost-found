@@ -78,6 +78,40 @@ export const api = {
   ask(question) {
     return call('/ask', { method: 'POST', body: JSON.stringify({ question }) })
   },
+  async askStream(question, onDelta) {
+    const res = await fetch('/api/ask/stream', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Owner': owner() },
+      body: JSON.stringify({ question })
+    })
+    if (!res.ok) {
+      let msg = '问答服务暂时不可用'
+      try { msg = (await res.json()).error || msg } catch (_) {}
+      throw new Error(msg)
+    }
+    const reader = res.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+    let final = null
+    while (true) {
+      const { value, done } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const parts = buffer.split('\n\n')
+      buffer = parts.pop() || ''
+      for (const part of parts) {
+        const lines = part.split('\n')
+        const ev = (lines.find((x) => x.startsWith('event:')) || '').slice(6).trim()
+        const raw = lines.find((x) => x.startsWith('data:'))
+        if (!raw) continue
+        let data = {}
+        try { data = JSON.parse(raw.slice(5).trim()) } catch (_) { continue }
+        if (ev === 'delta' && onDelta) onDelta(data.text || '')
+        if (ev === 'done') final = data
+      }
+    }
+    return final || {}
+  },
   vision(image) {
     return call('/vision/analyze', { method: 'POST', body: JSON.stringify({ image, mime: 'image/jpeg' }) })
   },

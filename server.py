@@ -3024,6 +3024,32 @@ class Handler(BaseHTTPRequestHandler):
             self.close_connection = True
             return
 
+        if path == "/api/ask/stream":
+            body = self._read_body()
+            q = str(body.get("question") or "").strip()
+            if len(q) < 2:
+                return self._json({"error": "请输入问题"}, 400)
+            result = ask_kb(q)
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+            self.send_header("Cache-Control", "no-cache")
+            self.send_header("Connection", "close")
+            self.send_header("X-Accel-Buffering", "no")
+            self.end_headers()
+
+            def sse(event, data):
+                self.wfile.write(("event: %s\ndata: %s\n\n" % (
+                    event, json.dumps(data, ensure_ascii=False))).encode("utf-8"))
+                self.wfile.flush()
+
+            text = result.get("answer") or ""
+            for i in range(0, len(text), 12):
+                sse("delta", {"text": text[i:i + 12]})
+                time.sleep(0.015)
+            sse("done", result)
+            self.close_connection = True
+            return
+
         if path == "/api/ask":
             body = self._read_body()
             q = str(body.get("question") or "").strip()

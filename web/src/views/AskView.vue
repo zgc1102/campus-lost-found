@@ -30,8 +30,8 @@ async function ask(q) {
   answer.value = ''
   sources.value = []
   try {
-    const data = await api.ask(text)
-    answer.value = data.answer || '暂时没有找到答案'
+    const data = await api.askStream(text, (chunk) => { answer.value += chunk })
+    if (data.answer && !answer.value) answer.value = data.answer
     sources.value = (data.sources || []).slice(0, 4)
   } catch (e) {
     answer.value = e.message || '问答服务暂时不可用'
@@ -69,7 +69,7 @@ onMounted(() => {
 
       <div v-if="asked" class="ask-card">
         <div class="ask-q">你问：{{ asked }}</div>
-        <div v-if="loading" class="ask-a">正在查资料…</div>
+        <div v-if="loading && !answer" class="ask-a">正在查资料…</div>
         <div v-else class="ask-a" style="white-space:pre-line">{{ cleanAnswer }}</div>
       </div>
 
