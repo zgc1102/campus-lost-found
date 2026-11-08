@@ -50,10 +50,28 @@ function ask() {
       </button>
       <div class="sa" style="text-align:center;padding:16px 0">免登录即可浏览地图与问答</div>
     </div>
+    <button type="button" class="guide-ask-fab" @click="$emit('nav', 'ask')">问</button>
   </section>
 </template>
 
 <style scoped>
+.screen { position: relative; }
+.guide-ask-fab {
+  position: absolute;
+  left: 16px;
+  bottom: 88px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 0;
+  background: linear-gradient(135deg, #5B2A91, #7A3CB0);
+  color: #fff;
+  font-family: inherit;
+  font-size: 17px;
+  font-weight: 600;
+  box-shadow: 0 8px 20px rgba(59,29,99,.28);
+  z-index: 5;
+}
 .g-card {
   display: flex;
   align-items: center;
