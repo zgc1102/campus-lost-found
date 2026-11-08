@@ -83,7 +83,10 @@ function publish(type, cat) {
 </script>
 
 <template>
-  <div class="phone">
+  <div v-if="view === 'admin'" class="admin-route">
+    <LegacyAdminFrame />
+  </div>
+  <div v-else class="phone">
     <HomeView v-if="view === 'home'" @nav="go" />
     <ListView v-else-if="view === 'lost' || view === 'found'" :type="view" @nav="go" @publish="publish" />
     <HelpView v-else-if="view === 'help'" @nav="go" @publish="publish" />
@@ -103,8 +106,18 @@ function publish(type, cat) {
     <MemorialView v-else-if="view === 'memorial'" @nav="go" />
     <FaqView v-else-if="view === 'faq'" @nav="go" />
     <PhonesView v-else-if="view === 'phones'" @nav="go" />
-    <LegacyAdminFrame v-else-if="view === 'admin'" />
-    <BottomNav v-if="view !== 'admin' && view !== 'map' && view !== 'ask'" :active="view === 'publish' ? (publishType === 'help' ? 'help' : publishType) : view" @nav="go" />
-    <TourOverlay v-if="view !== 'admin'" />
+    <BottomNav v-if="view !== 'map' && view !== 'ask'" :active="view === 'publish' ? (publishType === 'help' ? 'help' : publishType) : view" @nav="go" />
+    <TourOverlay />
   </div>
 </template>
+
+<style>
+.admin-route {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  background: #fff;
+  z-index: 999;
+}
+</style>
