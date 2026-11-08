@@ -354,6 +354,7 @@ function statusClass(s) {
                 <div class="ai-meta">{{ it.place || '未填写地点' }} · {{ fmt(it.createdAt) }}</div>
                 <div class="ai-desc">{{ it.desc }}</div>
                 <div v-if="it.secret" class="ai-secret">🔒 核验特征：{{ it.secret }}</div>
+                <div v-if="it.rejectReason" class="ai-secret" style="border-color:#F3CFCF;color:#A12F2F;background:#FDF2F2">驳回理由：{{ it.rejectReason }}</div>
                 <img v-if="it.photoUrl" :src="it.photoUrl" class="ai-photo" alt="">
                 <div v-if="it.contact && it.contact.phone" class="ai-phone">📞 联系电话：{{ it.contact.phone }}</div>
                 <div class="ai-actions">
