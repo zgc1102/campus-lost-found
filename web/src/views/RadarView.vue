@@ -16,6 +16,7 @@ const hotspots = ref([])
 const radarSummary = ref('')
 const detective = ref(null)
 const scanned = ref(0)
+const steps = ref([])
 
 async function scan() {
   error.value = ''
@@ -28,6 +29,7 @@ async function scan() {
     hotspots.value = data.hotspots || []
     radarSummary.value = data.summary || ''
     scanned.value = data.scanned || 0
+    steps.value = data.steps || []
   } catch (e) {
     error.value = e.message || '扫描失败'
   } finally {
@@ -94,6 +96,19 @@ function openMatch(m) {
       <div v-if="loading" class="ag-loading">雷达扫描中…</div>
       <div v-else-if="!matches.length && !scanned" class="ag-loading">填好线索，点「扫描」开始</div>
 
+      <div v-if="steps.length" class="agent-trace">
+        <div class="at-head">
+          <b>AI Agent Trace</b>
+          <span class="at-badge">Agent</span><span class="at-badge">RAG</span><span class="at-badge">多模态</span>
+        </div>
+        <div class="at-sub">本次扫描的可解释执行链路</div>
+        <div v-for="(s, i) in steps" :key="i" class="at-step">
+          <span class="at-index">{{ i + 1 }}</span>
+          <span class="at-tool">{{ s.tool }}</span>
+          <span class="at-finding">{{ s.finding }}</span>
+        </div>
+      </div>
+
       <template v-if="matches.length">
         <div v-if="radarSummary" class="rd-summary">{{ radarSummary }}</div>
         <article v-for="(m, i) in matches" :key="m.item.id" class="rd-match" :style="{ animationDelay: (i * 0.12) + 's' }" @click="openMatch(m)">
@@ -102,6 +117,7 @@ function openMatch(m) {
             <div class="rd-title">{{ m.item.title }}</div>
             <div class="rd-meta">{{ m.item.place || '未填写地点' }}<span class="rd-conf">{{ m.confidence }}置信</span></div>
             <div class="rd-reasons"><span v-for="r in m.reasons" :key="r">{{ r }}</span></div>
+            <div class="rd-tech"><span>多模态特征</span><span>Agent 检索</span><span>LLM 重排</span></div>
           </div>
         </article>
       </template>
@@ -225,3 +241,18 @@ function openMatch(m) {
 .radar-action i { display: block; font-style: normal; font-size: 9px; line-height: 1.5; color: var(--sub); margin-top: 2px; }
 .detective-form { margin-top: 14px; }
 </style>
+
+<style scoped>
+.agent-trace { background:#fff; border:1px solid var(--line); border-radius:14px; padding:11px 12px; margin:10px 0 12px; }
+.at-head { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.at-head b { font-size:12px; color:var(--primary); margin-right:3px; }
+.at-badge { font-size:9px; line-height:1; padding:4px 6px; border-radius:99px; color:#6B3FA0; background:#F1E8FB; }
+.at-sub { font-size:10px; color:var(--sub); margin:4px 0 8px; }
+.at-step { display:flex; align-items:flex-start; gap:6px; font-size:10.5px; line-height:1.55; padding:5px 0; border-top:1px dashed #EFE8F7; }
+.at-index { flex:0 0 16px; height:16px; border-radius:50%; background:#F1E8FB; color:#6B3FA0; display:flex; align-items:center; justify-content:center; font-size:9px; }
+.at-tool { flex:0 0 auto; color:#3B1D63; font-weight:600; }
+.at-finding { color:#6E607F; }
+.rd-tech { display:flex; gap:4px; flex-wrap:wrap; margin-top:5px; }
+.rd-tech span { font-size:8.5px; color:#7A5AA8; background:#F7F0FF; border-radius:4px; padding:2px 4px; }
+</style>
+
