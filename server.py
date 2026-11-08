@@ -521,6 +521,9 @@ def _endpoints(base):
     out = [b + "/chat/completions"]
     if not b.endswith("/v1") and not b.endswith("/v4"):
         out.append(b + "/v1/chat/completions")
+    # 有些配置把 base_url 写成 .../v1，但 DeepSeek 的兼容接口在根路径
+    if b.endswith("/v1") and not b.endswith("/api/paas/v4"):
+        out.append(b[:-3].rstrip("/") + "/chat/completions")
     return out
 
 
@@ -1042,8 +1045,9 @@ def apply_ai_decision(item, ai, cfg):
         item["reviewedBy"] = "AI"
         item["reviewedAt"] = now_ms()
     elif not ai_trusted:
-        item["status"] = "rejected"
-        item["rejectReason"] = "审核系统暂时不可用，内容没有公开，请稍后重新提交"
+        # AI 不可用时不再直接驳回，转人工审核，避免整个发布功能被卡死
+        item["status"] = "pending"
+        item["rejectReason"] = "AI 审核暂不可用，已转人工审核"
         item["ai"]["fallback"] = True
         item["reviewedBy"] = "system"
         item["reviewedAt"] = now_ms()
