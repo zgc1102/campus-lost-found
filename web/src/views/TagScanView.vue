@@ -63,6 +63,14 @@ async function send() {
         <button type="button" class="primary" @click="$emit('nav', 'home')">返回首页</button>
       </template>
       <template v-else>
+        <div v-if="tag.deactivated" class="scan-deactivated">
+          <div class="scan-icon off">🔖</div>
+          <h2>此码已注销</h2>
+          <p>感谢您愿意扫这一下，也感谢您的一份善意。</p>
+          <p>这个拾光码已经被失主主动注销，不能再发送消息了。</p>
+          <button type="button" class="primary" @click="$emit('nav', 'home')">了解清华校园拾光里</button>
+        </div>
+        <template v-else>
         <div class="scan-card">
           <div class="scan-icon">🔖</div>
           <div class="scan-kicker">清华校园拾光里</div>
@@ -87,6 +95,7 @@ async function send() {
           <div v-if="error" class="warn-box">{{ error }}</div>
           <button type="button" class="primary scan-submit" :disabled="sending" @click="send">{{ sending ? '发送中…' : '通知失主' }}</button>
         </div>
+        </template>
       </template>
     </div>
   </section>
@@ -115,5 +124,14 @@ async function send() {
 
 <style scoped>
 .scan-policy { margin-top:12px; display:inline-block; font-size:9.5px; color:#5B2A91; background:#F1E8FB; border:1px solid #E4D4F7; border-radius:99px; padding:5px 9px; }
+</style>
+
+
+<style scoped>
+.scan-deactivated { background:#fff; border:1px solid #EDE4F7; border-radius:18px; padding:26px 18px; text-align:center; }
+.scan-deactivated .scan-icon.off { background:#EEE8F5; filter:grayscale(1); }
+.scan-deactivated h2 { margin:12px 0 8px; font-size:19px; color:#2B1D3D; }
+.scan-deactivated p { margin:6px 0; font-size:11.5px; line-height:1.8; color:#6E607F; }
+.scan-deactivated .primary { margin-top:16px; width:100%; }
 </style>
 

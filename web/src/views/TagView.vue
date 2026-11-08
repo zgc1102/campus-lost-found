@@ -41,6 +41,16 @@ function resetTag() {
   result.value = null
 }
 
+async function cancelTag() {
+  if (!confirm('确定注销这个拾光码？注销后别人扫码会显示「此码已注销」，无法再给你发消息。')) return
+  try {
+    await api.deleteTag()
+    result.value = null
+  } catch (e) {
+    error.value = e.message || '注销失败'
+  }
+}
+
 onMounted(async () => {
   try {
     const list = await api.myTags()
@@ -103,6 +113,9 @@ function qrError() {
         <div class="tr-item">{{ result.itemName }}</div>
         <div class="tr-code">拾光码 {{ result.code }} · {{ result.mode === 'phone' ? '扫码后直接显示手机号' : '扫码后只给你发通知' }}</div>
         <div class="tr-policy">长期有效 · 网站版本更新后仍可扫码</div>
+        <div class="tr-date" v-if="result.createdAt">注册于 {{ new Date(result.createdAt).toLocaleDateString('zh-CN') }}</div>
+        <div class="tr-warn">此码不再使用时，建议及时注销，避免被他人反复扫码打扰。</div>
+        <button type="button" class="tr-cancel" @click="cancelTag">注销此码</button>
         <div class="tr-actions">
           <a class="primary" :download="'拾光码-' + result.code + '.png'" :href="qrSrc">保存 / 打印</a>
           <button type="button" @click="copyLink">复制链接</button>
@@ -137,5 +150,12 @@ function qrError() {
 
 <style scoped>
 .tr-policy { margin-top:6px; font-size:9.5px; color:#5B2A91; background:#F1E8FB; border-radius:99px; display:inline-block; padding:4px 8px; }
+</style>
+
+
+<style scoped>
+.tr-date { margin-top:6px; font-size:10px; color:#8E7FA3; }
+.tr-warn { margin:8px 8px 0; font-size:9.5px; line-height:1.6; color:#A97A00; background:#FFF8E8; border-radius:8px; padding:6px 8px; }
+.tr-cancel { width:100%; margin-top:9px; border:1px solid #F3CFCF; background:#FDF2F2; color:#A12F2F; border-radius:9px; padding:8px; font-family:inherit; font-size:10px; }
 </style>
 

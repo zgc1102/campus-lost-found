@@ -13,14 +13,16 @@ const authMsg = ref('')
 const account = ref(localStorage.getItem('sg:account:v1') || '')
 const accountPhone = ref(localStorage.getItem('sg:account:phone') || '')
 const origin = location.origin
+const myTag = ref(null)
 
 onMounted(() => load())
 async function load(silent = false) {
   if (!silent) loading.value = true
   try {
-    const [list, cs] = await Promise.all([api.mine(), api.claims()])
+    const [list, cs, tags] = await Promise.all([api.mine(), api.claims(), api.myTags()])
     if (Array.isArray(list)) items.value = list
     claims.value = cs.received || []
+    myTag.value = Array.isArray(tags) && tags.length ? tags[0] : null
   } finally {
     if (!silent) loading.value = false
   }
@@ -60,8 +62,17 @@ async function withdraw(it) {
     authMsg.value = e.message || '撤回失败'
   }
 }
-async function actClaim(c, status) {
+async function cancelMyTag() {
+  if (!confirm('确定注销拾光码？注销后别人扫码会显示此码已注销，不能再给你发消息。')) return
   try {
+    await api.deleteTag()
+    myTag.value = null
+  } catch (e) {
+    authMsg.value = e.message || '注销失败'
+  }
+}
+
+async function actClaim(c, status) {  try {
     await api.claimAction(c.id, { status })
     await load(true)
   } catch (e) {
@@ -87,6 +98,18 @@ function fmt(ts) {
     </div>
     <div class="scroll">
       <div class="netbadge on">🌐 已连接服务器：{{ origin }}（其他同学也能看到）</div>
+
+      <div v-if="myTag" class="tag-mine">
+        <div class="tm-head"><b>我的拾光码</b><span class="tm-dot">长期有效</span></div>
+        <div class="tm-code">{{ myTag.code }}</div>
+        <div class="tm-meta">{{ myTag.itemName || '我的物品' }} · 注册于 {{ new Date(myTag.createdAt).toLocaleDateString('zh-CN') }}</div>
+        <div class="tm-warn">此码长期有效，不随版本更新失效。如果不再使用，建议及时注销，避免被他人反复扫码打扰。</div>
+        <button type="button" class="tm-cancel" @click="cancelMyTag">注销此码</button>
+      </div>
+      <div v-else class="tag-mine empty-tag">
+        <div class="tm-meta">还没有拾光码。给物品贴一张码，捡到的人扫码就能联系你。</div>
+        <button type="button" class="tm-create" @click="$emit('nav', 'tag')">去生成拾光码</button>
+      </div>
 
       <div class="accbox">
         <div v-if="account" class="acc-line">
@@ -157,5 +180,19 @@ function fmt(ts) {
   font-size: 11px;
   color: var(--ink);
 }
+</style>
+
+
+<style scoped>
+.tag-mine { background:#fff; border:1px solid #EADFF5; border-radius:12px; padding:10px 12px; margin-bottom:10px; }
+.tm-head { display:flex; align-items:center; justify-content:space-between; }
+.tm-head b { font-size:12px; color:#3B1D63; }
+.tm-dot { font-size:9px; color:#2F7D46; background:#EAF7EE; border-radius:99px; padding:3px 6px; }
+.tm-code { font-size:18px; font-weight:700; letter-spacing:.12em; color:#5B2A91; margin:5px 0 2px; }
+.tm-meta { font-size:10.5px; color:#6E607F; line-height:1.6; }
+.tm-warn { font-size:9.5px; color:#A97A00; background:#FFF8E8; border-radius:7px; padding:6px 7px; margin-top:7px; line-height:1.6; }
+.tm-cancel { width:100%; margin-top:7px; border:1px solid #F3CFCF; background:#FDF2F2; color:#A12F2F; border-radius:8px; padding:7px; font-family:inherit; font-size:10px; }
+.tm-create { margin-top:7px; border:0; background:linear-gradient(135deg,#5B2A91,#7A3CB0); color:#fff; border-radius:8px; padding:8px 12px; font-family:inherit; font-size:10.5px; }
+.empty-tag .tm-meta { margin-bottom:2px; }
 </style>
 

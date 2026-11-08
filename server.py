@@ -158,8 +158,14 @@ def _tag_public(tag, base_url="", with_qr=False):
         "phoneMasked": re.sub(r"(\d{3})\d{4}(\d{4})", r"\1****\2", phone) if phone else "",
         "createdAt": tag.get("createdAt"),
         "notifyCount": tag.get("notifyCount") or 0,
+        "deactivated": not tag.get("active", True),
+        "createdAt": tag.get("createdAt"),
         "url": (base_url.rstrip("/") + "/?tag=" + str(tag.get("code") or "")) if base_url else "",
     }
+    if out["deactivated"]:
+        out["phoneMasked"] = ""
+        out["url"] = ""
+        out.pop("phoneFull", None)
     if mode == "phone":
         out["phoneFull"] = phone
     if with_qr and base_url:
@@ -1130,6 +1136,25 @@ def review_item(item):
         ai["reason"] = ((ai.get("reason") or "") + "；终审：" + why2).strip("；")
         ai["second"] = True
     return ai
+
+
+def moderate_text(text, title="用户输入"):
+    """所有用户可输入文本的统一 AI 审核；审核服务异常时放行规则结果"""
+    text = str(text or "").strip()
+    if not text:
+        return True, ""
+    probe = {
+        "type": "found", "cat": "other",
+        "title": (title + "：" + text)[:80],
+        "desc": text[:800], "place": "", "contact": {}
+    }
+    try:
+        ai = review_item(probe)
+    except Exception:
+        return True, ""
+    if scope_violation(probe) or ai.get("decision") == "reject":
+        return False, (ai.get("reason") or "内容不符合校园互助规范")[:120]
+    return True, ""
 
 
 def public_item(it, owner=None):
@@ -2282,7 +2307,7 @@ class Handler(BaseHTTPRequestHandler):
             if not owner:
                 return self._json([])
             with LOCK:
-                tags = [x for x in load_tags() if x.get("owner") == owner]
+                tags = [x for x in load_tags() if x.get("owner") == owner and x.get("active", True)]
             tags.sort(key=lambda x: x.get("createdAt") or 0, reverse=True)
             host = self.headers.get("Host") or "127.0.0.1:8000"
             scheme = "https" if self.headers.get("X-Forwarded-Proto") == "https" else "http"
@@ -2820,9 +2845,12 @@ class Handler(BaseHTTPRequestHandler):
             note = str(body.get("note") or "").strip()[:80]
             if mode == "phone" and not phone:
                 return self._json({"error": "选择展示电话时，需要填写手机号"}, 400)
+            _ok, _why = moderate_text(item_name + " " + note, "拾光码内容")
+            if not _ok:
+                return self._json({"error": "内容未通过审核：" + _why}, 400)
             with LOCK:
                 tags = load_tags()
-                tag = next((x for x in tags if x.get("owner") == owner), None)
+                tag = next((x for x in tags if x.get("owner") == owner and x.get("active", True)), None)
                 if tag:
                     tag.update({"itemName": item_name, "phone": phone,
                                 "mode": mode, "note": note, "updatedAt": now_ms()})
@@ -2843,17 +2871,36 @@ class Handler(BaseHTTPRequestHandler):
             out["reused"] = True
             return self._json(out)
 
+        if path == "/api/tags/mine/delete":
+            owner = self._owner()
+            if not owner:
+                return self._json({"error": "请先登录"}, 401)
+            with LOCK:
+                tags = load_tags()
+                tag = next((x for x in tags if x.get("owner") == owner and x.get("active", True)), None)
+                if not tag:
+                    return self._json({"error": "没有可注销的拾光码"}, 404)
+                tag["active"] = False
+                tag["deactivatedAt"] = now_ms()
+                save_tags(tags)
+            return self._json({"ok": True})
+
         if path.startswith("/api/tags/") and path.endswith("/notify"):
             code = path[len("/api/tags/"):-len("/notify")].strip("/")
             body = self._read_body()
             message = str(body.get("message") or "").strip()[:160]
             contact = str(body.get("contact") or "").strip()[:40]
             found_item = str(body.get("itemName") or "").strip()[:40]
+            _ok, _why = moderate_text(found_item + " " + message + " " + contact, "扫码上报")
+            if not _ok:
+                return self._json({"error": "内容未通过审核：" + _why}, 400)
             with LOCK:
                 tags = load_tags()
                 tag = next((x for x in tags if x.get("code") == code), None)
                 if not tag:
                     return self._json({"error": "拾光码不存在"}, 404)
+                if not tag.get("active", True):
+                    return self._json({"error": "此码已注销，感谢您的一份好意"}, 410)
                 tag["notifyCount"] = int(tag.get("notifyCount") or 0) + 1
                 save_tags(tags)
                 notices = load_notices()
@@ -2865,6 +2912,34 @@ class Handler(BaseHTTPRequestHandler):
                     text += "（联系方式：%s）" % contact
                 add_notice(notices, tag.get("owner"), "pickup", text, "", "")
                 save_notices(notices)
+                # 捡到上报同步生成一条招领信息，进入正常失物招领流
+                if found_item or message:
+                    items = load_items()
+                    scan_item = {
+                        "id": "p_" + uuid.uuid4().hex[:12],
+                        "type": "found",
+                        "cat": "other",
+                        "title": ("扫码上报：" + (found_item or "捡到物品"))[:60],
+                        "desc": (message or "扫码上报捡到物品")[:400],
+                        "place": "扫码上报 · " + (tag.get("itemName") or "拾光码"),
+                        "eventTime": "",
+                        "secret": "",
+                        "photo": None,
+                        "contact": {"phone": contact[:20]} if contact else {},
+                        "ownerToken": self._owner() or ("scan_" + code),
+                        "source": "tag_scan",
+                        "tagCode": code,
+                        "tagOwner": tag.get("owner"),
+                        "status": "pending",
+                        "createdAt": now_ms(),
+                        "updatedAt": now_ms(),
+                    }
+                    items.append(scan_item)
+                    save_items(items)
+                    try:
+                        queue_add(scan_item["id"])
+                    except Exception:
+                        pass
             return self._json({"ok": True})
 
         if path == "/api/agent/radar":
@@ -3081,6 +3156,9 @@ class Handler(BaseHTTPRequestHandler):
             body = self._read_body()
             message = str(body.get("message") or "").strip()[:200]
             contact = str(body.get("contact") or "").strip()[:30]
+            _ok, _why = moderate_text(message + " " + contact, "认领申请")
+            if not _ok:
+                return self._json({"error": "内容未通过审核：" + _why}, 400)
             _chk = phone_check(contact)
             if contact and _chk["status"] == "red":
                 return self._json({"error": "电话号码不正确：" + _chk["reason"]}, 400)
@@ -3150,6 +3228,9 @@ class Handler(BaseHTTPRequestHandler):
             extra = str(body.get("message") or "").strip()[:200]
             if len(extra) < 2:
                 return self._json({"error": "请写一点补充说明"}, 400)
+            _ok, _why = moderate_text(extra, "认领补充")
+            if not _ok:
+                return self._json({"error": "内容未通过审核：" + _why}, 400)
             with LOCK:
                 claims = load_claims()
                 items = load_items()

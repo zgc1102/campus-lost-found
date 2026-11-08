@@ -168,6 +168,9 @@ export const api = {
   notifyTag(code, body) {
     return call('/tags/' + encodeURIComponent(code) + '/notify', { method: 'POST', body: JSON.stringify(body) })
   },
+  deleteTag() {
+    return call('/tags/mine/delete', { method: 'POST' })
+  },
   tag(code) {
     return call('/tags/' + encodeURIComponent(code))
   }
