@@ -19,7 +19,7 @@ import MemorialView from './views/MemorialView.vue'
 import FaqView from './views/FaqView.vue'
 import PhonesView from './views/PhonesView.vue'
 import InfoView from './views/InfoView.vue'
-import AdminView from './views/AdminView.vue'
+import LegacyAdminFrame from './components/LegacyAdminFrame.vue'
 import BottomNav from './components/BottomNav.vue'
 import TourOverlay from './components/TourOverlay.vue'
 
@@ -103,8 +103,8 @@ function publish(type, cat) {
     <MemorialView v-else-if="view === 'memorial'" @nav="go" />
     <FaqView v-else-if="view === 'faq'" @nav="go" />
     <PhonesView v-else-if="view === 'phones'" @nav="go" />
-    <AdminView v-else-if="view === 'admin'" />
+    <LegacyAdminFrame v-else-if="view === 'admin'" />
     <BottomNav v-if="view !== 'admin' && view !== 'map' && view !== 'ask'" :active="view === 'publish' ? (publishType === 'help' ? 'help' : publishType) : view" @nav="go" />
-    <TourOverlay />
+    <TourOverlay v-if="view !== 'admin'" />
   </div>
 </template>
