@@ -127,9 +127,6 @@ html {
 body {
   min-height: 100vh;
 }
-button, input, textarea, select {
-  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
-}
 .admin-route {
   position: fixed;
   inset: 0;

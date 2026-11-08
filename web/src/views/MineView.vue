@@ -11,6 +11,8 @@ const phone = ref('')
 const password = ref('')
 const authMsg = ref('')
 const account = ref(localStorage.getItem('sg:account:v1') || '')
+const accountPhone = ref(localStorage.getItem('sg:account:phone') || '')
+const origin = location.origin
 
 onMounted(load)
 async function load() {
@@ -28,7 +30,9 @@ async function login() {
   try {
     const r = await api.accountLogin({ phone: phone.value.trim(), password: password.value })
     localStorage.setItem('sg:account:v1', r.accountId)
+    localStorage.setItem('sg:account:phone', r.phone || phone.value.trim())
     account.value = r.accountId
+    accountPhone.value = r.phone || phone.value.trim()
     password.value = ''
     await load()
   } catch (e) {
@@ -37,8 +41,15 @@ async function login() {
 }
 function logout() {
   localStorage.removeItem('sg:account:v1')
+  localStorage.removeItem('sg:account:phone')
   account.value = ''
+  accountPhone.value = ''
   load()
+}
+function maskPhone(p) {
+  const s = String(p || '')
+  if (s.length < 7) return s
+  return s.slice(0, 3) + '****' + s.slice(-4)
 }
 async function withdraw(it) {
   if (!confirm('确定撤回删除「' + it.title + '」？')) return
@@ -75,71 +86,58 @@ function fmt(ts) {
       <button type="button" class="btn" @click="$emit('publish', 'lost')">发布</button>
     </div>
     <div class="scroll">
-      <div class="form-card" style="padding:14px;margin-bottom:10px">
-        <div class="fc-title">账号</div>
-        <div v-if="account" style="padding-top:10px;font-size:11px;color:var(--sub)">
-          已登录 · {{ account.slice(0, 10) }}
-          <button type="button" class="btn ghost" style="margin-left:8px" @click="logout">退出</button>
+      <div class="netbadge">🌐 已连接服务器：{{ origin }}（其他同学也能看到）</div>
+
+      <div class="accbox">
+        <div v-if="account" class="acc-line">
+          ✅ 已登录：{{ maskPhone(accountPhone) }}
+          <a href="javascript:void(0)" @click="logout">退出</a>
         </div>
         <template v-else>
-          <div class="form-item" style="margin:8px 0">
-            <input v-model="phone" maxlength="11" placeholder="手机号">
+          <div class="acc-title">登录后，换设备或换网址也能看到「我的发布」<br>第一次输入手机号 + 密码就是注册</div>
+          <div class="acc-row">
+            <input v-model="phone" inputmode="numeric" maxlength="20" placeholder="手机号">
+            <input v-model="password" type="password" maxlength="30" placeholder="密码（至少 4 位）">
           </div>
-          <div class="form-item" style="margin:8px 0">
-            <input v-model="password" type="password" placeholder="密码（至少 4 位）">
-          </div>
-          <button type="button" class="btn" style="width:100%" @click="login">登录 / 注册</button>
-          <div class="sa" style="text-align:center;margin-top:7px">未注册的手机号将直接注册</div>
-          <div v-if="authMsg" class="sa" style="margin-top:6px">{{ authMsg }}</div>
+          <button type="button" class="btn" style="width:100%;margin-top:8px" @click="login">登录 / 注册</button>
+          <div v-if="authMsg" class="tip-small" style="margin-top:6px;color:#c0392b">{{ authMsg }}</div>
         </template>
       </div>
-      <div class="lf-tabs" style="padding:0 0 10px">
-        <button type="button" :class="{ on: tab === 'mine' }" @click="tab = 'mine'">我的发布</button>
-        <button type="button" :class="{ on: tab === 'claims' }" @click="tab = 'claims'">认领申请 {{ claims.length ? '(' + claims.length + ')' : '' }}</button>
+
+      <div v-if="claims.length" style="margin:12px 0">
+        <div class="sectitle">认领申请</div>
+        <div v-for="c in claims" :key="c.id" class="mini">
+          <div class="mh">{{ c.itemTitle }}<span class="st">{{ c.status }}</span></div>
+          <div class="mmeta">{{ c.message }}</div>
+          <div class="mact">
+            <button type="button" class="btn" @click="actClaim(c, 'accepted')">通过</button>
+            <button type="button" class="btn ghost" @click="actClaim(c, 'need_more')">补充</button>
+            <button type="button" class="btn ghost" @click="actClaim(c, 'rejected')">拒绝</button>
+          </div>
+        </div>
       </div>
-      <div class="hintline">这台设备上发布的启事和求助。登录后换设备也能看到「我的发布」。</div>
-      <template v-if="tab === 'mine'">
-        <div v-if="loading" class="empty">正在读取…</div>
-        <div v-else-if="!items.length" class="empty">还没有发布，点右上角「发布」写一条</div>
-        <div v-else class="vue-list">
-          <article v-for="it in items" :key="it.id" class="item">
-            <div class="thumb">{{ it.type === 'help' ? '🤝' : (it.type === 'lost' ? '🔎' : '📦') }}</div>
-            <div class="body">
-              <div class="tt"><span class="src-tag">{{ it.type === 'help' ? '求助' : (it.type === 'lost' ? '寻物' : '招领') }}</span>{{ it.title }}</div>
-              <div class="dd">{{ it.desc }}</div>
-              <div class="row">
-                <span class="meta">{{ status(it) }} · {{ fmt(it.createdAt) }}</span>
-                <span style="display:flex;gap:5px">
-                  <button type="button" class="btn" @click="$emit('publish', it.type === 'help' ? 'help' : it.type)">再发一条</button>
-                  <button type="button" class="btn ghost" @click="withdraw(it)">撤回删除</button>
-                </span>
-              </div>
-            </div>
-          </article>
+
+      <div class="hintline">{{ items.length ? '共 ' + items.length + ' 条发布，只有「已上架」的才会出现在公共列表里。' : '你还没有发布过内容。提交后会先进入审核，通过后才上架。' }}</div>
+
+      <div v-if="loading" class="empty">正在读取…</div>
+      <div v-else-if="!items.length" class="empty">
+        还没有发布记录<br><br>
+        <button type="button" class="btn" @click="$emit('publish', 'lost')">发布寻物</button>
+        <button type="button" class="btn ghost" style="margin-left:5px" @click="$emit('publish', 'found')">发布招领</button>
+      </div>
+      <div v-else>
+        <div v-for="it in items" :key="it.id" class="mini">
+          <div class="mh">
+            {{ it.type === 'help' ? '🤝' : (it.type === 'lost' ? '🔎' : '📦') }} {{ it.title }}
+            <span class="st" :class="'st-' + it.status">{{ status(it) }}</span>
+          </div>
+          <div class="mmeta">{{ it.type === 'help' ? '爱心求助' : (it.type === 'lost' ? '寻物启事' : '招领启事') }} · {{ it.place || '' }} · {{ fmt(it.createdAt) }}</div>
+          <div class="mact">
+            <button type="button" class="btn ghost" @click="$emit('publish', it.type === 'help' ? 'help' : it.type)">查看 / 再发</button>
+            <button type="button" class="btn danger" @click="withdraw(it)">撤回删除</button>
+          </div>
         </div>
-      </template>
-      <template v-else>
-        <div v-if="loading" class="empty">正在读取…</div>
-        <div v-else-if="!claims.length" class="empty">还没有人申请</div>
-        <div v-else class="vue-list">
-          <article v-for="c in claims" :key="c.id" class="item">
-            <div class="thumb">🙋</div>
-            <div class="body">
-              <div class="tt"><span class="src-tag">{{ c.status }}</span>{{ c.itemTitle }}</div>
-              <div class="dd">{{ c.message }}</div>
-              <div v-if="c.itemSecret" class="dd" style="color:#8A52C7">核对特征：{{ c.itemSecret }}</div>
-              <div class="row">
-                <span class="meta">{{ fmt(c.createdAt) }}</span>
-                <span style="display:flex;gap:4px">
-                  <button type="button" class="btn" @click="actClaim(c, 'accepted')">通过</button>
-                  <button type="button" class="btn ghost" @click="actClaim(c, 'need_more')">补充</button>
-                  <button type="button" class="btn ghost" @click="actClaim(c, 'rejected')">拒绝</button>
-                </span>
-              </div>
-            </div>
-          </article>
-        </div>
-      </template>
+      </div>
     </div>
   </section>
 </template>
