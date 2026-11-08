@@ -49,8 +49,9 @@
 | 类型识别 | ✅ 已上线 | 判断更像寻物还是招领，发布前提醒 |
 | 核验 Agent | ✅ 已上线 | 5 个工具、证据链、LLM 裁决 + 规则兜底 |
 | RAG 知识库 | ✅ 已上线 | 本地 BM25 检索 + 引用来源，零额外接口成本 |
-| 多模态 | 🟡 接口就绪 | `/api/vision/analyze` 已实现，配置 `VISION_API_KEY` 后启用 |
-| 流式交互 | ✅ 已上线 | `/api/agent/review/stream` SSE：step / delta / done |
+| 多模态 | ✅ 已上线 | 图片理解生成 `visionDesc`，参与审核与管理端展示 |
+| 流式交互 | ✅ 已上线 | `/api/ask/stream` 与 `/api/agent/review/stream` SSE：delta / done |
+| MCP Server | ✅ 已上线 | `mcp_server.py`：查失物、查拾光码、校园地点建议 |
 
 ---
 
@@ -220,12 +221,14 @@ python -m pytest tests/ -q        # 待补
 ## 12. 路线图
 
 - [x] 发布、审核、匹配、认领、通知、账号、管理端
-- [ ] 核验 Agent（工具调用 + 证据链）
-- [ ] RAG 校园知识库
-- [ ] 多模态图片理解
-- [ ] 流式 AI 交互
-- [ ] React + TypeScript 前端
-- [ ] 云端部署与监控
+- [x] 核验 Agent（工具调用 + 证据链）
+- [x] RAG 校园知识库
+- [x] 多模态图片理解
+- [x] 流式 AI 交互
+- [x] Vue 3 + Vite 前端
+- [x] 云端部署与监控
+- [x] MCP Server
+- [ ] 评测报告 / 真实用户试用 / 演示视频
 
 ---
 
