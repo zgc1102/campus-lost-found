@@ -122,6 +122,9 @@ export const api = {
   adminDeleteAnnouncement(id, token) {
     return call('/admin/announcements/' + encodeURIComponent(id), { method: 'DELETE', headers: { 'X-Admin-Token': token } })
   },
+  adminDeploy(token) {
+    return call('/admin/deploy', { method: 'POST', headers: { 'X-Admin-Token': token } })
+  },
   adminDeployLog(token) {
     return call('/admin/deploy-log', { headers: { 'X-Admin-Token': token } })
   },

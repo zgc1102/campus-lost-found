@@ -140,6 +140,14 @@ async function toggleBan(a) {
   } catch (e) { error.value = e.message || '操作失败' }
 }
 
+async function deployCode() {
+  try {
+    const r = await api.adminDeploy(token.value)
+    error.value = r.msg || '已触发更新'
+    setTimeout(() => window.location.reload(), 15000)
+  } catch (e) { error.value = e.message || '更新失败' }
+}
+
 async function saveConfig() {
   if (!config.value) return
   try {
@@ -218,6 +226,7 @@ function statusClass(s) {
         </div>
         <div class="header-actions" v-if="token">
           <button type="button" @click="loadAll">刷新</button>
+          <button type="button" @click="deployCode">更新代码</button>
           <button type="button" @click="logout">退出登录</button>
         </div>
       </div>
