@@ -1017,7 +1017,8 @@ def apply_ai_decision(item, ai, cfg):
     except Exception:
         reject_at = 80
     item["ai"] = ai
-    ai_trusted = ai.get("source") == "llm"
+    # 本项目是全自动 AI 审核，不设人工审核队列；规则兜底也视为自动审核
+    ai_trusted = ai.get("source") in ("llm", "rule-fallback")
     scope_hits = scope_violation(item)
     if (ai_trusted and item.get("type") in ("lost", "found")
             and ai.get("guessType") and ai["guessType"] != item.get("type")):
@@ -1045,12 +1046,16 @@ def apply_ai_decision(item, ai, cfg):
         item["reviewedBy"] = "AI"
         item["reviewedAt"] = now_ms()
     elif not ai_trusted:
-        # AI 不可用时不再直接驳回，转人工审核，避免整个发布功能被卡死
-        item["status"] = "pending"
-        item["rejectReason"] = "AI 审核暂不可用，已转人工审核"
-        item["ai"]["fallback"] = True
-        item["reviewedBy"] = "system"
-        item["reviewedAt"] = now_ms()
+        # 极端情况下也保持全自动：按规则结果直接上架/拦截，不转人工
+        if ai.get("decision") == "reject":
+            item["status"] = "rejected"
+            item["autoRejected"] = True
+            item["rejectReason"] = "AI 自动拦截：" + (ai.get("reason") or "疑似违规内容")
+        else:
+            item["status"] = "approved"
+            item["autoApproved"] = True
+            item["reviewedBy"] = "AI-rule"
+            item["reviewedAt"] = now_ms()
     return item
 
 
