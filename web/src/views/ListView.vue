@@ -156,6 +156,24 @@ function openOldHelp() {
   color: #5B2A91;
   overflow: hidden;
 }
+.scroll > .tip-box {
+  margin-top: 10px;
+  margin-bottom: 14px;
+}
+.item .sum {
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+.item .dd {
+  font-size: 12px;
+  line-height: 1.6;
+}
+.item .meta {
+  font-size: 10.5px;
+}
+.item .chips .chip {
+  font-size: 10px;
+}
 </style>
 
 <template>
