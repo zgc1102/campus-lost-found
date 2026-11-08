@@ -374,7 +374,7 @@ function statusClass(s) {
                 <div class="ai-actions">
                   <button v-if="it.status === 'pending'" type="button" class="primary" @click="review(it, 'approved')">通过并上架</button>
                   <button v-if="it.status === 'pending'" type="button" class="danger" @click="review(it, 'rejected')">驳回</button>
-                  <button v-if="it.status === 'approved' || it.status === 'claimed'" type="button" class="ghost" @click="review(it, 'removed')">下架</button>
+                  <button v-if="it.status === 'approved' || it.status === 'claimed'" type="button" class="danger" @click="review(it, 'removed')">下架并填写理由</button>
                   <button v-if="it.status === 'rejected'" type="button" class="primary" @click="review(it, 'approved')">改为通过</button>
                   <button v-if="it.phoneStatus === 'yellow' && !it.phoneVerified" type="button" class="ghost" @click="approvePhone(it)">通过号码</button>
                 </div>
