@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue'
-import { api, oldUrl } from '../api'
+import { api } from '../api'
 
 const emit = defineEmits(['nav'])
 const title = ref('')
@@ -57,7 +57,7 @@ async function runDetective() {
 }
 
 function askCampus() {
-  location.href = oldUrl('ask')
+  emit('nav', 'ask')
 }
 function openMatch(m) {
   sessionStorage.setItem('sg:focusItem', m.item.id)
