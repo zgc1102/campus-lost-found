@@ -12,7 +12,7 @@ import MapView from './views/MapView.vue'
 import AskView from './views/AskView.vue'
 import NoticesView from './views/NoticesView.vue'
 import SearchView from './views/SearchView.vue'
-import LegacyStatic from './views/LegacyStatic.vue'
+import StaticInfoView from './views/StaticInfoView.vue'
 import SuccessView from './views/SuccessView.vue'
 import ToolsView from './views/ToolsView.vue'
 import MemorialView from './views/MemorialView.vue'
@@ -100,7 +100,7 @@ function publish(type, cat) {
     <NoticesView v-else-if="view === 'notices'" @nav="go" />
     <InfoView v-else-if="view === 'info'" :info-key="infoKey" @nav="go" />
     <SearchView v-else-if="view === 'search'" @nav="go" />
-    <LegacyStatic v-else-if="view === 'legacy'" :name="legacyName" @nav="go" />
+    <StaticInfoView v-else-if="view === 'legacy'" :name="legacyName" @nav="go" />
     <SuccessView v-else-if="view === 'success'" @nav="go" />
     <ToolsView v-else-if="view === 'lend' || view === 'borrow'" :mode="view" @nav="go" />
     <MemorialView v-else-if="view === 'memorial'" @nav="go" />
