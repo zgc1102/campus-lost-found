@@ -23,6 +23,11 @@ async function readAll() {
   items.value = items.value.map((x) => ({ ...x, read: true }))
   unread.value = 0
 }
+function openNotice(n) {
+  if (!n.itemId) return
+  localStorage.setItem('sg:focusItem', n.itemId)
+  emit('nav', 'found')
+}
 function fmt(ts) {
   if (!ts) return ''
   const d = new Date(ts)
@@ -47,9 +52,22 @@ function fmt(ts) {
           <div class="body">
             <div class="tt">{{ n.text }}</div>
             <div class="row"><span class="meta">{{ fmt(n.at) }}</span></div>
+            <div v-if="n.itemId" class="notice-actions">
+              <button type="button" class="n-main" @click="openNotice(n)">查看捡到信息</button>
+              <button type="button" class="n-ok" @click="openNotice(n)">这是我的，去认领</button>
+              <button type="button" class="n-ignore" @click="readAll">忽略</button>
+            </div>
           </div>
         </article>
       </div>
     </div>
   </section>
 </template>
+
+<style scoped>
+.notice-actions { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+.notice-actions button { border-radius:8px; padding:6px 8px; font-family:inherit; font-size:10px; border:1px solid #EADFF5; background:#F7F2FD; color:#5B2A91; }
+.notice-actions .n-ok { background:linear-gradient(135deg,#5B2A91,#7A3CB0); color:#fff; border:0; }
+.notice-actions .n-ignore { background:#fff; color:#8E7FA3; }
+</style>
+

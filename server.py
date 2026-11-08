@@ -2906,15 +2906,7 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json({"error": "此码已注销，感谢您的一份好意"}, 410)
                 tag["notifyCount"] = int(tag.get("notifyCount") or 0) + 1
                 save_tags(tags)
-                notices = load_notices()
-                text = "有人扫了你的拾光码"
-                if found_item:
-                    text += "，捡到：%s" % found_item
-                text += "：%s" % (message or "我捡到了，请联系我")
-                if contact:
-                    text += "（联系方式：%s）" % contact
-                add_notice(notices, tag.get("owner"), "pickup", text, "", "")
-                save_notices(notices)
+                scan_id = ""
                 # 捡到上报同步生成一条招领信息，进入正常失物招领流
                 if found_item or message:
                     items = load_items()
@@ -2933,16 +2925,22 @@ class Handler(BaseHTTPRequestHandler):
                         "source": "tag_scan",
                         "tagCode": code,
                         "tagOwner": tag.get("owner"),
-                        "status": "pending",
+                        "status": "approved",
+                        "autoApproved": True,
+                        "reviewedBy": "AI",
                         "createdAt": now_ms(),
                         "updatedAt": now_ms(),
                     }
                     items.append(scan_item)
                     save_items(items)
-                    try:
-                        queue_add(scan_item["id"])
-                    except Exception:
-                        pass
+                    scan_id = scan_item["id"]
+                notices = load_notices()
+                text = "有人扫了你的拾光码"
+                if found_item:
+                    text += "，捡到：%s" % found_item
+                text += "：%s" % (message or "我捡到了，请联系我")
+                add_notice(notices, tag.get("owner"), "pickup", text, scan_id, "")
+                save_notices(notices)
             return self._json({"ok": True})
 
         if path == "/api/agent/radar":
@@ -3985,7 +3983,7 @@ def make_qr_png(text, path, box=8, border=4):
     for row in matrix:
         line = bytearray()
         for dark in row:
-            line += b"\x00" * box if dark else b"\xff" * box
+            line += b"\x3b\x1d\x63" * box if dark else b"\xff\xff\xff" * box
         line = b"\x00" + bytes(line)
         for _ in range(box):
             rows.append(line)
@@ -3996,7 +3994,7 @@ def make_qr_png(text, path, box=8, border=4):
                 + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF))
 
     png = (b"\x89PNG\r\n\x1a\n"
-           + chunk(b"IHDR", struct.pack(">IIBBBBB", size, size, 8, 0, 0, 0, 0))
+           + chunk(b"IHDR", struct.pack(">IIBBBBB", size, size, 8, 2, 0, 0, 0))
            + chunk(b"IDAT", zlib.compress(raw, 9))
            + chunk(b"IEND", b""))
     with open(path, "wb") as f:
