@@ -104,6 +104,12 @@ export const api = {
   adminBanAccount(id, banned, token) {
     return call('/admin/accounts/' + encodeURIComponent(id) + '/ban', { method: 'POST', headers: { 'X-Admin-Token': token }, body: JSON.stringify({ banned }) })
   },
+  adminSpecialNumbers(token) {
+    return call('/admin/special-numbers', { headers: { 'X-Admin-Token': token } })
+  },
+  adminPhoneApprove(id, token) {
+    return call('/admin/items/' + encodeURIComponent(id) + '/phone-approve', { method: 'POST', headers: { 'X-Admin-Token': token } })
+  },
   adminAnnouncements(token) {
     return call('/admin/announcements', { headers: { 'X-Admin-Token': token } })
   },
