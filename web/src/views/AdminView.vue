@@ -180,7 +180,9 @@ async function applyAi(it) {
   }
   if (it.ai.decision === 'approve') {
     await review(it, 'approved')
+    return
   }
+  error.value = 'AI 建议人工复核：' + (it.ai.reason || '请人工判断')
 }
 
 async function preReviewAll() {
@@ -370,7 +372,7 @@ function statusClass(s) {
           <div class="ai-status">
             <span :class="['dot', config?.enabled ? 'on' : 'off']"></span>
             <template v-if="config?.enabled">
-              AI 审核已启用 · 模型：<b>{{ config.model || '未填写模型' }}</b> · 自动审核中
+              AI 审核已启用 · 模型：<b>{{ config.model || '未填写模型' }}</b> · {{ config.has_key ? 'Key 已配置' : 'Key 未配置' }} · 自动审核中
             </template>
             <template v-else>暂未启用 AI 大模型审核</template>
           </div>
@@ -395,6 +397,7 @@ function statusClass(s) {
               </div>
               <h3 style="margin-top:18px">近 7 天发布</h3>
               <div class="days"><span v-for="d in (stats?.days || [])" :key="d.day"><i :style="{ height: Math.max(4, d.count * 2) + 'px' }" /><em>{{ d.day }}</em></span></div>
+              <div class="overview-extra">注册用户 {{ stats?.accounts ?? 0 }}（停用 {{ stats?.banned ?? 0 }}） · 公告 {{ stats?.announcements ?? 0 }} · 认领申请 {{ stats?.claims ?? 0 }}</div>
             </div>
           </div>
 
@@ -673,4 +676,9 @@ textarea.field { min-height: 78px; resize: vertical; }
 .image-close { position:absolute; top:18px; right:22px; width:36px; height:36px; border:0; border-radius:50%; background:rgba(255,255,255,.16); color:#fff; font-size:16px; cursor:pointer; }
 </style>
 
+
+
+<style scoped>
+.overview-extra { margin-top:12px; font-size:11px; color:#8E7FA3; line-height:1.7; }
+</style>
 
