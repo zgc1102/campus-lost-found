@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 清华校园拾光里 · 服务端 v4
@@ -618,7 +618,8 @@ def claim_ai_check(item, claim):
 def ai_llm(it, cfg, timeout=25):
     """调用 OpenAI 兼容接口做语义审核"""
     user_text = "标题：%s\n类型：%s\n地点：%s\n描述：%s\n核验特征：%s" % (
-        it.get("title") or "", "寻物" if it.get("type") == "lost" else "招领",
+        it.get("title") or "",
+        "爱心求助" if it.get("type") == "help" else ("寻物" if it.get("type") == "lost" else "招领"),
         it.get("place") or "", it.get("desc") or "", it.get("secret") or "",
     )
     if it.get("visionDesc"):
@@ -2431,6 +2432,7 @@ class Handler(BaseHTTPRequestHandler):
                     "id": c.get("id"), "itemId": c.get("itemId"),
                     "kind": c.get("kind") or "claim",
                     "itemTitle": it.get("title") or "",
+                    "itemType": it.get("type") or "",
                     "itemStatus": it.get("status") or "",
                     "message": c.get("message") or "",
                     "history": c.get("history") or [],

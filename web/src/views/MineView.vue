@@ -84,8 +84,11 @@ async function actClaim(c, status) {
 }
 
 async function completeClaim(c) {
-  const code = prompt('请输入对方提供的 6 位取件码')
-  if (!code) return
+  let code = ''
+  if (c.itemType !== 'help') {
+    code = prompt('请输入对方提供的 6 位取件码') || ''
+    if (!code) return
+  }
   try {
     await api.claimComplete(c.id, { code: code.trim() })
     await load(true)
@@ -162,7 +165,7 @@ function fmt(ts) {
           <div class="mh">{{ c.itemTitle }}<span class="st">{{ c.status }}</span></div>
           <div class="mmeta">{{ c.message }}</div>
           <div v-if="c.status === 'accepted'" class="mmeta">取件码：{{ c.returnCode || '向对方索取' }}</div>
-          <div v-if="c.status === 'accepted'" class="mact">
+          <div v-if="c.status === 'accepted' && c.itemType !== 'help'" class="mact">
             <button type="button" class="btn" @click="completeClaim(c)">确认归还</button>
           </div>
         </div>
