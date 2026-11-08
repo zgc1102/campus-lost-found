@@ -86,7 +86,7 @@ function fmt(ts) {
       <button type="button" class="btn" @click="$emit('publish', 'lost')">发布</button>
     </div>
     <div class="scroll">
-      <div class="netbadge">🌐 已连接服务器：{{ origin }}（其他同学也能看到）</div>
+      <div class="netbadge on">🌐 已连接服务器：{{ origin }}（其他同学也能看到）</div>
 
       <div class="accbox">
         <div v-if="account" class="acc-line">
@@ -132,6 +132,7 @@ function fmt(ts) {
             <span class="st" :class="'st-' + it.status">{{ status(it) }}</span>
           </div>
           <div class="mmeta">{{ it.type === 'help' ? '爱心求助' : (it.type === 'lost' ? '寻物启事' : '招领启事') }} · {{ it.place || '' }} · {{ fmt(it.createdAt) }}</div>
+          <div v-if="it.status === 'rejected'" class="reason" style="color:#c0392b;font-size:11px;margin-top:4px">驳回理由：{{ it.rejectReason || '未填写' }}</div>
           <div class="mact">
             <button type="button" class="btn ghost" @click="$emit('publish', it.type === 'help' ? 'help' : it.type)">查看 / 再发</button>
             <button type="button" class="btn danger" @click="withdraw(it)">撤回删除</button>

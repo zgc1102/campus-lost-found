@@ -67,9 +67,9 @@ function openMatch(m) {
 
 <template>
   <section class="screen active" id="screen-radar">
-    <div class="ag-top">
-      <button type="button" class="ag-back" aria-label="返回" @click="$emit('nav', 'home')">‹</button>
-      <div class="ag-title"><b>AI 寻物雷达</b><span>{{ loading ? '正在扫描全站信息…' : '不用先发布，也可以直接查' }}</span></div>
+    <div class="topbar">
+      <div class="back" @click="$emit('nav', 'home')">‹</div>
+      <div class="t">AI 寻物雷达</div>
     </div>
 
     <div class="scroll">

@@ -21,6 +21,8 @@ const deployLog = ref([])
 const annTitle = ref('')
 const annBody = ref('')
 const apiKey = ref('')
+const rejectTarget = ref(null)
+const rejectReason = ref('')
 
 const tabs = [
   ['pending', '待审核'],
@@ -96,10 +98,32 @@ function logout() {
 }
 
 async function review(it, status) {
+  if (status === 'rejected') {
+    rejectTarget.value = it
+    rejectReason.value = ''
+    return
+  }
   try {
-    await api.adminPatch(it.id, { status, rejectReason: status === 'rejected' ? '管理员驳回' : '' }, token.value)
+    await api.adminPatch(it.id, { status, rejectReason: '' }, token.value)
     await loadAll()
   } catch (e) { error.value = e.message || '操作失败' }
+}
+
+async function confirmReject() {
+  if (!rejectTarget.value) return
+  if (rejectReason.value.trim().length < 2) {
+    error.value = '请写一下驳回理由'
+    return
+  }
+  try {
+    await api.adminPatch(rejectTarget.value.id, {
+      status: 'rejected',
+      rejectReason: rejectReason.value.trim()
+    }, token.value)
+    rejectTarget.value = null
+    rejectReason.value = ''
+    await loadAll()
+  } catch (e) { error.value = e.message || '驳回失败' }
 }
 
 async function approvePhone(it) {
@@ -221,6 +245,13 @@ function statusClass(s) {
             <div class="ov-item"><b>{{ stats?.claims ?? '—' }}</b><span>认领申请</span></div>
             <div class="ov-item"><b>{{ stats?.announcements ?? '—' }}</b><span>已发布公告</span></div>
           </div>
+          <div class="ai-status">
+            <span :class="['dot', config?.enabled ? 'on' : 'off']"></span>
+            <template v-if="config?.enabled">
+              AI 审核已启用 · 模型：<b>{{ config.model || '未填写模型' }}</b> · 自动审核中
+            </template>
+            <template v-else>暂未启用 AI 大模型审核</template>
+          </div>
 
           <div class="admin-tabs">
             <button v-for="[id, name] in tabs" :key="id" type="button" :class="{ on: tab === id }" @click="tab = id">{{ name }}</button>
@@ -337,6 +368,17 @@ function statusClass(s) {
           </template>
         </template>
       </div>
+      <div v-if="rejectTarget" class="admin-modal">
+        <div class="modal-card">
+          <h3>驳回「{{ rejectTarget.title }}」</h3>
+          <p>请填写驳回理由，发布者会在「我的发布」里看到。</p>
+          <textarea v-model="rejectReason" maxlength="200" placeholder="例如：描述过于模糊，请补充物品颜色/划痕等独有特征"></textarea>
+          <div class="modal-actions">
+            <button type="button" class="ghost" @click="rejectTarget = null">取消</button>
+            <button type="button" class="danger" @click="confirmReject">确认驳回</button>
+          </div>
+        </div>
+      </div>
     </main>
   </div>
 </template>
@@ -429,3 +471,21 @@ textarea.field { min-height: 78px; resize: vertical; }
   .brand h1 { font-size: 16px; }
 }
 </style>
+
+<style scoped>
+.admin-modal { position: fixed; inset: 0; background: rgba(20,8,32,.42); z-index: 500; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.modal-card { width: min(440px, 100%); background: #fff; border-radius: 16px; padding: 20px; box-shadow: 0 20px 60px rgba(20,8,32,.25); }
+.modal-card h3 { margin: 0 0 6px; font-size: 15px; }
+.modal-card p { margin: 0 0 10px; font-size: 11px; color: #8E7FA3; }
+.modal-card textarea { width: 100%; box-sizing: border-box; min-height: 84px; background: #F8F4FD; border: 1px solid #EDE3F8; border-radius: 10px; padding: 10px; font-family: inherit; font-size: 12px; resize: vertical; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+</style>
+
+
+<style scoped>
+.ai-status { display:flex; align-items:center; gap:7px; background:#fff; border:1px solid #E9DFF5; border-radius:11px; padding:9px 12px; margin:-4px 0 12px; font-size:11px; color:#6E607F; }
+.ai-status b { color:#2F7D46; }
+.ai-status .dot { width:7px; height:7px; border-radius:50%; background:#A99BB9; }
+.ai-status .dot.on { background:#2F7D46; box-shadow:0 0 0 3px rgba(47,125,70,.12); }
+</style>
+

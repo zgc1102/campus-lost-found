@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { api } from '../api'
 
 const emit = defineEmits(['nav'])
@@ -25,6 +25,23 @@ const stats = computed(() => {
   const today = pub.filter((x) => (x.createdAt || 0) >= start.getTime())
   return { total: pub.length, closed: closed.length, today: today.length }
 })
+
+const shown = reactive({ total: 0, closed: 0, today: 0 })
+let countFrame = null
+watch(stats, (val) => {
+  cancelAnimationFrame(countFrame)
+  const from = { ...shown }
+  const start = performance.now()
+  const step = (now) => {
+    const p = Math.min(1, (now - start) / 650)
+    const ease = 1 - Math.pow(1 - p, 3)
+    shown.total = Math.round(from.total + (val.total - from.total) * ease)
+    shown.closed = Math.round(from.closed + (val.closed - from.closed) * ease)
+    shown.today = Math.round(from.today + (val.today - from.today) * ease)
+    if (p < 1) countFrame = requestAnimationFrame(step)
+  }
+  countFrame = requestAnimationFrame(step)
+}, { immediate: true })
 
 const helpEntries = [
   { cat: 'help_borrow', title: '借用工具', sub: '借伞 · 充电宝', tone: 'tone-lilac', art: artUmbrella() },
@@ -94,7 +111,7 @@ async function load() {
 }
 
 onMounted(load)
-onUnmounted(() => clearTimeout(timer))
+onUnmounted(() => { clearTimeout(timer); if (countFrame) cancelAnimationFrame(countFrame) })
 function replayTour() {
   window.dispatchEvent(new Event('sg:tour'))
 }
@@ -212,9 +229,9 @@ function openMemo(s) {
       </div>
 
       <div class="home-stats">
-        <div><b>{{ loading ? '—' : stats.total }}</b><span>已发布</span></div>
-        <div><b>{{ loading ? '—' : stats.closed }}</b><span>已找回</span></div>
-        <div><b>{{ loading ? '—' : stats.today }}</b><span>今日新增</span></div>
+        <div><b>{{ loading ? '—' : shown.total }}</b><span>已发布</span></div>
+        <div><b>{{ loading ? '—' : shown.closed }}</b><span>已找回</span></div>
+        <div><b>{{ loading ? '—' : shown.today }}</b><span>今日新增</span></div>
       </div>
 
       <div class="foot-b">
