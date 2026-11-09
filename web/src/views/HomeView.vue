@@ -245,10 +245,11 @@ function openMemo(s) {
         </div>
         <div class="flic">测试版 · 暂未备案 · 仅用于校园公益</div>
         <div class="fcopy">Copyright © 2025-2026 清城牧羊 版权所有</div>
-        <div class="ver">v4.0 · 2026-11-08 · Vue 3 + AI Agent</div>
+        <div class="ver">v3.2 · 2026-10-26 · 本机 / 同 Wi-Fi / 公网 三种模式自动切换</div>
       </div>
     </div>
     <button class="fab-pub" type="button" aria-label="发布启事" @click="$emit('nav', 'publish')">＋</button>
   </section>
 </template>
+
 
