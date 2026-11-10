@@ -2494,6 +2494,7 @@ class Handler(BaseHTTPRequestHandler):
             with LOCK:
                 notices = load_notices()
                 item_map = {x.get("id"): x for x in load_items()}
+                claim_map = {x.get("id"): x for x in load_claims()}
             mine = []
             for n in notices:
                 if n.get("owner") != owner:
@@ -2504,6 +2505,12 @@ class Handler(BaseHTTPRequestHandler):
                     row["itemType"] = it.get("type") or ""
                     row["itemTitle"] = it.get("title") or ""
                     row["itemStatus"] = it.get("status") or ""
+                cl = claim_map.get(n.get("claimId"))
+                if cl:
+                    row["claimStatus"] = cl.get("status") or "pending"
+                    row["claimMessage"] = cl.get("message") or ""
+                    row["claimContact"] = (cl.get("contact") if cl.get("status") in ("accepted", "completed")
+                                           else mask_contact(cl.get("contact")))
                 mine.append(row)
             mine.sort(key=lambda x: x.get("at") or 0, reverse=True)
             unread = sum(1 for n in mine if not n.get("read"))

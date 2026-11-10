@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { onMounted, ref } from 'vue'
 import { api } from '../api'
 
@@ -151,12 +151,12 @@ function fmt(ts) {
           <div class="mmeta">{{ c.message }}</div>
           <div class="mact">
             <template v-if="c.status === 'accepted'">
-              <button type="button" class="btn" @click="completeClaim(c)">确认归还</button>
+              <button type="button" class="btn" @click="completeClaim(c)">{{ c.itemType === 'help' ? '完成帮助' : '确认归还' }}</button>
             </template>
             <template v-else>
-              <button type="button" class="btn" @click="actClaim(c, 'accepted')">通过</button>
-              <button type="button" class="btn ghost" @click="actClaim(c, 'need_more')">补充</button>
-              <button type="button" class="btn ghost" @click="actClaim(c, 'rejected')">拒绝</button>
+              <button type="button" class="btn" @click="actClaim(c, 'accepted')">{{ c.itemType === 'help' ? '接受帮忙' : '通过' }}</button>
+              <button type="button" class="btn ghost" @click="actClaim(c, 'need_more')">{{ c.itemType === 'help' ? '请补充' : '补充' }}</button>
+              <button type="button" class="btn ghost" @click="actClaim(c, 'rejected')">{{ c.itemType === 'help' ? '婉拒' : '拒绝' }}</button>
             </template>
           </div>
         </div>
@@ -166,7 +166,7 @@ function fmt(ts) {
           <div class="mmeta">{{ c.message }}</div>
           <div v-if="c.status === 'accepted'" class="mmeta">取件码：{{ c.returnCode || '向对方索取' }}</div>
           <div v-if="c.status === 'accepted' && c.itemType !== 'help'" class="mact">
-            <button type="button" class="btn" @click="completeClaim(c)">确认归还</button>
+            <button type="button" class="btn" @click="completeClaim(c)">{{ c.itemType === 'help' ? '完成帮助' : '确认归还' }}</button>
           </div>
         </div>
       </div>
@@ -226,4 +226,5 @@ function fmt(ts) {
 .tm-create { margin-top:7px; border:0; background:linear-gradient(135deg,#5B2A91,#7A3CB0); color:#fff; border-radius:8px; padding:8px 12px; font-family:inherit; font-size:10.5px; }
 .empty-tag .tm-meta { margin-bottom:2px; }
 </style>
+
 

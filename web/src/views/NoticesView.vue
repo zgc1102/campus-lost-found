@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { onMounted, ref } from 'vue'
 import { api } from '../api'
 
@@ -26,12 +26,22 @@ async function readAll() {
   items.value = items.value.map((x) => ({ ...x, read: true }))
   unread.value = 0
 }
-function typeLabel(t) {
+function typeLabel(t, itemType = '') {
+  if (itemType === 'help') {
+    return ({
+      claim: '🤝 收到帮忙申请',
+      accepted: '✅ 帮忙申请已通过',
+      rejected: '❌ 帮忙申请被婉拒',
+      need_more: '📝 帮忙申请待补充',
+      done: '🎉 爱心帮助已完成'
+    })[t] || '爱心求助提醒'
+  }
   return ({
     match: '🔍 相似物品提醒',
     claim: '📥 收到认领申请',
     accepted: '✅ 申请已通过',
     rejected: '❌ 申请被拒',
+    need_more: '📝 申请待补充',
     done: '🎉 已完成归还',
     pickup: '🔖 拾光码提醒'
   })[t] || '通知'
@@ -67,6 +77,26 @@ async function publishReport() {
   } catch (e) { actionMsg.value = e.message || '公开失败' }
 }
 
+async function helpAction(status) {
+  if (!selected.value?.claimId) return
+  try {
+    await api.claimAction(selected.value.claimId, { status })
+    selected.value.claimStatus = status
+    actionMsg.value = status === 'accepted' ? '已接受帮忙，完成后记得点「完成帮助」'
+      : status === 'need_more' ? '已请对方补充说明'
+      : '已婉拒这次帮忙'
+  } catch (e) { actionMsg.value = e.message || '操作失败' }
+}
+
+async function completeHelp() {
+  if (!selected.value?.claimId) return
+  try {
+    await api.claimComplete(selected.value.claimId, { code: '' })
+    selected.value.claimStatus = 'completed'
+    actionMsg.value = '已完成这次爱心帮助'
+  } catch (e) { actionMsg.value = e.message || '确认失败' }
+}
+
 function ignoreNotice() {
   selected.value = null
 }
@@ -94,7 +124,7 @@ function fmt(ts) {
           :style="n.read ? 'opacity:.7' : ''"
           @click="openNotice(n)"
         >
-          <div class="mh">{{ typeLabel(n.type) }}</div>
+          <div class="mh">{{ typeLabel(n.type, n.itemType) }}</div>
           <div class="mmeta">{{ n.text }}</div>
           <div v-if="n.type === 'claim' && n.claimId" class="mmeta" style="color:var(--purple)">
             点这里查看对方填了什么，与自己那条对比 →
@@ -107,21 +137,31 @@ function fmt(ts) {
 
     <div v-if="selected" class="sheet vue-sheet show notice-detail">
       <button type="button" class="sheet-x" @click="selected = null">收起</button>
-      <div class="nd-kicker">{{ typeLabel(selected.type) }}</div>
+      <div class="nd-kicker">{{ typeLabel(selected.type, selected.itemType) }}</div>
       <h2>{{ selected.report?.itemName || selected.itemTitle || '通知详情' }}</h2>
       <div class="nd-text">{{ selected.report?.message || selected.text }}</div>
       <div v-if="selected.report?.tagItem" class="nd-meta">拾光码物品：{{ selected.report.tagItem }}</div>
       <div v-if="selected.report?.at" class="nd-meta">上报时间：{{ fmt(selected.report.at) }}</div>
       <div v-if="contact" class="nd-contact">联系方式：{{ contact }}</div>
       <div v-if="actionMsg" class="nd-msg">{{ actionMsg }}</div>
-      <div class="nd-actions">
+      <div v-if="selected.itemType === 'help'" class="nd-claim">
+        <div class="nd-meta">帮忙说明：{{ selected.claimMessage || selected.report?.message || selected.text }}</div>
+        <div v-if="selected.claimContact" class="nd-contact">对方联系方式：{{ selected.claimContact }}</div>
+        <div class="nd-actions">
+          <template v-if="selected.claimId && selected.claimStatus === 'pending'">
+            <button type="button" class="btn" @click="helpAction('accepted')">接受帮忙</button>
+            <button type="button" class="btn ghost" @click="helpAction('need_more')">请补充</button>
+            <button type="button" class="btn ghost" @click="helpAction('rejected')">婉拒</button>
+          </template>
+          <button v-if="selected.claimId && selected.claimStatus === 'accepted'" type="button" class="btn" @click="completeHelp">完成帮助</button>
+          <button type="button" class="btn ghost" @click="goItem">查看求助详情</button>
+          <button type="button" class="btn ghost" @click="ignoreNotice">忽略</button>
+        </div>
+      </div>
+      <div v-else class="nd-actions">
         <template v-if="selected.type === 'pickup' && selected.report">
           <button type="button" class="btn" @click="revealContact">联系捡到的人</button>
           <button type="button" class="btn ghost" @click="publishReport">公开为招领</button>
-        </template>
-        <template v-else-if="selected.itemType === 'help'">
-          <button type="button" class="btn" @click="$emit('nav', 'mine'); selected = null">去我的发布处理</button>
-          <button type="button" class="btn ghost" @click="goItem">查看求助详情</button>
         </template>
         <button v-if="selected.itemId" type="button" class="btn ghost" @click="goItem">查看对应内容</button>
         <button type="button" class="btn ghost" @click="ignoreNotice">不是我的 / 忽略</button>
@@ -141,3 +181,4 @@ function fmt(ts) {
 .nd-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 14px; }
 .nd-actions .btn { flex: 1; min-width: 130px; }
 </style>
+
