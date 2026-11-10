@@ -130,6 +130,15 @@ export const api = {
   noticePublish(id) {
     return call('/notices/' + encodeURIComponent(id) + '/publish', { method: 'POST' })
   },
+  reportContact(id) {
+    return call('/reports/' + encodeURIComponent(id) + '/contact', { method: 'POST' })
+  },
+  reportPublish(id) {
+    return call('/reports/' + encodeURIComponent(id) + '/publish', { method: 'POST' })
+  },
+  reportClose(id) {
+    return call('/reports/' + encodeURIComponent(id) + '/close', { method: 'POST' })
+  },
   adminLogin(password) {
     return call('/login', { method: 'POST', body: JSON.stringify({ password }) })
   },

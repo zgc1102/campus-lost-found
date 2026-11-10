@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { onMounted, ref } from 'vue'
 import { api } from '../api'
 
@@ -62,19 +62,33 @@ function goItem() {
 
 async function revealContact() {
   try {
-    const r = await api.noticeContact(selected.value.id)
+    const rid = selected.value.report?.id
+    const r = rid ? await api.reportContact(rid) : await api.noticeContact(selected.value.id)
     contact.value = r.contact || '对方没有留联系方式'
+    if (selected.value.report) selected.value.report.status = r.status || 'contacted'
     actionMsg.value = '已标记为已读'
   } catch (e) { actionMsg.value = e.message || '读取失败' }
 }
 
 async function publishReport() {
   try {
-    const r = await api.noticePublish(selected.value.id)
+    const rid = selected.value.report?.id
+    const r = rid ? await api.reportPublish(rid) : await api.noticePublish(selected.value.id)
     selected.value.itemId = r.itemId
     selected.value.itemType = 'found'
+    if (selected.value.report) selected.value.report.status = 'published'
     actionMsg.value = r.already ? '这条已经公开过了' : '已公开为招领，其他同学现在可以看见'
   } catch (e) { actionMsg.value = e.message || '公开失败' }
+}
+
+async function closeReport() {
+  try {
+    const rid = selected.value.report?.id
+    if (!rid) return
+    await api.reportClose(rid)
+    selected.value.report.status = 'closed'
+    actionMsg.value = '已标记为找回 / 关闭'
+  } catch (e) { actionMsg.value = e.message || '关闭失败' }
 }
 
 async function helpAction(status) {
@@ -141,6 +155,7 @@ function fmt(ts) {
       <h2>{{ selected.report?.itemName || selected.itemTitle || '通知详情' }}</h2>
       <div class="nd-text">{{ selected.report?.message || selected.text }}</div>
       <div v-if="selected.report?.tagItem" class="nd-meta">拾光码物品：{{ selected.report.tagItem }}</div>
+      <div v-if="selected.report?.status" class="nd-status">状态：{{ ({pending:'待确认', contacted:'已联系', published:'已公开为招领', closed:'已找回'})[selected.report.status] || selected.report.status }}</div>
       <div v-if="selected.report?.at" class="nd-meta">上报时间：{{ fmt(selected.report.at) }}</div>
       <div v-if="contact" class="nd-contact">联系方式：{{ contact }}</div>
       <div v-if="actionMsg" class="nd-msg">{{ actionMsg }}</div>
@@ -161,7 +176,8 @@ function fmt(ts) {
       <div v-else class="nd-actions">
         <template v-if="selected.type === 'pickup' && selected.report">
           <button type="button" class="btn" @click="revealContact">联系捡到的人</button>
-          <button type="button" class="btn ghost" @click="publishReport">公开为招领</button>
+          <button v-if="selected.report.status !== 'published' && selected.report.status !== 'closed'" type="button" class="btn ghost" @click="publishReport">公开为招领</button>
+          <button v-if="selected.report.status !== 'closed'" type="button" class="btn ghost" @click="closeReport">已找回 / 关闭</button>
         </template>
         <button v-if="selected.itemId" type="button" class="btn ghost" @click="goItem">查看对应内容</button>
         <button type="button" class="btn ghost" @click="ignoreNotice">不是我的 / 忽略</button>
@@ -180,5 +196,10 @@ function fmt(ts) {
 .nd-msg { margin-top: 8px; font-size: 10.5px; color: #A97A00; }
 .nd-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 14px; }
 .nd-actions .btn { flex: 1; min-width: 130px; }
+</style>
+
+
+<style scoped>
+.nd-status { margin-top: 8px; display:inline-block; font-size:10px; color:#5B2A91; background:#F1E8FB; border-radius:99px; padding:4px 8px; }
 </style>
 

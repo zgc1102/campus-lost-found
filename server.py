@@ -135,6 +135,7 @@ def save_items(items):
 
 # ---------- 拾光码 ----------
 TAGS_FILE = os.path.join(BASE_DIR, "tags.json")
+TAG_REPORTS_FILE = os.path.join(BASE_DIR, "tag_reports.json")
 TAG_QR_DIR = os.path.join(BASE_DIR, "tag_qr")
 
 
@@ -144,6 +145,14 @@ def load_tags():
 
 def save_tags(data):
     _save_json(TAGS_FILE, data)
+
+
+def load_tag_reports():
+    return _load_json(TAG_REPORTS_FILE, [])
+
+
+def save_tag_reports(data):
+    _save_json(TAG_REPORTS_FILE, data)
 
 
 def _tag_public(tag, base_url="", with_qr=False):
@@ -2495,11 +2504,22 @@ class Handler(BaseHTTPRequestHandler):
                 notices = load_notices()
                 item_map = {x.get("id"): x for x in load_items()}
                 claim_map = {x.get("id"): x for x in load_claims()}
+                report_map = {x.get("id"): x for x in load_tag_reports()}
             mine = []
             for n in notices:
                 if n.get("owner") != owner:
                     continue
                 row = dict(n)
+                rp = report_map.get(n.get("reportId"))
+                if rp:
+                    row["report"] = {
+                        "id": rp.get("id"), "itemName": rp.get("itemName"),
+                        "message": rp.get("message"), "contact": rp.get("contact"),
+                        "tagCode": rp.get("tagCode"), "tagItem": rp.get("tagItem"),
+                        "status": rp.get("status") or "pending",
+                        "at": rp.get("createdAt"),
+                        "itemId": rp.get("itemId") or "",
+                    }
                 it = item_map.get(n.get("itemId"))
                 if it:
                     row["itemType"] = it.get("type") or ""
@@ -2676,6 +2696,7 @@ class Handler(BaseHTTPRequestHandler):
                             "echo \"[$(date '+%F %T')] deploy start\"\n"
                             "cd /opt/lostfound\n"
                             "cp tags.json tags.json.bak.$(date +%Y%m%d%H%M%S) 2>/dev/null || true\n"
+                            "cp tag_reports.json tag_reports.json.bak.$(date +%Y%m%d%H%M%S) 2>/dev/null || true\n"
                             "cp items.json items.json.bak.$(date +%Y%m%d%H%M%S) 2>/dev/null || true\n"
                             "git fetch origin main\n"
                             "git reset --hard origin/main\n"
@@ -2947,21 +2968,39 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json({"error": "此码已注销，感谢您的一份好意"}, 410)
                 tag["notifyCount"] = int(tag.get("notifyCount") or 0) + 1
                 save_tags(tags)
+                reports = load_tag_reports()
+                report = {
+                    "id": "r_" + uuid.uuid4().hex[:10],
+                    "owner": tag.get("owner"),
+                    "tagCode": code,
+                    "tagItem": tag.get("itemName") or "",
+                    "finder": self._owner(),
+                    "itemName": found_item or "捡到物品",
+                    "message": message or "我捡到了，请联系我",
+                    "contact": contact,
+                    "status": "pending",
+                    "createdAt": now_ms(),
+                    "updatedAt": now_ms(),
+                }
+                reports.append(report)
+                save_tag_reports(reports)
                 notices = load_notices()
                 text = "有人扫了你的拾光码"
                 if found_item:
                     text += "，捡到：%s" % found_item
                 text += "：%s" % (message or "我捡到了，请联系我")
                 add_notice(notices, tag.get("owner"), "pickup", text, "", "")
-                # 扫码上报默认只给失主看，不直接公开到失物招领；失主确认后可一键公开
                 if notices:
+                    notices[-1]["reportId"] = report["id"]
                     notices[-1]["report"] = {
-                        "itemName": found_item or "捡到物品",
-                        "message": message or "我捡到了，请联系我",
-                        "contact": contact,
+                        "id": report["id"],
+                        "itemName": report["itemName"],
+                        "message": report["message"],
+                        "contact": report["contact"],
                         "tagCode": code,
-                        "tagItem": tag.get("itemName") or "",
-                        "at": now_ms(),
+                        "tagItem": report["tagItem"],
+                        "status": report["status"],
+                        "at": report["createdAt"],
                     }
                 save_notices(notices)
             return self._json({"ok": True})
@@ -3378,6 +3417,94 @@ class Handler(BaseHTTPRequestHandler):
                 add_notice(notices, claim.get("from"), "done",
                            "《%s》已标记完成归还，谢谢你" % (item.get("title") or ""), item.get("id"))
                 save_notices(notices)
+            return self._json({"ok": True})
+
+        if path.startswith("/api/reports/") and path.endswith("/contact"):
+            owner = self._owner()
+            report_id = path[len("/api/reports/"):-len("/contact")]
+            with LOCK:
+                reports = load_tag_reports()
+                report = next((r for r in reports if r.get("id") == report_id), None)
+                if not report:
+                    return self._json({"error": "捡到上报不存在"}, 404)
+                if report.get("owner") != owner:
+                    return self._json({"error": "只有失主能查看联系方式"}, 403)
+                if report.get("status") == "pending":
+                    report["status"] = "contacted"
+                    report["updatedAt"] = now_ms()
+                    save_tag_reports(reports)
+            return self._json({"ok": True, "contact": report.get("contact") or "",
+                               "status": report.get("status")})
+
+        if path.startswith("/api/reports/") and path.endswith("/publish"):
+            owner = self._owner()
+            report_id = path[len("/api/reports/"):-len("/publish")]
+            with LOCK:
+                reports = load_tag_reports()
+                report = next((r for r in reports if r.get("id") == report_id), None)
+                if not report:
+                    return self._json({"error": "捡到上报不存在"}, 404)
+                if report.get("owner") != owner:
+                    return self._json({"error": "只有失主能公开这条信息"}, 403)
+                if report.get("itemId"):
+                    return self._json({"ok": True, "itemId": report["itemId"], "already": True})
+                items = load_items()
+                created = {
+                    "id": "p_" + uuid.uuid4().hex[:12],
+                    "type": "found",
+                    "cat": "other",
+                    "title": ("扫码上报：" + (report.get("itemName") or "捡到物品"))[:60],
+                    "desc": (report.get("message") or "扫码上报捡到物品")[:400],
+                    "place": "扫码上报 · " + (report.get("tagItem") or "拾光码"),
+                    "eventTime": "",
+                    "secret": "",
+                    "photo": None,
+                    "contact": {"phone": str(report.get("contact") or "")[:20]} if report.get("contact") else {},
+                    "ownerToken": report.get("finder") or ("report_" + report_id),
+                    "source": "tag_scan",
+                    "tagCode": report.get("tagCode") or "",
+                    "tagOwner": owner,
+                    "reportId": report_id,
+                    "status": "approved",
+                    "autoApproved": True,
+                    "reviewedBy": "owner",
+                    "createdAt": now_ms(),
+                    "updatedAt": now_ms(),
+                }
+                items.append(created)
+                save_items(items)
+                report["status"] = "published"
+                report["itemId"] = created["id"]
+                report["updatedAt"] = now_ms()
+                save_tag_reports(reports)
+                notices = load_notices()
+                for n in notices:
+                    if n.get("reportId") == report_id:
+                        n["itemId"] = created["id"]
+                        n["read"] = True
+                save_notices(notices)
+            return self._json({"ok": True, "itemId": created["id"]})
+
+        if path.startswith("/api/reports/") and path.endswith("/close"):
+            owner = self._owner()
+            report_id = path[len("/api/reports/"):-len("/close")]
+            with LOCK:
+                reports = load_tag_reports()
+                report = next((r for r in reports if r.get("id") == report_id), None)
+                if not report:
+                    return self._json({"error": "捡到上报不存在"}, 404)
+                if report.get("owner") != owner:
+                    return self._json({"error": "只有失主能关闭"}, 403)
+                report["status"] = "closed"
+                report["updatedAt"] = now_ms()
+                save_tag_reports(reports)
+                if report.get("itemId"):
+                    items = load_items()
+                    for it in items:
+                        if it.get("id") == report["itemId"]:
+                            it["status"] = "closed"
+                            it["updatedAt"] = now_ms()
+                    save_items(items)
             return self._json({"ok": True})
 
         if path.startswith("/api/notices/") and path.endswith("/contact"):
