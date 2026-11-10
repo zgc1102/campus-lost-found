@@ -2712,6 +2712,7 @@ class Handler(BaseHTTPRequestHandler):
                             "cd /opt/lostfound\n"
                             "cp tags.json tags.json.bak.$(date +%Y%m%d%H%M%S) 2>/dev/null || true\n"
                             "cp tag_reports.json tag_reports.json.bak.$(date +%Y%m%d%H%M%S) 2>/dev/null || true\n"
+                            "cp help_tasks.json help_tasks.json.bak.$(date +%Y%m%d%H%M%S) 2>/dev/null || true\n"
                             "cp items.json items.json.bak.$(date +%Y%m%d%H%M%S) 2>/dev/null || true\n"
                             "git fetch origin main\n"
                             "git reset --hard origin/main\n"
