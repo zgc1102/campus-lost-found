@@ -265,6 +265,9 @@ function openOldHelp() {
         <div class="similar-title">AI 相似匹配</div>
         <div v-for="s in similar" :key="s.id" class="similar-row" @click.stop="openDetail(s)">
           <b>{{ s.title }}</b><span>{{ s.place || '' }} · {{ s.type === 'lost' ? '寻物' : '招领' }}<em class="similar-pct">{{ s.similarity }}% 相似</em></span>
+          <div v-if="s.similarityDetail?.reasons?.length" class="similar-why">
+            <i v-for="r in s.similarityDetail.reasons" :key="r">{{ r }}</i>
+          </div>
         </div>
       </div>
       <div class="sa" style="margin-top:8px">📍 {{ selected.place || '未填写地点' }} · {{ fmt(selected.createdAt) }}</div>
@@ -305,5 +308,11 @@ function openOldHelp() {
 
 <style scoped>
 .similar-pct { margin-left:6px; font-style:normal; color:#5B2A91; background:#F1E8FB; border-radius:99px; padding:2px 5px; }
+</style>
+
+
+<style scoped>
+.similar-why { display:flex; flex-wrap:wrap; gap:4px; margin-top:3px; }
+.similar-why i { font-style:normal; font-size:8.5px; color:#7A5AA8; background:#F7F0FF; border-radius:4px; padding:2px 4px; }
 </style>
 

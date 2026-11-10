@@ -2351,6 +2351,19 @@ class Handler(BaseHTTPRequestHandler):
             for _, similarity, x in cands[:3]:
                 row = public_item(x, None)
                 row["similarity"] = similarity
+                _reasons = []
+                if cat_match:
+                    _reasons.append("同类别")
+                if place_match:
+                    _reasons.append("同地点")
+                if jac > 0:
+                    _reasons.append("描述相似 %d%%" % round(jac * 100))
+                row["similarityDetail"] = {
+                    "text": round(jac * 100),
+                    "category": bool(cat_match),
+                    "place": bool(place_match),
+                    "reasons": _reasons
+                }
                 out.append(row)
             return self._json(out)
 
