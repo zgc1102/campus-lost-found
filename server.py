@@ -136,6 +136,7 @@ def save_items(items):
 # ---------- 拾光码 ----------
 TAGS_FILE = os.path.join(BASE_DIR, "tags.json")
 TAG_REPORTS_FILE = os.path.join(BASE_DIR, "tag_reports.json")
+HELP_TASKS_FILE = os.path.join(BASE_DIR, "help_tasks.json")
 TAG_QR_DIR = os.path.join(BASE_DIR, "tag_qr")
 
 
@@ -153,6 +154,20 @@ def load_tag_reports():
 
 def save_tag_reports(data):
     _save_json(TAG_REPORTS_FILE, data)
+
+
+def load_help_tasks():
+    return _load_json(HELP_TASKS_FILE, [])
+
+
+def save_help_tasks(data):
+    _save_json(HELP_TASKS_FILE, data)
+
+
+def load_all_claims():
+    claims = list(load_claims())
+    claims.extend(load_help_tasks())
+    return claims
 
 
 def _tag_public(tag, base_url="", with_qr=False):
@@ -2450,7 +2465,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"received": [], "sent": []})
             with LOCK:
                 items = {x.get("id"): x for x in load_items()}
-                claims = load_claims()
+                claims = load_all_claims()
 
             def pack(c, side):
                 it = items.get(c.get("itemId"), {})
@@ -2503,7 +2518,7 @@ class Handler(BaseHTTPRequestHandler):
             with LOCK:
                 notices = load_notices()
                 item_map = {x.get("id"): x for x in load_items()}
-                claim_map = {x.get("id"): x for x in load_claims()}
+                claim_map = {x.get("id"): x for x in load_all_claims()}
                 report_map = {x.get("id"): x for x in load_tag_reports()}
             mine = []
             for n in notices:
@@ -3270,7 +3285,7 @@ class Handler(BaseHTTPRequestHandler):
             if _chk.get("normalized"):
                 contact = _chk["normalized"]
             if len(message) < 2:
-                return self._json({"error": "请说明一下物品的独有特征"}, 400)
+                return self._json({"error": "请说明一下你的申请理由"}, 400)
             with LOCK:
                 items = load_items()
                 target = next((x for x in items if x.get("id") == item_id), None)
@@ -3282,8 +3297,8 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json({"error": "这个物品已经被别人认领了"}, 400)
                 if target.get("status") != "approved":
                     return self._json({"error": "这条已经不在可认领状态"}, 400)
-                claims = load_claims()
-                if any(c.get("itemId") == item_id and c.get("from") == owner for c in claims):
+                all_claims = load_all_claims()
+                if any(c.get("itemId") == item_id and c.get("from") == owner for c in all_claims):
                     return self._json({"error": "你已经申请过了"}, 400)
                 # 三个方向：
                 #  - 招领帖(found)：申请人=失主，填「只有失主知道的特征」
@@ -3296,7 +3311,7 @@ class Handler(BaseHTTPRequestHandler):
                 else:
                     kind = "claim"
                 claim = {
-                    "id": "c_" + uuid.uuid4().hex[:10],
+                    "id": ("h_" if kind == "help" else "c_") + uuid.uuid4().hex[:10],
                     "itemId": item_id,
                     "from": owner,
                     "kind": kind,
@@ -3313,8 +3328,14 @@ class Handler(BaseHTTPRequestHandler):
                         claim["aiCheck"] = _chk0
                 except Exception:
                     pass
-                claims.append(claim)
-                save_claims(claims)
+                if kind == "help":
+                    tasks = load_help_tasks()
+                    tasks.append(claim)
+                    save_help_tasks(tasks)
+                else:
+                    claims = load_claims()
+                    claims.append(claim)
+                    save_claims(claims)
                 notices = load_notices()
                 if kind == "found":
                     text = "有人捡到了你丢失的《%s》，快去核对" % (target.get("title") or "")
@@ -3346,8 +3367,13 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"error": "内容未通过审核：" + _why}, 400)
             with LOCK:
                 claims = load_claims()
+                tasks = load_help_tasks()
                 items = load_items()
                 claim = next((c for c in claims if c.get("id") == claim_id), None)
+                in_help = False
+                if not claim:
+                    claim = next((c for c in tasks if c.get("id") == claim_id), None)
+                    in_help = bool(claim)
                 if not claim:
                     return self._json({"error": "not found"}, 404)
                 if claim.get("from") != owner:
@@ -3373,7 +3399,10 @@ class Handler(BaseHTTPRequestHandler):
                             claim["aiCheck"] = _chk
                 except Exception:
                     pass
-                save_claims(claims)
+                if in_help:
+                    save_help_tasks(tasks)
+                else:
+                    save_claims(claims)
                 item = next((x for x in items if x.get("id") == claim.get("itemId")), None)
                 notices = load_notices()
                 if item:
@@ -3389,8 +3418,13 @@ class Handler(BaseHTTPRequestHandler):
             claim_id = path[len("/api/claims/"):-len("/complete")]
             with LOCK:
                 claims = load_claims()
+                tasks = load_help_tasks()
                 items = load_items()
                 claim = next((c for c in claims if c.get("id") == claim_id), None)
+                in_help = False
+                if not claim:
+                    claim = next((c for c in tasks if c.get("id") == claim_id), None)
+                    in_help = bool(claim)
                 if not claim:
                     return self._json({"error": "not found"}, 404)
                 item = next((x for x in items if x.get("id") == claim.get("itemId")), None)
@@ -3411,11 +3445,15 @@ class Handler(BaseHTTPRequestHandler):
                 item["status"] = "closed"
                 item["closedAt"] = now_ms()
                 item["updatedAt"] = now_ms()
-                save_claims(claims)
+                if in_help:
+                    save_help_tasks(tasks)
+                else:
+                    save_claims(claims)
                 save_items(items)
                 notices = load_notices()
                 add_notice(notices, claim.get("from"), "done",
-                           "《%s》已标记完成归还，谢谢你" % (item.get("title") or ""), item.get("id"))
+                           ("《%s》爱心帮助已完成，谢谢你" if in_help else "《%s》已标记完成归还，谢谢你")
+                           % (item.get("title") or ""), item.get("id"))
                 save_notices(notices)
             return self._json({"ok": True})
 
@@ -3888,8 +3926,13 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"error": "bad status"}, 400)
             with LOCK:
                 claims = load_claims()
+                tasks = load_help_tasks()
                 items = load_items()
                 claim = next((c for c in claims if c.get("id") == claim_id), None)
+                in_help = False
+                if not claim:
+                    claim = next((c for c in tasks if c.get("id") == claim_id), None)
+                    in_help = bool(claim)
                 if not claim:
                     return self._json({"error": "not found"}, 404)
                 item = next((x for x in items if x.get("id") == claim.get("itemId")), None)
@@ -3915,7 +3958,10 @@ class Handler(BaseHTTPRequestHandler):
                             c2["rejectReason"] = "物品已被其他人认领"
                             c2["updatedAt"] = now_ms()
                             others.append(c2)
-                save_claims(claims)
+                if in_help:
+                    save_help_tasks(tasks)
+                else:
+                    save_claims(claims)
                 save_items(items)
                 notices = load_notices()
                 if status == "accepted":
@@ -3925,9 +3971,10 @@ class Handler(BaseHTTPRequestHandler):
                                    "失主已确认你捡到的《%s》，对方电话：%s" % (item.get("title") or "", phone),
                                    item.get("id"))
                     else:
-                        add_notice(notices, claim.get("from"), "accepted",
-                                   "你申请的《%s》已通过，发布者电话：%s" % (item.get("title") or "", phone),
-                                   item.get("id"))
+                        text_acc = ("求助者已接受你的帮忙《%s》，可以开始联系了" % (item.get("title") or "")
+                                    if claim.get("kind") == "help"
+                                    else "你申请的《%s》已通过，发布者电话：%s" % (item.get("title") or "", phone))
+                        add_notice(notices, claim.get("from"), "accepted", text_acc, item.get("id"))
                     for c2 in others:
                         add_notice(notices, c2.get("from"), "rejected",
                                    "《%s》已被其他同学认领，感谢你的申请" % (item.get("title") or ""),
