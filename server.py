@@ -2334,16 +2334,25 @@ class Handler(BaseHTTPRequestHandler):
                     continue
                 if x.get("type") == it.get("type"):
                     continue
-                score = 0
-                if x.get("cat") == it.get("cat"):
-                    score += 3
-                if it.get("place") and x.get("place") and str(it["place"]) in str(x["place"]):
-                    score += 2
-                score += len(bg & grams((x.get("title") or "") + " " + (x.get("desc") or ""))) * 0.12
+                cg = grams((x.get("title") or "") + " " + (x.get("desc") or ""))
+                union = bg | cg
+                jac = (len(bg & cg) / len(union)) if union else 0
+                cat_match = 1 if x.get("cat") == it.get("cat") else 0
+                place_match = 1 if (it.get("place") and x.get("place")
+                                    and str(it["place"]) in str(x["place"])) else 0
+                score = cat_match * 3 + place_match * 2 + jac * 4
                 if score >= 2.4:
-                    cands.append((score, x))
+                    # 展示给用户的是可解释的相似度，不是模型随机分
+                    similarity = round((0.55 * jac + 0.25 * cat_match + 0.20 * place_match) * 100)
+                    similarity = max(1, min(99, similarity))
+                    cands.append((score, similarity, x))
             cands.sort(key=lambda p: p[0], reverse=True)
-            return self._json([public_item(x, None) for _, x in cands[:3]])
+            out = []
+            for _, similarity, x in cands[:3]:
+                row = public_item(x, None)
+                row["similarity"] = similarity
+                out.append(row)
+            return self._json(out)
 
         if path == "/api/tags/mine":
             owner = self._owner()
