@@ -1139,6 +1139,23 @@ def review_item(item):
     return ai
 
 
+def moderate_tag(text):
+    """拾光码标签是物品标签，不是公开帖子；只做内容安全审核，不按招领范围驳回"""
+    text = str(text or "").strip()
+    if not text:
+        return True, ""
+    bad = re.search(r"招嫖|包夜|性服务|赌博|毒品|代考|代写|刷单|诈骗|传销|枪支|迷药", text)
+    if bad:
+        return False, "内容包含违规词：" + bad.group(0)
+    try:
+        probe = {"type": "help", "cat": "help_borrow", "title": "拾光码物品标签",
+                 "desc": text[:800], "place": "", "contact": {}}
+        review_item(probe)
+    except Exception:
+        pass
+    return True, ""
+
+
 def moderate_text(text, title="用户输入", allow_help=False):
     """所有用户可输入文本的统一 AI 审核；审核服务异常时放行规则结果"""
     text = str(text or "").strip()
@@ -2851,7 +2868,7 @@ class Handler(BaseHTTPRequestHandler):
             note = str(body.get("note") or "").strip()[:80]
             if mode == "phone" and not phone:
                 return self._json({"error": "选择展示电话时，需要填写手机号"}, 400)
-            _ok, _why = moderate_text(item_name + " " + note, "拾光码内容")
+            _ok, _why = moderate_tag(item_name + " " + note)
             if not _ok:
                 return self._json({"error": "内容未通过审核：" + _why}, 400)
             with LOCK:
@@ -2897,14 +2914,17 @@ class Handler(BaseHTTPRequestHandler):
             message = str(body.get("message") or "").strip()[:160]
             contact = str(body.get("contact") or "").strip()[:40]
             found_item = str(body.get("itemName") or "").strip()[:40]
+            with LOCK:
+                tags = load_tags()
+                tag = next((x for x in tags if x.get("code") == code), None)
+            if not tag:
+                return self._json({"error": "拾光码不存在"}, 404)
+            if not tag.get("active", True):
+                return self._json({"error": "此码已注销，感谢您的一份好意"}, 410)
             _ok, _why = moderate_text(found_item + " " + message + " " + contact, "扫码上报")
             if not _ok:
                 return self._json({"error": "内容未通过审核：" + _why}, 400)
             with LOCK:
-                tags = load_tags()
-                tag = next((x for x in tags if x.get("code") == code), None)
-                if not tag:
-                    return self._json({"error": "拾光码不存在"}, 404)
                 if not tag.get("active", True):
                     return self._json({"error": "此码已注销，感谢您的一份好意"}, 410)
                 tag["notifyCount"] = int(tag.get("notifyCount") or 0) + 1
