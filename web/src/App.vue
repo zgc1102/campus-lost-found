@@ -58,7 +58,7 @@ function go(target, arg) {
     return
   }
   if (target === 'publish') {
-    publish('lost')
+    publish(arg === 'help' ? 'help' : 'lost')
     return
   }
   if (target === 'lost' || target === 'found' || target === 'help' || target === 'lend' || target === 'borrow') {
@@ -84,6 +84,7 @@ function go(target, arg) {
 function publish(type, cat) {
   editingItem.value = null
   if (type === 'help') {
+    publishType.value = 'help'
     helpPublishCat.value = cat || 'help_borrow'
     view.value = 'help-publish'
     history.replaceState({}, '', location.pathname + '?view=help-publish')
@@ -124,7 +125,7 @@ function editItem(item) {
     <InfoView v-else-if="view === 'info'" :info-key="infoKey" @nav="go" />
     <SearchView v-else-if="view === 'search'" @nav="go" />
     <StaticInfoView v-else-if="view === 'legacy'" :name="legacyName" @nav="go" />
-    <SuccessView v-else-if="view === 'success'" @nav="go" />
+    <SuccessView v-else-if="view === 'success'" :type="publishType" @nav="go" />
     <ToolsView v-else-if="view === 'lend' || view === 'borrow'" :mode="view" @nav="go" />
     <MemorialView v-else-if="view === 'memorial'" @nav="go" />
     <FaqView v-else-if="view === 'faq'" @nav="go" />

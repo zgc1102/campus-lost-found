@@ -25,8 +25,9 @@ async function readAll() {
 }
 function openNotice(n) {
   if (!n.itemId) return
-  localStorage.setItem('sg:focusItem', n.itemId)
-  emit('nav', 'found')
+  sessionStorage.setItem('sg:focusItem', n.itemId)
+  const t = n.itemType === 'help' ? 'help' : n.itemType === 'lost' ? 'lost' : 'found'
+  emit('nav', t)
 }
 function fmt(ts) {
   if (!ts) return ''

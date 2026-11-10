@@ -51,7 +51,15 @@ const visible = computed(() => {
     .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
 })
 
-onMounted(load)
+onMounted(async () => {
+  await load()
+  const id = sessionStorage.getItem('sg:focusItem')
+  if (id) {
+    const target = items.value.find((x) => x.id === id)
+    if (target) selected.value = target
+    sessionStorage.removeItem('sg:focusItem')
+  }
+})
 async function load() {
   loading.value = true
   try {

@@ -2493,7 +2493,18 @@ class Handler(BaseHTTPRequestHandler):
             owner = self._owner()
             with LOCK:
                 notices = load_notices()
-            mine = [n for n in notices if n.get("owner") == owner]
+                item_map = {x.get("id"): x for x in load_items()}
+            mine = []
+            for n in notices:
+                if n.get("owner") != owner:
+                    continue
+                row = dict(n)
+                it = item_map.get(n.get("itemId"))
+                if it:
+                    row["itemType"] = it.get("type") or ""
+                    row["itemTitle"] = it.get("title") or ""
+                    row["itemStatus"] = it.get("status") or ""
+                mine.append(row)
             mine.sort(key=lambda x: x.get("at") or 0, reverse=True)
             unread = sum(1 for n in mine if not n.get("read"))
             return self._json({"items": mine[:50], "unread": unread})
