@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { onMounted, ref } from 'vue'
 import { api } from '../api'
 
@@ -122,7 +122,7 @@ function fmt(ts) {
 </script>
 
 <template>
-  <section class="screen active" id="screen-notices">
+  <section v-if="!selected" class="screen active" id="screen-notices">
     <div class="topbar">
       <div class="back" @click="$emit('nav', 'home')">‹</div>
       <div class="t">通知</div>
@@ -148,9 +148,14 @@ function fmt(ts) {
       </template>
       <div class="adm-link" @click="readAll">全部标为已读</div>
     </div>
+  </section>
 
-    <div v-if="selected" class="sheet vue-sheet show notice-detail">
-      <button type="button" class="sheet-x" @click="selected = null">收起</button>
+  <section v-else class="screen active notice-detail-screen">
+    <div class="topbar">
+      <div class="back" @click="selected = null">‹</div>
+      <div class="t">通知详情</div>
+    </div>
+    <div class="scroll nd-scroll">
       <div class="nd-kicker">{{ typeLabel(selected.type, selected.itemType) }}</div>
       <h2>{{ selected.report?.itemName || selected.itemTitle || '通知详情' }}</h2>
       <div class="nd-text">{{ selected.report?.message || selected.text }}</div>
@@ -187,9 +192,9 @@ function fmt(ts) {
 </template>
 
 <style scoped>
-.notice-detail { padding-bottom: 92px; }
+.notice-detail-screen { background: var(--bg); }
 .nd-kicker { font-size: 10px; color: var(--sub); letter-spacing: .08em; }
-.notice-detail h2 { margin: 7px 0 8px; font-size: 17px; color: var(--ink); }
+.notice-detail-screen h2 { margin: 7px 0 8px; font-size: 17px; color: var(--ink); }
 .nd-text { font-size: 12px; line-height: 1.8; color: #4E445D; white-space: pre-wrap; }
 .nd-meta { margin-top: 7px; font-size: 10.5px; color: #8E7FA3; }
 .nd-contact { margin-top: 10px; padding: 8px 10px; border-radius: 9px; background: #F1E8FB; color: #3B1D63; font-size: 12px; }
@@ -202,4 +207,5 @@ function fmt(ts) {
 <style scoped>
 .nd-status { margin-top: 8px; display:inline-block; font-size:10px; color:#5B2A91; background:#F1E8FB; border-radius:99px; padding:4px 8px; }
 </style>
+
 

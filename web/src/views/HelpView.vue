@@ -135,12 +135,13 @@ async function submitHelp() {
             <span v-else>{{ thumb(it) }}</span>
           </div>
           <div class="body">
-            <div class="tt"><span class="src-tag">求助</span>{{ it.title }}</div>
+            <div class="tt"><span class="src-tag">求助</span>{{ it.title }}<span v-if="it.status === 'closed'" class="help-done">已结束</span></div>
             <div class="dd">{{ it.desc }}</div>
             <div v-if="chips(it).length" class="chips"><span v-for="c in chips(it)" :key="c" class="chip">{{ c }}</span></div>
             <div class="row">
               <span class="meta">📍 {{ it.place || '未填写地点' }} · {{ fmt(it.createdAt) }}</span>
-              <button type="button" class="btn" @click.stop="openDetail(it)">我来帮忙</button>
+              <button v-if="it.status === 'approved'" type="button" class="btn" @click.stop="openDetail(it)">我来帮忙</button>
+              <span v-else class="help-state">{{ it.status === 'closed' ? '已结束' : '进行中' }}</span>
             </div>
           </div>
         </article>
@@ -157,10 +158,15 @@ async function submitHelp() {
       <div class="sa">{{ selected.desc }}</div>
       <div class="sa" style="margin-top:8px">📍 {{ selected.place || '未填写地点' }}</div>
       <div class="sa" style="margin-top:8px">联系方式：{{ (selected.contact && selected.contact.phone) || '对方确认后可见' }}</div>
-      <textarea v-model="goMsg" maxlength="120" placeholder="说一句你能怎么帮，例如：我明天上午可以带过去" style="width:100%;box-sizing:border-box;margin-top:10px;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:11px;padding:10px;font-family:inherit;font-size:11px;min-height:64px"></textarea>
-      <input v-model="goPhone" maxlength="20" placeholder="你的联系方式（对方确认后可见）" style="width:100%;box-sizing:border-box;margin-top:7px;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:11px;padding:10px;font-family:inherit;font-size:11px">
-      <div v-if="goState" class="sa" style="margin-top:6px">{{ goState }}</div>
-      <button type="button" class="btn" style="width:100%;margin-top:12px" :disabled="going" @click="submitHelp">{{ going ? '发送中…' : '发送' }}</button>
+      <div v-if="selected.status !== 'approved'" class="sa" style="margin-top:10px;color:var(--sub)">
+        这条求助{{ selected.status === 'closed' ? '已经结束' : '已经有人帮忙，正在进行中' }}。
+      </div>
+      <template v-else>
+        <textarea v-model="goMsg" maxlength="120" placeholder="说一句你能怎么帮，例如：我明天上午可以带过去" style="width:100%;box-sizing:border-box;margin-top:10px;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:11px;padding:10px;font-family:inherit;font-size:11px;min-height:64px"></textarea>
+        <input v-model="goPhone" maxlength="20" placeholder="你的联系方式（对方确认后可见）" style="width:100%;box-sizing:border-box;margin-top:7px;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:11px;padding:10px;font-family:inherit;font-size:11px">
+        <div v-if="goState" class="sa" style="margin-top:6px">{{ goState }}</div>
+        <button type="button" class="btn" style="width:100%;margin-top:12px" :disabled="going" @click="submitHelp">{{ going ? '发送中…' : '发送' }}</button>
+      </template>
       <div class="close" @click="selected = null">收起</div>
     </div>
     <div v-if="photoOpen" class="help-photo-viewer" @click="photoOpen = false">
@@ -197,5 +203,11 @@ async function submitHelp() {
 .help-photo-viewer { position:fixed; inset:0; z-index:800; background:rgba(12,5,20,.88); display:flex; align-items:center; justify-content:center; padding:24px; }
 .help-photo-viewer img { max-width:94vw; max-height:88vh; border-radius:12px; }
 .help-photo-viewer button { position:absolute; top:18px; right:20px; width:38px; height:38px; border:0; border-radius:50%; background:rgba(255,255,255,.16); color:#fff; font-size:16px; }
+</style>
+
+
+<style scoped>
+.help-done { margin-left:5px; font-size:9px; color:#8E7FA3; background:#F0EDF5; border-radius:99px; padding:2px 5px; vertical-align:middle; }
+.help-state { font-size:10px; color:#8E7FA3; white-space:nowrap; }
 </style>
 
