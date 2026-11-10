@@ -205,6 +205,9 @@ export const api = {
   radar(body) {
     return call('/agent/radar', { method: 'POST', body: JSON.stringify(body) })
   },
+  similar(id) {
+    return call('/items/' + encodeURIComponent(id) + '/similar')
+  },
   detective(body) {
     return call('/agent/detective', { method: 'POST', body: JSON.stringify(body) })
   },

@@ -75,6 +75,9 @@ function openDetail(it) {
   goPhone.value = ''
   goState.value = ''
 }
+function aiLabel(d) {
+  return d === 'approve' ? '建议通过' : d === 'reject' ? '建议驳回' : '建议复核'
+}
 async function submitHelp() {
   if (!selected.value) return
   if (goMsg.value.trim().length < 2) { goState.value = '说一句你能怎么帮'; return }
@@ -137,6 +140,7 @@ async function submitHelp() {
           <div class="body">
             <div class="tt"><span class="src-tag">求助</span>{{ it.title }}<span v-if="it.status === 'closed'" class="help-done">已结束</span></div>
             <div class="dd">{{ it.desc }}</div>
+            <div v-if="it.ai" class="help-ai-line">🤖 AI 审核 {{ aiLabel(it.ai.decision) }} · 风险 {{ it.ai.score ?? '—' }}/100</div>
             <div v-if="chips(it).length" class="chips"><span v-for="c in chips(it)" :key="c" class="chip">{{ c }}</span></div>
             <div class="row">
               <span class="meta">📍 {{ it.place || '未填写地点' }} · {{ fmt(it.createdAt) }}</span>
@@ -156,6 +160,10 @@ async function submitHelp() {
       </div>
       <div class="sh">{{ selected.title }}</div>
       <div class="sa">{{ selected.desc }}</div>
+      <div v-if="selected.ai" class="help-ai-box">
+        <b>🤖 AI 审核 {{ aiLabel(selected.ai.decision) }} · 风险 {{ selected.ai.score ?? '—' }}/100</b>
+        <p>{{ selected.ai.reason || 'AI 已完成内容分析' }}</p>
+      </div>
       <div class="sa" style="margin-top:8px">📍 {{ selected.place || '未填写地点' }}</div>
       <div class="sa" style="margin-top:8px">联系方式：{{ (selected.contact && selected.contact.phone) || '对方确认后可见' }}</div>
       <div v-if="selected.status !== 'approved'" class="sa" style="margin-top:10px;color:var(--sub)">
@@ -209,5 +217,13 @@ async function submitHelp() {
 <style scoped>
 .help-done { margin-left:5px; font-size:9px; color:#8E7FA3; background:#F0EDF5; border-radius:99px; padding:2px 5px; vertical-align:middle; }
 .help-state { font-size:10px; color:#8E7FA3; white-space:nowrap; }
+</style>
+
+
+<style scoped>
+.help-ai-line { margin-top:5px; font-size:9px; color:#7A5AA8; background:#F7F0FF; border-radius:5px; padding:3px 5px; display:inline-block; }
+.help-ai-box { margin-top:9px; padding:8px 9px; border-radius:9px; background:#F7F0FF; border:1px solid #EADDF7; }
+.help-ai-box b { font-size:10px; color:#5B2A91; }
+.help-ai-box p { margin:3px 0 0; font-size:10px; line-height:1.6; color:#6E607F; }
 </style>
 

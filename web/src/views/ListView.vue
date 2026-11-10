@@ -18,14 +18,20 @@ const claiming = ref(false)
 const reportState = ref('')
 const claimOpen = ref(false)
 const photoOpen = ref(false)
+const similar = ref([])
 
-function openDetail(it) {
+async function openDetail(it) {
   selected.value = it
   claimMsg.value = ''
   claimPhone.value = ''
   claimState.value = ''
   claimOpen.value = false
   photoOpen.value = false
+  similar.value = []
+  try {
+    const r = await api.similar(it.id)
+    if (Array.isArray(r)) similar.value = r
+  } catch (_) {}
 }
 async function submitClaim() {
   if (!selected.value) return
@@ -250,6 +256,17 @@ function openOldHelp() {
       </div>
       <div class="sh">{{ selected.title || '未命名物品' }}</div>
       <div class="sa">{{ selected.desc || '暂无描述' }}</div>
+      <div v-if="selected.ai" class="pub-ai" :class="'pub-ai-' + (selected.ai.decision || 'review')">
+        <b>🤖 AI 审核 {{ ({approve:'建议通过', reject:'建议驳回', review:'建议复核'})[selected.ai.decision] || '已分析' }}</b>
+        <span>风险 {{ selected.ai.score ?? '—' }}/100</span>
+        <p>{{ selected.ai.reason || 'AI 已完成内容分析' }}</p>
+      </div>
+      <div v-if="similar.length" class="similar-box">
+        <div class="similar-title">AI 相似匹配</div>
+        <div v-for="s in similar" :key="s.id" class="similar-row" @click.stop="openDetail(s)">
+          <b>{{ s.title }}</b><span>{{ s.place || '' }} · {{ s.type === 'lost' ? '寻物' : '招领' }}</span>
+        </div>
+      </div>
       <div class="sa" style="margin-top:8px">📍 {{ selected.place || '未填写地点' }} · {{ fmt(selected.createdAt) }}</div>
       <div class="sa" style="margin-top:8px">联系方式：{{ (selected.contact && selected.contact.phone) || '认领时由发布者确认' }}</div>
       <button v-if="!claimOpen" type="button" class="btn" style="width:100%;margin-top:14px" :disabled="!canClaim(selected)" @click="canClaim(selected) && (claimOpen = true)">{{ actionLabel(selected) }}</button>
@@ -271,3 +288,17 @@ function openOldHelp() {
     </div>
   </section>
 </template>
+
+<style scoped>
+.pub-ai { margin-top:9px; border-radius:9px; padding:8px 9px; background:#F7F0FF; border:1px solid #EADDF7; font-size:10px; line-height:1.6; }
+.pub-ai b { color:#5B2A91; margin-right:6px; }
+.pub-ai span { color:#8E7FA3; font-size:9px; }
+.pub-ai p { margin:3px 0 0; color:#6E607F; }
+.pub-ai-reject { background:#FDF2F2; border-color:#F3CFCF; }
+.similar-box { margin-top:10px; border-top:1px dashed #EADDF7; padding-top:9px; }
+.similar-title { font-size:10px; color:#8E7FA3; margin-bottom:5px; }
+.similar-row { display:flex; flex-direction:column; gap:2px; background:#FAF7FE; border-radius:8px; padding:7px 8px; margin-bottom:5px; }
+.similar-row b { font-size:10.5px; color:#3B1D63; }
+.similar-row span { font-size:9px; color:#8E7FA3; }
+</style>
+
