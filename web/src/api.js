@@ -124,6 +124,12 @@ export const api = {
   readNotices() {
     return call('/notices/read', { method: 'POST' })
   },
+  noticeContact(id) {
+    return call('/notices/' + encodeURIComponent(id) + '/contact', { method: 'POST' })
+  },
+  noticePublish(id) {
+    return call('/notices/' + encodeURIComponent(id) + '/publish', { method: 'POST' })
+  },
   adminLogin(password) {
     return call('/login', { method: 'POST', body: JSON.stringify({ password }) })
   },

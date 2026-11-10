@@ -2940,40 +2940,22 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json({"error": "此码已注销，感谢您的一份好意"}, 410)
                 tag["notifyCount"] = int(tag.get("notifyCount") or 0) + 1
                 save_tags(tags)
-                scan_id = ""
-                # 捡到上报同步生成一条招领信息，进入正常失物招领流
-                if found_item or message:
-                    items = load_items()
-                    scan_item = {
-                        "id": "p_" + uuid.uuid4().hex[:12],
-                        "type": "found",
-                        "cat": "other",
-                        "title": ("扫码上报：" + (found_item or "捡到物品"))[:60],
-                        "desc": (message or "扫码上报捡到物品")[:400],
-                        "place": "扫码上报 · " + (tag.get("itemName") or "拾光码"),
-                        "eventTime": "",
-                        "secret": "",
-                        "photo": None,
-                        "contact": {"phone": contact[:20]} if contact else {},
-                        "ownerToken": self._owner() or ("scan_" + code),
-                        "source": "tag_scan",
-                        "tagCode": code,
-                        "tagOwner": tag.get("owner"),
-                        "status": "approved",
-                        "autoApproved": True,
-                        "reviewedBy": "AI",
-                        "createdAt": now_ms(),
-                        "updatedAt": now_ms(),
-                    }
-                    items.append(scan_item)
-                    save_items(items)
-                    scan_id = scan_item["id"]
                 notices = load_notices()
                 text = "有人扫了你的拾光码"
                 if found_item:
                     text += "，捡到：%s" % found_item
                 text += "：%s" % (message or "我捡到了，请联系我")
-                add_notice(notices, tag.get("owner"), "pickup", text, scan_id, "")
+                add_notice(notices, tag.get("owner"), "pickup", text, "", "")
+                # 扫码上报默认只给失主看，不直接公开到失物招领；失主确认后可一键公开
+                if notices:
+                    notices[-1]["report"] = {
+                        "itemName": found_item or "捡到物品",
+                        "message": message or "我捡到了，请联系我",
+                        "contact": contact,
+                        "tagCode": code,
+                        "tagItem": tag.get("itemName") or "",
+                        "at": now_ms(),
+                    }
                 save_notices(notices)
             return self._json({"ok": True})
 
@@ -3295,6 +3277,14 @@ class Handler(BaseHTTPRequestHandler):
                 else:
                     text = "有人申请认领你捡到的《%s》" % (target.get("title") or "")
                 add_notice(notices, target.get("ownerToken"), "claim", text, item_id, claim["id"])
+                if notices:
+                    notices[-1]["report"] = {
+                        "itemName": target.get("title") or "",
+                        "message": message,
+                        "contact": contact,
+                        "kind": kind,
+                        "at": now_ms(),
+                    }
                 save_notices(notices)
             return self._json({"ok": True, "id": claim["id"]})
 
@@ -3382,6 +3372,65 @@ class Handler(BaseHTTPRequestHandler):
                            "《%s》已标记完成归还，谢谢你" % (item.get("title") or ""), item.get("id"))
                 save_notices(notices)
             return self._json({"ok": True})
+
+        if path.startswith("/api/notices/") and path.endswith("/contact"):
+            owner = self._owner()
+            notice_id = path[len("/api/notices/"):-len("/contact")]
+            with LOCK:
+                notices = load_notices()
+                notice = next((n for n in notices if n.get("id") == notice_id), None)
+                if not notice:
+                    return self._json({"error": "通知不存在"}, 404)
+                if notice.get("owner") != owner:
+                    return self._json({"error": "只有失主能查看联系方式"}, 403)
+                report = notice.get("report") or {}
+                notice["read"] = True
+                save_notices(notices)
+            return self._json({"ok": True, "contact": report.get("contact") or ""})
+
+        if path.startswith("/api/notices/") and path.endswith("/publish"):
+            owner = self._owner()
+            notice_id = path[len("/api/notices/"):-len("/publish")]
+            with LOCK:
+                notices = load_notices()
+                notice = next((n for n in notices if n.get("id") == notice_id), None)
+                if not notice:
+                    return self._json({"error": "通知不存在"}, 404)
+                if notice.get("owner") != owner:
+                    return self._json({"error": "只有失主能公开这条信息"}, 403)
+                report = notice.get("report") or {}
+                if not report:
+                    return self._json({"error": "这条通知没有可公开的上报"}, 400)
+                if notice.get("itemId"):
+                    return self._json({"ok": True, "itemId": notice["itemId"], "already": True})
+                items = load_items()
+                created = {
+                    "id": "p_" + uuid.uuid4().hex[:12],
+                    "type": "found",
+                    "cat": "other",
+                    "title": ("扫码上报：" + (report.get("itemName") or "捡到物品"))[:60],
+                    "desc": (report.get("message") or "扫码上报捡到物品")[:400],
+                    "place": "扫码上报 · " + (report.get("tagItem") or "拾光码"),
+                    "eventTime": "",
+                    "secret": "",
+                    "photo": None,
+                    "contact": {"phone": str(report.get("contact") or "")[:20]} if report.get("contact") else {},
+                    "ownerToken": "notice_" + notice_id,
+                    "source": "tag_scan",
+                    "tagCode": report.get("tagCode") or "",
+                    "tagOwner": owner,
+                    "status": "approved",
+                    "autoApproved": True,
+                    "reviewedBy": "owner",
+                    "createdAt": now_ms(),
+                    "updatedAt": now_ms(),
+                }
+                items.append(created)
+                save_items(items)
+                notice["itemId"] = created["id"]
+                notice["read"] = True
+                save_notices(notices)
+            return self._json({"ok": True, "itemId": created["id"]})
 
         if path == "/api/notices/read":
             owner = self._owner()
