@@ -3120,17 +3120,33 @@ class Handler(BaseHTTPRequestHandler):
                 acc["lastLoginAt"] = now_ms()
                 save_accounts(accs)
             adopted = 0
+            guest_owner = self._owner()
             with LOCK:
                 items = load_items()
                 for x in items:
-                    if (re.sub(r"\D", "", str((x.get("contact") or {}).get("phone") or "")) == phone
-                            and x.get("ownerToken") != acc["id"]):
+                    _ph = re.sub(r"\D", "", str((x.get("contact") or {}).get("phone") or ""))
+                    _owned_by_device = (guest_owner and not guest_owner.startswith("acc_")
+                                        and x.get("ownerToken") == guest_owner)
+                    if ((_ph == phone or _owned_by_device) and x.get("ownerToken") != acc["id"]):
                         x["ownerToken"] = acc["id"]
                         x["ownerId"] = acc["id"]
                         x["updatedAt"] = now_ms()
                         adopted += 1
                 if adopted:
                     save_items(items)
+                # 拾光码也跟随账号，避免先生成码再登录就丢失
+                tags = load_tags()
+                tag_changed = False
+                for t in tags:
+                    _tph = re.sub(r"\D", "", str(t.get("phone") or ""))
+                    _owned_by_device = (guest_owner and not guest_owner.startswith("acc_")
+                                        and t.get("owner") == guest_owner)
+                    if ((_tph == phone or _owned_by_device) and t.get("owner") != acc["id"]):
+                        t["owner"] = acc["id"]
+                        t["updatedAt"] = now_ms()
+                        tag_changed = True
+                if tag_changed:
+                    save_tags(tags)
             return self._json({"ok": True, "accountId": acc["id"], "phone": phone,
                                "created": created, "adopted": adopted})
 
