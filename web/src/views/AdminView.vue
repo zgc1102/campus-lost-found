@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { api } from '../api'
 
 const TOKEN_KEY = 'sg:admin:token'
@@ -19,6 +19,10 @@ const announcements = ref([])
 const specials = ref([])
 const config = ref(null)
 const deployLog = ref([])
+const deploying = ref(false)
+const deployCountdown = ref(0)
+const deployMsg = ref('')
+let deployTimer = null
 
 const annTitle = ref('')
 const annBody = ref('')
@@ -55,6 +59,7 @@ const filteredItems = computed(() => {
 })
 
 onMounted(() => { if (token.value) loadAll() })
+onUnmounted(() => { if (deployTimer) clearInterval(deployTimer) })
 
 async function loadAll(silent = false) {
   if (!token.value) return
@@ -195,11 +200,40 @@ async function preReviewAll() {
 }
 
 async function deployCode() {
+  if (deploying.value) return
+  deploying.value = true
+  deployMsg.value = '正在检查更新…'
+  deployCountdown.value = 10
+  if (deployTimer) clearInterval(deployTimer)
+  deployTimer = setInterval(() => {
+    if (deployCountdown.value > 0) {
+      deployCountdown.value -= 1
+      if (deployCountdown.value === 0) {
+        deployMsg.value = '更新完成，正在刷新…'
+        clearInterval(deployTimer)
+        deployTimer = null
+        setTimeout(() => window.location.reload(), 800)
+      }
+    }
+  }, 1000)
   try {
     const r = await api.adminDeploy(token.value)
-    error.value = r.msg || '已触发更新'
-    setTimeout(() => window.location.reload(), 15000)
-  } catch (e) { error.value = e.message || '更新失败' }
+    if (!r.hasUpdate) {
+      clearInterval(deployTimer)
+      deployTimer = null
+      deployCountdown.value = 0
+      deploying.value = false
+      deployMsg.value = r.msg || '暂无可更新的代码'
+      return
+    }
+    deployMsg.value = '发现新版本，正在更新…'
+  } catch (e) {
+    if (deployTimer) clearInterval(deployTimer)
+    deployTimer = null
+    deployCountdown.value = 0
+    deploying.value = false
+    deployMsg.value = e.message || '更新失败'
+  }
 }
 
 async function saveConfig() {
@@ -341,11 +375,15 @@ function statusClass(s) {
           <button type="button" @click="loadAll">刷新</button>
           <button type="button" @click="preReviewAll">AI 预审全部</button>
           <button type="button" @click="resetDemo">重置演示数据</button>
-          <button type="button" @click="deployCode">更新代码</button>
+          <button type="button" :disabled="deploying" @click="deployCode">{{ deploying ? '更新中…' : '更新代码' }}</button>
           <button type="button" @click="logout">退出登录</button>
         </div>
       </div>
     </header>
+    <div v-if="deployMsg" class="deploy-status">
+      {{ deployMsg }}
+      <b v-if="deployCountdown > 0">{{ deployCountdown }}s</b>
+    </div>
 
     <main class="admin-main">
       <div class="admin-wrap">
@@ -680,5 +718,11 @@ textarea.field { min-height: 78px; resize: vertical; }
 
 <style scoped>
 .overview-extra { margin-top:12px; font-size:11px; color:#8E7FA3; line-height:1.7; }
+</style>
+
+
+<style scoped>
+.deploy-status { width:min(1120px,calc(100% - 48px)); margin:12px auto 0; background:#FFF8E8; border:1px solid #F2DFC0; color:#8A5A16; border-radius:10px; padding:9px 12px; font-size:11px; display:flex; align-items:center; justify-content:space-between; }
+.deploy-status b { color:#5B2A91; font-size:13px; }
 </style>
 
