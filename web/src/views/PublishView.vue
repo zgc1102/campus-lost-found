@@ -1,5 +1,5 @@
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { api } from '../api'
 
 const props = defineProps({
@@ -52,6 +52,25 @@ if (props.editItem) {
   const reverse = { card: '证件', electronics: '电子设备', cloth: '衣物', bottle: '水杯', bag: '书包', other: '其他' }
   form.category = reverse[e.cat] || ''
 }
+
+const DRAFT_KEY = 'sg:draft:publish'
+onMounted(() => {
+  if (props.editItem) return
+  try {
+    const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || '{}')
+    for (const k of ['title', 'category', 'desc', 'place', 'eventTime', 'secret', 'phone']) {
+      if (d[k]) form[k] = d[k]
+    }
+  } catch (_) {}
+})
+watch(form, () => {
+  if (props.editItem) return
+  const d = {}
+  for (const k of ['title', 'category', 'desc', 'place', 'eventTime', 'secret', 'phone']) {
+    d[k] = form[k]
+  }
+  localStorage.setItem(DRAFT_KEY, JSON.stringify(d))
+}, { deep: true })
 
 const catMap = {
   '证件': 'card',
@@ -159,6 +178,7 @@ async function submit() {
       : await api.create(item)
     result.value = saved
     try { sessionStorage.setItem('sg:lastResult', JSON.stringify(saved)) } catch (e) {}
+    localStorage.removeItem(DRAFT_KEY)
     emit('nav', 'success')
   } catch (e) {
     if (e.body && e.body.needConfirm) {

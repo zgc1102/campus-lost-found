@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { api } from '../api'
 
@@ -143,6 +143,10 @@ function openMemo(s) {
     </div>
 
     <div class="scroll">
+      <div class="home-do">
+        <button type="button" class="hd-find" @click="$emit('nav', 'lost')">我要找东西</button>
+        <button type="button" class="hd-pub" @click="$emit('nav', 'publish')">我要发布</button>
+      </div>
       <div class="mem-win">
         <span class="mw-tag" style="cursor:pointer" @click="$emit('nav', 'notices')">公告通知 · 左右滑动</span>
         <div class="mem-track">
@@ -252,4 +256,12 @@ function openMemo(s) {
   </section>
 </template>
 
+
+
+<style scoped>
+.home-do { display:flex; gap:8px; padding:10px 0 0; }
+.home-do button { flex:1; border:0; border-radius:11px; padding:11px 8px; font-family:inherit; font-size:12px; font-weight:600; }
+.hd-find { background:#fff; color:var(--primary); border:1px solid #E4D4F7 !important; }
+.hd-pub { background:linear-gradient(135deg,#5B2A91,#7A3CB0); color:#fff; }
+</style>
 

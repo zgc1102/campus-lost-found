@@ -19,6 +19,7 @@ const reportState = ref('')
 const claimOpen = ref(false)
 const photoOpen = ref(false)
 const similar = ref([])
+const showClosed = ref(false)
 
 async function openDetail(it) {
   selected.value = it
@@ -77,6 +78,7 @@ const visible = computed(() => {
   const q = query.value.trim().toLowerCase()
   return items.value
     .filter((x) => x.type === target && ['approved', 'claimed', 'closed'].includes(x.status))
+    .filter((x) => showClosed.value || x.status !== 'closed')
     .filter((x) => !q || ((x.title || '') + (x.desc || '') + (x.place || '')).toLowerCase().includes(q))
     .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
 })
@@ -200,6 +202,7 @@ function openOldHelp() {
 
       <div class="list-meta">
         <b>{{ visible.length }}</b> 条{{ type === 'lost' ? '招领' : '寻物' }} · {{ copy.hint }}
+        <button type="button" class="closed-toggle" @click="showClosed = !showClosed">{{ showClosed ? '隐藏已结束' : '显示已结束' }}</button>
       </div>
 
       <button type="button" class="radar-entry" @click="openOldRadar">
@@ -314,5 +317,10 @@ function openOldHelp() {
 <style scoped>
 .similar-why { display:flex; flex-wrap:wrap; gap:4px; margin-top:3px; }
 .similar-why i { font-style:normal; font-size:8.5px; color:#7A5AA8; background:#F7F0FF; border-radius:4px; padding:2px 4px; }
+</style>
+
+
+<style scoped>
+.closed-toggle { float:right; border:0; background:transparent; color:#8E7FA3; font-family:inherit; font-size:9.5px; text-decoration:underline; padding:0; }
 </style>
 
