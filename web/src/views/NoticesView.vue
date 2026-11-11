@@ -236,7 +236,7 @@ function fmt(ts) {
           <button type="button" class="btn ghost" @click="ignoreNotice">忽略</button>
         </template>
         <template v-else>
-          <button v-if="selected.itemId" type="button" class="btn ghost" @click="goItem">查看对应内容</button>
+          <button v-if="selected.itemId && selected.type !== 'pickup'" type="button" class="btn ghost" @click="goItem">查看对应内容</button>
           <button type="button" class="btn ghost" @click="ignoreNotice">忽略</button>
         </template>
       </div>

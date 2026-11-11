@@ -20,6 +20,8 @@ const claimOpen = ref(false)
 const photoOpen = ref(false)
 const similar = ref([])
 const showClosed = ref(false)
+const aiPhotoInput = ref(null)
+const aiPhotoState = ref('')
 
 async function openDetail(it) {
   selected.value = it
@@ -33,6 +35,42 @@ async function openDetail(it) {
     const r = await api.similar(it.id)
     if (Array.isArray(r)) similar.value = r
   } catch (_) {}
+}
+
+function openAiPhoto() {
+  aiPhotoInput.value?.click()
+}
+
+function onAiPhoto(e) {
+  const file = e.target.files && e.target.files[0]
+  if (!file) return
+  aiPhotoState.value = 'AI 正在识别照片…'
+  const reader = new FileReader()
+  reader.onload = () => {
+    const img = new Image()
+    img.onload = async () => {
+      const max = 900
+      const scale = Math.min(1, max / Math.max(img.width, img.height))
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.round(img.width * scale)
+      canvas.height = Math.round(img.height * scale)
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height)
+      const photo = canvas.toDataURL('image/jpeg', 0.78)
+      let info = { photo }
+      try {
+        const d = await api.vision(photo)
+        if (d && d.ok !== false) {
+          info = { ...info, category: d.category, color: d.color, brand: d.brand, features: d.features, desc: d.desc }
+        }
+      } catch (_) {}
+      sessionStorage.setItem('sg:aiPhoto', JSON.stringify(info))
+      aiPhotoState.value = ''
+      emit('nav', 'publish')
+    }
+    img.src = reader.result
+  }
+  reader.readAsDataURL(file)
+  e.target.value = ''
 }
 async function submitClaim() {
   if (!selected.value) return
@@ -200,6 +238,14 @@ function openOldHelp() {
     <div class="scroll">
       <div class="tip-box" v-html="copy.warning"></div>
 
+      <button type="button" class="ai-photo-entry" @click="openAiPhoto">
+        <span class="ape-ico">📷</span>
+        <span class="ape-copy"><b>AI 拍照识别</b><i>拍一张，自动识别物品、颜色和特征</i></span>
+        <span class="ape-go">→</span>
+      </button>
+      <input ref="aiPhotoInput" type="file" accept="image/*" capture="environment" style="display:none" @change="onAiPhoto">
+      <div v-if="aiPhotoState" class="ai-photo-state">{{ aiPhotoState }}</div>
+
       <div class="list-meta">
         <b>{{ visible.length }}</b> 条{{ type === 'lost' ? '招领' : '寻物' }} · {{ copy.hint }}
         <button type="button" class="closed-toggle" @click="showClosed = !showClosed">{{ showClosed ? '隐藏已结束' : '显示已结束' }}</button>
@@ -328,5 +374,16 @@ function openOldHelp() {
 
 <style scoped>
 .similar-verdict { font-size:9px; color:#A97A00; margin-top:2px; }
+</style>
+
+
+<style scoped>
+.ai-photo-entry { width:100%; display:flex; align-items:center; gap:9px; border:1px solid #E4D4F7; background:linear-gradient(135deg,#FBF8FF,#F4ECFC); border-radius:13px; padding:10px 12px; margin-top:9px; font-family:inherit; text-align:left; }
+.ape-ico { width:32px; height:32px; flex:0 0 32px; border-radius:10px; background:linear-gradient(145deg,#6D3BA6,#3B1D63); display:flex; align-items:center; justify-content:center; font-size:15px; }
+.ape-copy { flex:1; display:flex; flex-direction:column; gap:2px; }
+.ape-copy b { font-size:12px; color:#3B1D63; }
+.ape-copy i { font-style:normal; font-size:9.5px; color:#8E7FA3; }
+.ape-go { color:#7A3CB0; font-size:18px; }
+.ai-photo-state { margin-top:6px; font-size:10px; color:#7A3CB0; }
 </style>
 

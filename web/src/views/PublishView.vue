@@ -62,6 +62,18 @@ onMounted(() => {
       if (d[k]) form[k] = d[k]
     }
   } catch (_) {}
+  try {
+    const ai = JSON.parse(sessionStorage.getItem('sg:aiPhoto') || '{}')
+    if (ai.photo) {
+      photo.value = ai.photo
+      if (!form.title && ai.category) form.title = String(ai.category).slice(0, 30)
+      if (!form.desc) {
+        form.desc = [ai.color, ai.brand, ai.features, ai.desc].filter(Boolean).join('，').slice(0, 300)
+      }
+      visionState.value = 'AI 识别：' + [ai.category, ai.color, ai.features].filter(Boolean).join(' · ')
+      sessionStorage.removeItem('sg:aiPhoto')
+    }
+  } catch (_) {}
 })
 watch(form, () => {
   if (props.editItem) return
