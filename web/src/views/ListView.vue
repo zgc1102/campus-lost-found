@@ -271,6 +271,7 @@ function openOldHelp() {
           <div v-if="s.similarityDetail?.reasons?.length" class="similar-why">
             <i v-for="r in s.similarityDetail.reasons" :key="r">{{ r }}</i>
           </div>
+          <div v-if="s.similarityDetail?.verdict" class="similar-verdict">{{ s.similarityDetail.verdict }}</div>
         </div>
       </div>
       <div class="sa" style="margin-top:8px">📍 {{ selected.place || '未填写地点' }} · {{ fmt(selected.createdAt) }}</div>
@@ -322,5 +323,10 @@ function openOldHelp() {
 
 <style scoped>
 .closed-toggle { float:right; border:0; background:transparent; color:#8E7FA3; font-family:inherit; font-size:9.5px; text-decoration:underline; padding:0; }
+</style>
+
+
+<style scoped>
+.similar-verdict { font-size:9px; color:#A97A00; margin-top:2px; }
 </style>
 

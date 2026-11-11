@@ -212,7 +212,7 @@ function fmt(ts) {
           <button v-if="selected.report.status !== 'published' && selected.report.status !== 'closed'" type="button" class="btn ghost" @click="publishReport">公开为招领</button>
           <button v-if="selected.report.status !== 'closed'" type="button" class="btn ghost" @click="closeReport">已找回 / 关闭</button>
         </template>
-        <button v-if="selected.itemId" type="button" class="btn ghost" @click="goItem">查看对应内容</button>
+        <button v-if="selected.itemId && selected.type !== 'pickup'" type="button" class="btn ghost" @click="goItem">查看对应内容</button>
         <button type="button" class="btn ghost" @click="ignoreNotice">不是我的 / 忽略</button>
       </div>
     </div>

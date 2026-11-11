@@ -183,6 +183,8 @@ def _tag_public(tag, base_url="", with_qr=False):
         "createdAt": tag.get("createdAt"),
         "notifyCount": tag.get("notifyCount") or 0,
         "deactivated": not tag.get("active", True),
+        "verified": True,
+        "officialHost": "shiguangli.work",
         "createdAt": tag.get("createdAt"),
         "url": (base_url.rstrip("/") + "/?tag=" + str(tag.get("code") or "")) if base_url else "",
     }
@@ -2362,7 +2364,10 @@ class Handler(BaseHTTPRequestHandler):
                     "text": round(jac * 100),
                     "category": bool(cat_match),
                     "place": bool(place_match),
-                    "reasons": _reasons
+                    "reasons": _reasons,
+                    "verdict": ("类别一致，可优先核对" if cat_match
+                                else "类别不同，仅作参考" if not place_match
+                                else "地点接近但类别不同，建议核对"),
                 }
                 out.append(row)
             return self._json(out)

@@ -118,6 +118,7 @@ function fmt(ts) {
 
       <div v-if="myTag" class="tag-mine">
         <div class="tm-head"><b>我的拾光码</b><span class="tm-dot">长期有效</span></div>
+        <img v-if="myTag.qrData" :src="myTag.qrData" class="tm-qr" alt="拾光码二维码">
         <div class="tm-code">{{ myTag.code }}</div>
         <div class="tm-meta">{{ myTag.itemName || '我的物品' }} · 注册于 {{ new Date(myTag.createdAt).toLocaleDateString('zh-CN') }}</div>
         <div class="tm-warn">此码长期有效，不随版本更新失效。如果不再使用，建议及时注销，避免被他人反复扫码打扰。</div>
@@ -227,4 +228,9 @@ function fmt(ts) {
 .empty-tag .tm-meta { margin-bottom:2px; }
 </style>
 
+
+
+<style scoped>
+.tm-qr { width:112px; height:112px; display:block; margin:8px auto 4px; border-radius:8px; }
+</style>
 
