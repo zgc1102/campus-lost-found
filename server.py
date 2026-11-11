@@ -2547,6 +2547,16 @@ class Handler(BaseHTTPRequestHandler):
                 item_map = {x.get("id"): x for x in load_items()}
                 claim_map = {x.get("id"): x for x in load_all_claims()}
                 report_map = {x.get("id"): x for x in load_tag_reports()}
+            # 私有上报 7 天未处理自动过期，避免一直挂着
+            _expired = False
+            for rid, rp in report_map.items():
+                if rp.get("status") == "pending" and now_ms() - int(rp.get("createdAt") or 0) > 7 * 86400000:
+                    rp["status"] = "expired"
+                    rp["updatedAt"] = now_ms()
+                    _expired = True
+            if _expired:
+                with LOCK:
+                    save_tag_reports(list(report_map.values()))
             mine = []
             for n in notices:
                 if n.get("owner") != owner:
@@ -3003,6 +3013,16 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"error": "拾光码不存在"}, 404)
             if not tag.get("active", True):
                 return self._json({"error": "此码已注销，感谢您的一份好意"}, 410)
+            finder = self._owner() or ("ip_" + (self.headers.get("X-Forwarded-For") or "unknown")[:40])
+            with LOCK:
+                reports_now = load_tag_reports()
+            if finder in (tag.get("blockedFinders") or []):
+                return self._json({"error": "该设备已被失主屏蔽"}, 403)
+            now = now_ms()
+            if any(r.get("tagCode") == code and r.get("finder") == finder
+                   and now - int(r.get("createdAt") or 0) < 86400000
+                   and r.get("status") != "closed" for r in reports_now):
+                return self._json({"error": "你今天已经上报过这个拾光码，请等待失主处理"}, 429)
             _ok, _why = moderate_text(found_item + " " + message + " " + contact, "扫码上报")
             if not _ok:
                 return self._json({"error": "内容未通过审核：" + _why}, 400)
@@ -3017,7 +3037,7 @@ class Handler(BaseHTTPRequestHandler):
                     "owner": tag.get("owner"),
                     "tagCode": code,
                     "tagItem": tag.get("itemName") or "",
-                    "finder": self._owner(),
+                    "finder": finder,
                     "itemName": found_item or "捡到物品",
                     "message": message or "我捡到了，请联系我",
                     "contact": contact,
@@ -3551,6 +3571,30 @@ class Handler(BaseHTTPRequestHandler):
                 save_notices(notices)
             return self._json({"ok": True, "itemId": created["id"]})
 
+        if path.startswith("/api/reports/") and path.endswith("/block"):
+            owner = self._owner()
+            report_id = path[len("/api/reports/"):-len("/block")]
+            with LOCK:
+                reports = load_tag_reports()
+                report = next((r for r in reports if r.get("id") == report_id), None)
+                if not report:
+                    return self._json({"error": "捡到上报不存在"}, 404)
+                if report.get("owner") != owner:
+                    return self._json({"error": "只有失主能屏蔽"}, 403)
+                tags = load_tags()
+                for tag in tags:
+                    if tag.get("code") == report.get("tagCode"):
+                        blocked = tag.get("blockedFinders") or []
+                        if report.get("finder") and report["finder"] not in blocked:
+                            blocked.append(report["finder"])
+                        tag["blockedFinders"] = blocked[-50:]
+                        save_tags(tags)
+                        break
+                report["status"] = "closed"
+                report["updatedAt"] = now_ms()
+                save_tag_reports(reports)
+            return self._json({"ok": True})
+
         if path.startswith("/api/reports/") and path.endswith("/close"):
             owner = self._owner()
             report_id = path[len("/api/reports/"):-len("/close")]
@@ -3564,6 +3608,13 @@ class Handler(BaseHTTPRequestHandler):
                 report["status"] = "closed"
                 report["updatedAt"] = now_ms()
                 save_tag_reports(reports)
+                tags = load_tags()
+                for tag in tags:
+                    if tag.get("code") == report.get("tagCode"):
+                        tag["active"] = False
+                        tag["pausedAt"] = now_ms()
+                        save_tags(tags)
+                        break
                 if report.get("itemId"):
                     items = load_items()
                     for it in items:

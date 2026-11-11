@@ -10,6 +10,7 @@ const note = ref('')
 const result = ref(null)
 const loading = ref(false)
 const error = ref('')
+const lookup = ref('')
 
 async function generate() {
   error.value = ''
@@ -51,6 +52,12 @@ async function cancelTag() {
   }
 }
 
+function openLookup() {
+  const code = lookup.value.trim().toUpperCase().replace(/^.*[?&]tag=/, '').replace(/[^A-Z0-9]/g, '')
+  if (!code) { error.value = '请输入拾光码'; return }
+  location.href = '/?tag=' + encodeURIComponent(code)
+}
+
 onMounted(async () => {
   try {
     const list = await api.myTags()
@@ -85,6 +92,10 @@ function qrError() {
     <div class="scroll tag-body">
       <div class="tag-intro">
         一个拾光码可以贴在任何物品上：电脑、键盘、校园卡、充电器都行。捡到的人扫码后，可以只给你发通知，也可以直接看到你的电话。
+      </div>
+      <div class="tag-lookup">
+        <input v-model="lookup" maxlength="60" placeholder="扫不出来？输入拾光码，如 SGBEA45A">
+        <button type="button" @click="openLookup">查看</button>
       </div>
 
       <div class="tag-sec">
@@ -163,5 +174,12 @@ function qrError() {
 
 <style scoped>
 .tr-security { margin-top:6px; font-size:9px; line-height:1.6; color:#8E7FA3; }
+</style>
+
+
+<style scoped>
+.tag-lookup { display:flex; gap:6px; margin:8px 0 4px; }
+.tag-lookup input { flex:1; min-width:0; border:1px solid #EADFF5; background:#FBF8FF; border-radius:9px; padding:8px; font-family:inherit; font-size:10.5px; }
+.tag-lookup button { border:1px solid #E4D4F7; background:#F1E8FB; color:#5B2A91; border-radius:9px; padding:0 10px; font-family:inherit; font-size:10.5px; }
 </style>
 

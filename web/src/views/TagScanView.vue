@@ -79,6 +79,7 @@ async function send() {
           <p class="scan-phone">失主联系方式：{{ tag.mode === 'phone' && tag.phoneFull ? tag.phoneFull : (tag.phoneMasked || '已隐藏') }}</p>
           <p class="scan-hint">你不需要注册，也不用曝光自己。留一句话，失主会收到通知。</p>
           <div class="scan-policy">此码长期有效 · 不随网站版本更新失效</div>
+          <div class="scan-verified">✓ 官方校验通过 · 码有效</div>
           <div class="scan-trust">
             <b>官方站点：shiguangli.work</b>
             <span>只在本站内留言，不会要求转账、付款、下载 App 或填写银行卡。</span>
@@ -144,5 +145,10 @@ async function send() {
 .scan-trust { margin-top:10px; padding:9px 10px; border:1px dashed #D8C8EE; border-radius:10px; text-align:left; background:#FBF8FF; }
 .scan-trust b { display:block; font-size:10px; color:#3B1D63; margin-bottom:3px; }
 .scan-trust span { display:block; font-size:9px; line-height:1.6; color:#8E7FA3; }
+</style>
+
+
+<style scoped>
+.scan-verified { margin-top:7px; display:inline-block; font-size:9px; color:#2F7D46; background:#EAF7EE; border:1px solid #CFE8D6; border-radius:99px; padding:4px 8px; }
 </style>
 

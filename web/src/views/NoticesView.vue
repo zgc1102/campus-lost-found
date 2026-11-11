@@ -110,8 +110,19 @@ async function closeReport() {
     if (!rid) return
     await api.reportClose(rid)
     selected.value.report.status = 'closed'
-    actionMsg.value = '已标记为找回 / 关闭'
+    actionMsg.value = '已标记为找回 / 关闭，拾光码已自动停用'
   } catch (e) { actionMsg.value = e.message || '关闭失败' }
+}
+
+async function blockReport() {
+  const rid = selected.value.report?.id
+  if (!rid) return
+  if (!confirm('屏蔽这个上报设备？之后它不能再通过此码骚扰你。')) return
+  try {
+    await api.reportBlock(rid)
+    selected.value.report.status = 'closed'
+    actionMsg.value = '已屏蔽该设备，并关闭这条上报'
+  } catch (e) { actionMsg.value = e.message || '屏蔽失败' }
 }
 
 async function helpAction(status) {
@@ -223,6 +234,7 @@ function fmt(ts) {
           <button type="button" class="btn" @click="revealContact">联系捡到的人</button>
           <button v-if="selected.report.status !== 'published' && selected.report.status !== 'closed'" type="button" class="btn ghost" @click="publishReport">公开为招领</button>
           <button v-if="selected.report.status !== 'closed'" type="button" class="btn ghost" @click="closeReport">已找回 / 关闭</button>
+          <button v-if="selected.report.status !== 'closed'" type="button" class="btn ghost" @click="blockReport">屏蔽此人</button>
           <button type="button" class="btn ghost" @click="ignoreNotice">不是我的 / 忽略</button>
         </template>
         <template v-else-if="selected.itemType === 'help'">

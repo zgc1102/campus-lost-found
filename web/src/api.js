@@ -142,6 +142,9 @@ export const api = {
   reportClose(id) {
     return call('/reports/' + encodeURIComponent(id) + '/close', { method: 'POST' })
   },
+  reportBlock(id) {
+    return call('/reports/' + encodeURIComponent(id) + '/block', { method: 'POST' })
+  },
   adminLogin(password) {
     return call('/login', { method: 'POST', body: JSON.stringify({ password }) })
   },
