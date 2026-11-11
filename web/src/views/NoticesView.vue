@@ -184,18 +184,48 @@ function fmt(ts) {
       <div class="t">通知详情</div>
     </div>
     <div class="scroll nd-scroll">
-      <div class="nd-kicker">{{ typeLabel(selected.type, selected.itemType) }}</div>
-      <h2>{{ selected.report?.itemName || selected.itemTitle || '通知详情' }}</h2>
-      <div class="nd-text">{{ selected.report?.message || selected.text }}</div>
-      <div v-if="selected.report?.tagItem" class="nd-meta">拾光码物品：{{ selected.report.tagItem }}</div>
-      <div v-if="selected.report?.status" class="nd-status">状态：{{ ({pending:'待确认', contacted:'已联系', published:'已公开为招领', closed:'已找回'})[selected.report.status] || selected.report.status }}</div>
-      <div v-if="selected.report?.at" class="nd-meta">上报时间：{{ fmt(selected.report.at) }}</div>
+      <div class="nd-hero" :class="'nd-hero-' + (selected.type || 'system')">
+        <div class="nd-hero-icon">{{ selected.type === 'pickup' ? '🔖' : selected.itemType === 'help' ? '🤝' : '🔔' }}</div>
+        <div class="nd-hero-main">
+          <div class="nd-kicker">{{ typeLabel(selected.type, selected.itemType) }}</div>
+          <h2>{{ selected.report?.itemName || selected.itemTitle || '通知详情' }}</h2>
+          <div class="nd-time">{{ fmt(selected.at) }}</div>
+        </div>
+        <div v-if="selected.report" class="nd-state">{{ ({pending:'待确认', contacted:'已联系', published:'已公开', closed:'已找回'})[selected.report.status] || selected.report.status }}</div>
+      </div>
+
+      <div v-if="selected.report" class="nd-card">
+        <div class="nd-card-title">捡到上报</div>
+        <div class="nd-kv"><span>捡到物品</span><b>{{ selected.report.itemName || '捡到物品' }}</b></div>
+        <div class="nd-kv"><span>拾光码物品</span><b>{{ selected.report.tagItem || '我的物品' }}</b></div>
+        <div class="nd-kv"><span>上报时间</span><b>{{ fmt(selected.report.at) }}</b></div>
+        <div class="nd-message">{{ selected.report.message }}</div>
+      </div>
+
+      <div v-else class="nd-card">
+        <div class="nd-card-title">通知内容</div>
+        <div class="nd-message">{{ selected.text }}</div>
+        <div v-if="!selected.itemId" class="nd-legacy">这条是旧版通知，只保留了文字记录，没有可操作的上报详情。</div>
+      </div>
+
+      <div v-if="selected.itemType === 'help'" class="nd-card nd-help-card">
+        <div class="nd-card-title">帮忙说明</div>
+        <div class="nd-message">{{ selected.claimMessage || selected.report?.message || selected.text }}</div>
+        <div v-if="selected.claimContact" class="nd-contact">对方联系方式：{{ selected.claimContact }}</div>
+        <div v-if="selected.claimStatus" class="nd-state" style="margin-top:8px">{{ ({pending:'待处理', accepted:'进行中', completed:'已完成', rejected:'已婉拒', need_more:'待补充'})[selected.claimStatus] || selected.claimStatus }}</div>
+      </div>
+
       <div v-if="contact" class="nd-contact">联系方式：{{ contact }}</div>
       <div v-if="actionMsg" class="nd-msg">{{ actionMsg }}</div>
-      <div v-if="selected.itemType === 'help'" class="nd-claim">
-        <div class="nd-meta">帮忙说明：{{ selected.claimMessage || selected.report?.message || selected.text }}</div>
-        <div v-if="selected.claimContact" class="nd-contact">对方联系方式：{{ selected.claimContact }}</div>
-        <div class="nd-actions">
+
+      <div class="nd-actions">
+        <template v-if="selected.type === 'pickup' && selected.report">
+          <button type="button" class="btn" @click="revealContact">联系捡到的人</button>
+          <button v-if="selected.report.status !== 'published' && selected.report.status !== 'closed'" type="button" class="btn ghost" @click="publishReport">公开为招领</button>
+          <button v-if="selected.report.status !== 'closed'" type="button" class="btn ghost" @click="closeReport">已找回 / 关闭</button>
+          <button type="button" class="btn ghost" @click="ignoreNotice">不是我的 / 忽略</button>
+        </template>
+        <template v-else-if="selected.itemType === 'help'">
           <template v-if="selected.claimId && selected.claimStatus === 'pending'">
             <button type="button" class="btn" @click="helpAction('accepted')">接受帮忙</button>
             <button type="button" class="btn ghost" @click="helpAction('need_more')">请补充</button>
@@ -204,16 +234,11 @@ function fmt(ts) {
           <button v-if="selected.claimId && selected.claimStatus === 'accepted'" type="button" class="btn" @click="completeHelp">完成帮助</button>
           <button type="button" class="btn ghost" @click="goItem">查看求助详情</button>
           <button type="button" class="btn ghost" @click="ignoreNotice">忽略</button>
-        </div>
-      </div>
-      <div v-else class="nd-actions">
-        <template v-if="selected.type === 'pickup' && selected.report">
-          <button type="button" class="btn" @click="revealContact">联系捡到的人</button>
-          <button v-if="selected.report.status !== 'published' && selected.report.status !== 'closed'" type="button" class="btn ghost" @click="publishReport">公开为招领</button>
-          <button v-if="selected.report.status !== 'closed'" type="button" class="btn ghost" @click="closeReport">已找回 / 关闭</button>
         </template>
-        <button v-if="selected.itemId && selected.type !== 'pickup'" type="button" class="btn ghost" @click="goItem">查看对应内容</button>
-        <button type="button" class="btn ghost" @click="ignoreNotice">不是我的 / 忽略</button>
+        <template v-else>
+          <button v-if="selected.itemId" type="button" class="btn ghost" @click="goItem">查看对应内容</button>
+          <button type="button" class="btn ghost" @click="ignoreNotice">忽略</button>
+        </template>
       </div>
     </div>
   </section>
@@ -243,5 +268,28 @@ function fmt(ts) {
 .notice-tabs button { border:0; background:transparent; color:#8E7FA3; font-family:inherit; font-size:11px; padding:6px 8px 8px; border-bottom:2px solid transparent; white-space:nowrap; }
 .notice-tabs button.on { color:var(--primary); border-bottom-color:var(--primary); font-weight:600; }
 .notice-tabs button i { font-style:normal; font-size:8px; color:#fff; background:#B45A5A; border-radius:99px; padding:1px 4px; margin-left:3px; }
+</style>
+
+
+<style scoped>
+.nd-scroll { padding:12px 12px 28px; }
+.nd-hero { display:flex; align-items:flex-start; gap:10px; background:#fff; border:1px solid #EADFF5; border-radius:16px; padding:14px; margin-bottom:10px; }
+.nd-hero-icon { width:38px; height:38px; flex:0 0 38px; border-radius:12px; background:linear-gradient(145deg,#6D3BA6,#3B1D63); display:flex; align-items:center; justify-content:center; font-size:18px; }
+.nd-hero-main { flex:1; min-width:0; }
+.nd-hero-main h2 { margin:4px 0 3px; font-size:17px; line-height:1.35; color:var(--ink); }
+.nd-time { font-size:9.5px; color:#A99BB9; }
+.nd-state { flex:0 0 auto; font-size:9px; color:#5B2A91; background:#F1E8FB; border-radius:99px; padding:4px 7px; }
+.nd-card { background:#fff; border:1px solid #EADFF5; border-radius:14px; padding:12px 13px; margin-bottom:10px; }
+.nd-card-title { font-size:11px; font-weight:600; color:#3B1D63; margin-bottom:8px; }
+.nd-kv { display:flex; justify-content:space-between; gap:10px; font-size:10.5px; padding:4px 0; border-bottom:1px dashed #F1EBF7; }
+.nd-kv span { color:#8E7FA3; }
+.nd-kv b { color:#3B1D63; font-weight:500; text-align:right; }
+.nd-message { margin-top:9px; background:#FAF7FE; border-radius:9px; padding:9px 10px; font-size:12px; line-height:1.8; color:#4E445D; white-space:pre-wrap; }
+.nd-legacy { margin-top:8px; font-size:9.5px; color:#A97A00; line-height:1.6; }
+.nd-contact { margin:8px 0; padding:8px 10px; border-radius:9px; background:#F1E8FB; color:#3B1D63; font-size:11px; }
+.nd-msg { margin:8px 0; font-size:10.5px; color:#A97A00; }
+.nd-actions { display:flex; flex-wrap:wrap; gap:7px; margin-top:12px; }
+.nd-actions .btn { flex:1; min-width:120px; }
+.nd-help-card { border-color:#D8E8DD; background:#FBFEFC; }
 </style>
 
