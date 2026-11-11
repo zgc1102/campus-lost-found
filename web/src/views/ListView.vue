@@ -131,7 +131,7 @@ function actionLabel(x) {
   return x.type === 'lost' ? '提供线索' : '认领'
 }
 function statusChip(x) {
-  const map = { claimed: '已认领', closed: '已闭环', pending: '审核中' }
+  const map = { claimed: '进行中', closed: '已结束', pending: '审核中', rejected: '未通过', removed: '已下架' }
   return map[x.status] || ''
 }
 function canClaim(x) {

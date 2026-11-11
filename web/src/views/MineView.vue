@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { onMounted, ref } from 'vue'
 import { api } from '../api'
 
@@ -97,7 +97,7 @@ async function completeClaim(c) {
   }
 }
 function status(x) {
-  return ({ pending: '审核中', approved: '已上架', rejected: '已驳回', closed: '已闭环', claimed: '已认领', removed: '已下架' })[x.status] || x.status
+  return ({ pending: '审核中', approved: '进行中', rejected: '未通过', closed: '已结束', claimed: '进行中', removed: '已下架' })[x.status] || x.status
 }
 function fmt(ts) {
   if (!ts) return ''
@@ -171,7 +171,7 @@ function fmt(ts) {
         </div>
       </div>
 
-      <div class="hintline">{{ items.length ? '共 ' + items.length + ' 条发布，只有「已上架」的才会出现在公共列表里。' : '你还没有发布过内容。提交后会先进入审核，通过后才上架。' }}</div>
+      <div class="hintline">{{ items.length ? '共 ' + items.length + ' 条发布，只有「进行中」的才会出现在公共列表里。' : '你还没有发布过内容。提交后会先进入审核，通过后才上架。' }}</div>
 
       <div v-if="loading" class="empty">正在读取…</div>
       <div v-else-if="!items.length" class="empty">

@@ -124,6 +124,9 @@ export const api = {
   readNotices() {
     return call('/notices/read', { method: 'POST' })
   },
+  readNotice(id) {
+    return call('/notices/' + encodeURIComponent(id) + '/read', { method: 'POST' })
+  },
   noticeContact(id) {
     return call('/notices/' + encodeURIComponent(id) + '/contact', { method: 'POST' })
   },

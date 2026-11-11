@@ -1,14 +1,32 @@
-﻿<script setup>
-import { onMounted, ref } from 'vue'
+<script setup>
+import { computed, onMounted, ref } from 'vue'
 import { api } from '../api'
 
 const emit = defineEmits(['nav'])
 const items = ref([])
 const loading = ref(true)
 const unread = ref(0)
+const tab = ref('all')
 const selected = ref(null)
 const contact = ref('')
 const actionMsg = ref('')
+const groups = [
+  ['all', '全部'],
+  ['lost', '失物'],
+  ['help', '求助'],
+  ['tag', '拾光码'],
+  ['system', '系统']
+]
+function groupOf(n) {
+  if (n.type === 'pickup' || n.report) return 'tag'
+  if (n.itemType === 'help') return 'help'
+  if (n.itemType === 'lost' || n.itemType === 'found' || ['match', 'claim', 'accepted', 'rejected', 'done'].includes(n.type)) return 'lost'
+  return 'system'
+}
+const visibleItems = computed(() => tab.value === 'all' ? items.value : items.value.filter((n) => groupOf(n) === tab.value))
+function groupUnread(id) {
+  return items.value.filter((n) => !n.read && (id === 'all' || groupOf(n) === id)).length
+}
 
 onMounted(load)
 async function load() {
@@ -50,6 +68,11 @@ function openNotice(n) {
   selected.value = n
   contact.value = ''
   actionMsg.value = ''
+  if (!n.read) {
+    n.read = true
+    unread.value = Math.max(0, unread.value - 1)
+    api.readNotice(n.id).catch(() => {})
+  }
 }
 
 function goItem() {
@@ -127,12 +150,17 @@ function fmt(ts) {
       <div class="back" @click="$emit('nav', 'home')">‹</div>
       <div class="t">通知</div>
     </div>
+    <div class="notice-tabs">
+      <button v-for="[id, label] in groups" :key="id" type="button" :class="{ on: tab === id }" @click="tab = id">
+        {{ label }}<i v-if="groupUnread(id)">{{ groupUnread(id) }}</i>
+      </button>
+    </div>
     <div class="scroll">
       <div v-if="loading" class="empty">正在读取通知…</div>
-      <div v-else-if="!items.length" class="empty">还没有通知</div>
+      <div v-else-if="!visibleItems.length" class="empty">这个分类还没有通知</div>
       <template v-else>
         <div
-          v-for="n in items"
+          v-for="n in visibleItems"
           :key="n.id"
           class="mini"
           :style="n.read ? 'opacity:.7' : ''"
@@ -208,4 +236,12 @@ function fmt(ts) {
 .nd-status { margin-top: 8px; display:inline-block; font-size:10px; color:#5B2A91; background:#F1E8FB; border-radius:99px; padding:4px 8px; }
 </style>
 
+
+
+<style scoped>
+.notice-tabs { display:flex; gap:6px; overflow-x:auto; padding:8px 10px 0; background:#fff; border-bottom:1px solid var(--line); flex-shrink:0; }
+.notice-tabs button { border:0; background:transparent; color:#8E7FA3; font-family:inherit; font-size:11px; padding:6px 8px 8px; border-bottom:2px solid transparent; white-space:nowrap; }
+.notice-tabs button.on { color:var(--primary); border-bottom-color:var(--primary); font-weight:600; }
+.notice-tabs button i { font-style:normal; font-size:8px; color:#fff; background:#B45A5A; border-radius:99px; padding:1px 4px; margin-left:3px; }
+</style>
 

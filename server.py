@@ -3627,6 +3627,20 @@ class Handler(BaseHTTPRequestHandler):
                 save_notices(notices)
             return self._json({"ok": True, "itemId": created["id"]})
 
+        if path.startswith("/api/notices/") and path.endswith("/read"):
+            owner = self._owner()
+            notice_id = path[len("/api/notices/"):-len("/read")]
+            with LOCK:
+                notices = load_notices()
+                notice = next((n for n in notices if n.get("id") == notice_id), None)
+                if not notice:
+                    return self._json({"error": "通知不存在"}, 404)
+                if notice.get("owner") != owner:
+                    return self._json({"error": "无权操作"}, 403)
+                notice["read"] = True
+                save_notices(notices)
+            return self._json({"ok": True})
+
         if path == "/api/notices/read":
             owner = self._owner()
             with LOCK:
