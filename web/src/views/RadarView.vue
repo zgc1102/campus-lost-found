@@ -18,6 +18,7 @@ const detective = ref(null)
 const scanned = ref(0)
 const steps = ref([])
 const detectiveSteps = ref([])
+const selectedMatch = ref(null)
 
 async function scan() {
   error.value = ''
@@ -64,8 +65,12 @@ function askCampus() {
   emit('nav', 'ask')
 }
 function openMatch(m) {
-  sessionStorage.setItem('sg:focusItem', m.item.id)
-  emit('nav', m.item.type === 'lost' ? 'found' : 'lost')
+  selectedMatch.value = m
+}
+function openFullMatch() {
+  if (!selectedMatch.value) return
+  sessionStorage.setItem('sg:focusItem', selectedMatch.value.item.id)
+  emit('nav', selectedMatch.value.item.type === 'lost' ? 'found' : 'lost')
 }
 </script>
 
@@ -175,6 +180,20 @@ function openMatch(m) {
         <button type="button" class="dt-ask" @click="askCampus">还拿不准？问校园 AI</button>
       </template>
     </div>
+      <div v-if="selectedMatch" class="sheet vue-sheet show radar-detail">
+        <button type="button" class="sheet-x" @click="selectedMatch = null">收起</button>
+        <div class="rd-detail-score">{{ selectedMatch.score }}%</div>
+        <h2>{{ selectedMatch.item.title }}</h2>
+        <div class="rd-detail-meta">{{ selectedMatch.item.place || '未填写地点' }} · {{ selectedMatch.confidence }}置信</div>
+        <p>{{ selectedMatch.item.desc }}</p>
+        <div v-if="selectedMatch.reasons?.length" class="rd-tech" style="margin-top:8px">
+          <span v-for="r in selectedMatch.reasons" :key="r">{{ r }}</span>
+        </div>
+        <div class="rd-detail-actions">
+          <button type="button" class="btn" @click="openFullMatch">打开完整详情</button>
+          <button type="button" class="btn ghost" @click="selectedMatch = null">继续看匹配</button>
+        </div>
+      </div>
   </section>
 </template>
 
@@ -266,5 +285,15 @@ function openMatch(m) {
 .dt-tech span { font-size:8.5px; color:#7A5AA8; background:#F7F0FF; border-radius:4px; padding:3px 5px; }
 .dt-step { font-size:10px; line-height:1.55; color:#6E607F; border-top:1px dashed #EFE8F7; padding:5px 0; }
 .dt-step b { color:#3B1D63; margin-right:5px; }
+</style>
+
+
+<style scoped>
+.radar-detail h2 { margin:8px 0 4px; font-size:18px; }
+.rd-detail-score { display:inline-block; font-size:12px; color:#fff; background:linear-gradient(135deg,#5B2A91,#7A3CB0); border-radius:99px; padding:4px 8px; }
+.rd-detail-meta { font-size:10px; color:#8E7FA3; }
+.radar-detail p { font-size:12px; line-height:1.8; color:#4E445D; }
+.rd-detail-actions { display:flex; gap:8px; margin-top:14px; }
+.rd-detail-actions .btn { flex:1; }
 </style>
 

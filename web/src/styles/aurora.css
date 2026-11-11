@@ -789,3 +789,10 @@ body:has(.sheet.show) .bottom-nav{transform:translate(-50%,120%)!important;}
   .bottom-nav { left: 0 !important; width: 100vw !important; max-width: 100vw !important; transform: none !important; }
 }
 
+
+@media (max-width: 759px) {
+  .scroll { -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+  .screen.active, .item, .mini, .rd-match, .dt-action, .entry-card { animation: none !important; }
+  .ticker-track { animation-duration: 60s; }
+}
+

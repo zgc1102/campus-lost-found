@@ -292,9 +292,9 @@ async function submit() {
             <div class="upload-box" @click="fileInput && fileInput.click()">
               <div class="ub-ico">📷</div>
               <div class="ub-t">点击上传 / 拍照</div>
-              <div class="ub-s">会自动压缩，只保存在本机</div>
+              <div class="ub-s">AI 会识别物品、颜色和特征，自动帮写描述</div>
             </div>
-            <input ref="fileInput" type="file" accept="image/*" style="display:none" @change="onPhoto">
+            <input ref="fileInput" type="file" accept="image/*" capture="environment" style="display:none" @change="onPhoto">
             <img v-if="photo" :src="photo" alt="预览" style="width:100%;max-height:180px;object-fit:cover;border-radius:10px;margin-top:8px">
             <div v-if="visionState" class="sa" style="margin-top:5px">{{ visionState }}</div>
           </div>

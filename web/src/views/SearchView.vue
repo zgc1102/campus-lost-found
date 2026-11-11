@@ -8,6 +8,10 @@ const items = ref([])
 const loading = ref(true)
 const imgMode = ref(false)
 const imgCat = ref('')
+function openResult(it) {
+  sessionStorage.setItem('sg:focusItem', it.id)
+  emit('nav', it.type === 'help' ? 'help' : (it.type === 'lost' ? 'found' : 'lost'))
+}
 const samples = [
   { cat: 'umbrella', e: '🌂', name: '雨伞' },
   { cat: 'card', e: '💳', name: '校园卡' },
@@ -69,7 +73,7 @@ function label(x) {
       <div v-else-if="!q.trim() && !imgCat" class="empty">输入关键词，或点一张示例图搜全站</div>
       <div v-else-if="!results.length" class="empty">没有找到相关内容</div>
       <div v-else class="vue-list">
-        <article v-for="it in results" :key="it.id" class="item" @click="$emit('nav', it.type === 'help' ? 'help' : (it.type === 'lost' ? 'found' : 'lost'))">
+        <article v-for="it in results" :key="it.id" class="item" @click="openResult(it)">
           <div class="thumb">{{ it.type === 'help' ? '🤝' : '📦' }}</div>
           <div class="body">
             <div class="tt"><span class="src-tag">{{ label(it) }}</span>{{ it.title }}</div>
