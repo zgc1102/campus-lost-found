@@ -14,6 +14,9 @@ const contact = ref('')
 const itemName = ref('')
 const sent = ref(false)
 const sending = ref(false)
+const reportId = ref('')
+const chat = ref([])
+const chatText = ref('')
 
 onMounted(async () => {
   if (!props.code) { error.value = '拾光码链接不完整'; loading.value = false; return }
@@ -35,17 +38,36 @@ async function send() {
   sending.value = true
   error.value = ''
   try {
-    await api.notifyTag(props.code, {
+    const r = await api.notifyTag(props.code, {
       message: message.value.trim(),
       contact: contact.value.trim(),
       itemName: itemName.value.trim()
     })
+    reportId.value = r.reportId || ''
     sent.value = true
+    if (reportId.value) loadChat()
   } catch (e) {
     error.value = e.message || '通知发送失败'
   } finally {
     sending.value = false
   }
+}
+
+async function loadChat() {
+  if (!reportId.value) return
+  try {
+    const r = await api.reportMessages(reportId.value)
+    chat.value = r.messages || []
+  } catch (_) {}
+}
+
+async function sendChat() {
+  if (!chatText.value.trim() || !reportId.value) return
+  try {
+    await api.reportSend(reportId.value, chatText.value.trim())
+    chatText.value = ''
+    await loadChat()
+  } catch (e) { error.value = e.message || '发送失败' }
 }
 </script>
 
@@ -89,6 +111,16 @@ async function send() {
         <div v-if="sent" class="scan-done">
           <b>已通知失主</b>
           <span>失主会在「通知」里看到你的留言。谢谢你把东西还回去。</span>
+        </div>
+        <div v-if="sent && reportId" class="scan-chat">
+          <div class="sc-title">和失主匿名沟通</div>
+          <div v-for="(m, i) in chat" :key="i" class="sc-msg" :class="m.from === 'finder' ? 'mine' : 'other'">
+            <span>{{ m.text }}</span>
+          </div>
+          <div class="sc-input">
+            <input v-model="chatText" maxlength="200" placeholder="回复失主，不需要暴露手机号">
+            <button type="button" @click="sendChat">发送</button>
+          </div>
         </div>
         <div v-else class="scan-form">
           <label>你捡到了什么</label>
@@ -150,5 +182,19 @@ async function send() {
 
 <style scoped>
 .scan-verified { margin-top:7px; display:inline-block; font-size:9px; color:#2F7D46; background:#EAF7EE; border:1px solid #CFE8D6; border-radius:99px; padding:4px 8px; }
+</style>
+
+
+<style scoped>
+.scan-chat { background:#fff; border:1px solid #EADFF5; border-radius:14px; padding:12px; margin-top:10px; }
+.sc-title { font-size:11px; font-weight:600; color:#3B1D63; margin-bottom:8px; }
+.sc-msg { display:flex; margin:5px 0; }
+.sc-msg span { max-width:82%; font-size:11px; line-height:1.6; padding:7px 9px; border-radius:10px; }
+.sc-msg.other span { background:#F4EEFB; color:#4E445D; }
+.sc-msg.mine { justify-content:flex-end; }
+.sc-msg.mine span { background:#5B2A91; color:#fff; }
+.sc-input { display:flex; gap:6px; margin-top:8px; }
+.sc-input input { flex:1; min-width:0; background:#FAF7FE; border:1px solid #EADFF5; border-radius:9px; padding:8px; font-family:inherit; font-size:10.5px; }
+.sc-input button { border:0; background:#5B2A91; color:#fff; border-radius:9px; padding:0 10px; font-family:inherit; font-size:10px; }
 </style>
 

@@ -145,6 +145,12 @@ export const api = {
   reportBlock(id) {
     return call('/reports/' + encodeURIComponent(id) + '/block', { method: 'POST' })
   },
+  reportMessages(id) {
+    return call('/reports/' + encodeURIComponent(id) + '/messages/list', { method: 'POST' })
+  },
+  reportSend(id, text) {
+    return call('/reports/' + encodeURIComponent(id) + '/messages/send', { method: 'POST', body: JSON.stringify({ text }) })
+  },
   adminLogin(password) {
     return call('/login', { method: 'POST', body: JSON.stringify({ password }) })
   },

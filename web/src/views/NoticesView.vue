@@ -10,6 +10,8 @@ const tab = ref('all')
 const selected = ref(null)
 const contact = ref('')
 const actionMsg = ref('')
+const chat = ref([])
+const chatText = ref('')
 const groups = [
   ['all', '全部'],
   ['lost', '失物'],
@@ -68,11 +70,29 @@ function openNotice(n) {
   selected.value = n
   contact.value = ''
   actionMsg.value = ''
+  chat.value = []
+  chatText.value = ''
+  if (n.reportId) loadChat(n.reportId)
   if (!n.read) {
     n.read = true
     unread.value = Math.max(0, unread.value - 1)
     api.readNotice(n.id).catch(() => {})
   }
+}
+
+async function loadChat(rid) {
+  try {
+    const r = await api.reportMessages(rid)
+    chat.value = r.messages || []
+  } catch (_) {}
+}
+async function sendChat() {
+  if (!chatText.value.trim() || !selected.value?.report?.id) return
+  try {
+    await api.reportSend(selected.value.report.id, chatText.value.trim())
+    chatText.value = ''
+    await loadChat(selected.value.report.id)
+  } catch (e) { actionMsg.value = e.message || '发送失败' }
 }
 
 function goItem() {
@@ -213,6 +233,18 @@ function fmt(ts) {
         <div class="nd-message">{{ selected.report.message }}</div>
       </div>
 
+      <div v-if="selected.report" class="nd-card">
+        <div class="nd-card-title">匿名沟通</div>
+        <div v-if="!chat.length" class="nd-message" style="color:#8E7FA3">还没有消息，可以先回复捡到者。</div>
+        <div v-for="(m, i) in chat" :key="i" class="nd-chat" :class="m.from === 'owner' ? 'mine' : 'other'">
+          <span>{{ m.text }}</span>
+        </div>
+        <div class="nd-chat-input">
+          <input v-model="chatText" maxlength="200" placeholder="回复捡到者，不需要暴露手机号">
+          <button type="button" @click="sendChat">发送</button>
+        </div>
+      </div>
+
       <div v-else class="nd-card">
         <div class="nd-card-title">通知内容</div>
         <div class="nd-message">{{ selected.text }}</div>
@@ -303,5 +335,16 @@ function fmt(ts) {
 .nd-actions { display:flex; flex-wrap:wrap; gap:7px; margin-top:12px; }
 .nd-actions .btn { flex:1; min-width:120px; }
 .nd-help-card { border-color:#D8E8DD; background:#FBFEFC; }
+</style>
+
+
+<style scoped>
+.nd-chat { display:flex; margin:5px 0; }
+.nd-chat span { max-width:82%; font-size:11px; line-height:1.6; padding:7px 9px; border-radius:10px; background:#F4EEFB; color:#4E445D; }
+.nd-chat.mine { justify-content:flex-end; }
+.nd-chat.mine span { background:#5B2A91; color:#fff; }
+.nd-chat-input { display:flex; gap:6px; margin-top:8px; }
+.nd-chat-input input { flex:1; min-width:0; background:#FAF7FE; border:1px solid #EADFF5; border-radius:9px; padding:8px; font-family:inherit; font-size:10.5px; }
+.nd-chat-input button { border:0; background:#5B2A91; color:#fff; border-radius:9px; padding:0 10px; font-family:inherit; font-size:10px; }
 </style>
 

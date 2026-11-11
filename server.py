@@ -3066,7 +3066,7 @@ class Handler(BaseHTTPRequestHandler):
                         "at": report["createdAt"],
                     }
                 save_notices(notices)
-            return self._json({"ok": True})
+            return self._json({"ok": True, "reportId": report["id"]})
 
         if path == "/api/agent/radar":
             body = self._read_body()
@@ -3502,6 +3502,47 @@ class Handler(BaseHTTPRequestHandler):
                 add_notice(notices, claim.get("from"), "done",
                            ("《%s》爱心帮助已完成，谢谢你" if in_help else "《%s》已标记完成归还，谢谢你")
                            % (item.get("title") or ""), item.get("id"))
+                save_notices(notices)
+            return self._json({"ok": True})
+
+        if path.startswith("/api/reports/") and (path.endswith("/messages/list") or path.endswith("/messages/send")):
+            owner = self._owner()
+            is_send = path.endswith("/messages/send")
+            report_id = path[len("/api/reports/"):].replace("/messages/send", "").replace("/messages/list", "")
+            with LOCK:
+                reports = load_tag_reports()
+                report = next((r for r in reports if r.get("id") == report_id), None)
+            if not report:
+                return self._json({"error": "上报不存在"}, 404)
+            side = "owner" if report.get("owner") == owner else "finder" if report.get("finder") == owner else ""
+            if not side:
+                return self._json({"error": "无权查看这条对话"}, 403)
+            if not is_send:
+                return self._json({"ok": True, "messages": report.get("messages") or [], "side": side})
+            body = self._read_body()
+            text = str(body.get("text") or "").strip()[:200]
+            if len(text) < 1:
+                return self._json({"error": "请输入消息"}, 400)
+            _ok, _why = moderate_text(text, "拾光码对话", allow_help=True)
+            if not _ok:
+                return self._json({"error": "消息未通过审核：" + _why}, 400)
+            with LOCK:
+                reports = load_tag_reports()
+                report = next((r for r in reports if r.get("id") == report_id), None)
+                msg = {"from": side, "text": text, "at": now_ms()}
+                report.setdefault("messages", []).append(msg)
+                report["messages"] = report["messages"][-50:]
+                if report.get("status") == "pending":
+                    report["status"] = "contacted"
+                report["updatedAt"] = now_ms()
+                save_tag_reports(reports)
+                other = report.get("finder") if side == "owner" else report.get("owner")
+                notices = load_notices()
+                if other:
+                    add_notice(notices, other, "pickup",
+                               ("失主回复：" if side == "owner" else "捡到者回复：") + text, "", "")
+                    if notices:
+                        notices[-1]["reportId"] = report_id
                 save_notices(notices)
             return self._json({"ok": True})
 
