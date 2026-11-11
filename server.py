@@ -3523,7 +3523,7 @@ class Handler(BaseHTTPRequestHandler):
             text = str(body.get("text") or "").strip()[:200]
             if len(text) < 1:
                 return self._json({"error": "请输入消息"}, 400)
-            _ok, _why = moderate_text(text, "拾光码对话", allow_help=True)
+            _ok, _why = moderate_tag(text)
             if not _ok:
                 return self._json({"error": "消息未通过审核：" + _why}, 400)
             with LOCK:
