@@ -2098,9 +2098,14 @@ def vision_analyze(image_b64, mime="image/jpeg"):
         "category 必须写出物品名称，color 必须写颜色。不要输出任何其他文字。",
     ]
     last = {}
-    for prompt in prompts:
+    models = [cfg["model"]]
+    if cfg["model"] != "glm-4v-flash":
+        # 兼容旧版验证可用的视觉模型；主模型不支持图片时自动回退
+        models.append("glm-4v-flash")
+    for model in models:
+      for prompt in prompts:
         payload = {
-            "model": cfg["model"],
+            "model": model,
             "temperature": 0.1,
             "messages": [{"role": "user", "content": [
                 {"type": "text", "text": prompt},
@@ -2126,10 +2131,10 @@ def vision_analyze(image_b64, mime="image/jpeg"):
         if cat and cat not in ("无法识别", "未知", "其他"):
             return {"ok": True, "category": cat[:20], "color": color[:20],
                     "brand": str(obj.get("brand") or "")[:40], "features": feats[:80],
-                    "desc": desc[:120], "model": cfg["model"]}
+                    "desc": desc[:120], "model": model}
         last = {"ok": True, "category": cat[:20], "color": color[:20],
                 "brand": str(obj.get("brand") or "")[:40], "features": feats[:80],
-                "desc": desc[:120], "model": cfg["model"]}
+                "desc": desc[:120], "model": model}
     return last if last.get("ok") else {"ok": False, "reason": last.get("reason") or "AI 没看清，请手动填写"}
 
 
