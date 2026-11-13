@@ -6,6 +6,7 @@ import HelpView from './views/HelpView.vue'
 import HelpPublishView from './views/HelpPublishView.vue'
 import PublishView from './views/PublishView.vue'
 import RadarView from './views/RadarView.vue'
+import MatchView from './views/MatchView.vue'
 import TagView from './views/TagView.vue'
 import TagScanView from './views/TagScanView.vue'
 import MineView from './views/MineView.vue'
@@ -122,6 +123,7 @@ function editItem(item) {
     <HelpPublishView v-else-if="view === 'help-publish'" :key="editingItem ? editingItem.id : 'new-' + helpPublishCat" :help-cat="helpPublishCat" :edit-item="editingItem" @nav="go" />
     <PublishView v-else-if="view === 'publish'" :key="publishType + '-' + helpCat + '-' + (editingItem ? editingItem.id : 'new')" :type="publishType" :help-cat="helpCat" :edit-item="editingItem" @nav="go" />
     <RadarView v-else-if="view === 'radar'" @nav="go" />
+    <MatchView v-else-if="view === 'match'" @nav="go" />
     <TagScanView v-else-if="view === 'tag-scan'" :code="tagCode" @nav="go" />
     <TagView v-else-if="view === 'tag'" @nav="go" />
     <MineView v-else-if="view === 'mine'" @nav="go" @publish="publish" @edit="editItem" />

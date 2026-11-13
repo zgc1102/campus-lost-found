@@ -21,7 +21,6 @@ const claimCheck = ref(null)
 const claimChecking = ref(false)
 const claimCheckError = ref('')
 const photoOpen = ref(false)
-const similar = ref([])
 const showClosed = ref(false)
 const aiPhotoInput = ref(null)
 const aiPhotoState = ref('')
@@ -33,13 +32,8 @@ async function openDetail(it) {
   claimState.value = ''
   claimOpen.value = false
   photoOpen.value = false
-  similar.value = []
   claimCheck.value = null
   claimCheckError.value = ''
-  try {
-    const r = await api.similar(it.id)
-    if (Array.isArray(r)) similar.value = r
-  } catch (_) {}
 }
 
 function openAiPhoto() {
@@ -79,7 +73,7 @@ function onAiPhoto(e) {
 }
 async function submitClaim() {
   if (!selected.value) return
-  if (claimMsg.value.trim().length < 2) { claimState.value = '写一下只有失主知道的细节'; return }
+  if (claimMsg.value.trim().length < 2) { claimState.value = selected.value.type === 'lost' ? '写一下你是在哪里捡到的' : '写一下只有失主知道的细节'; return }
   claiming.value = true
   claimState.value = ''
   try {
@@ -197,7 +191,8 @@ function actionLabel(x) {
   if (x.isMine) return '你发布的'
   if (x.status === 'closed') return '已结束'
   if (x.status === 'claimed') return '进行中'
-  if (x.status !== 'approved') return '暂不可认领'
+  if (x.status !== 'approved') return '暂不可操作'
+  if (x.type === 'lost') return '提供线索'
   if (x.myClaim === 'pending') return '已申请'
   if (x.myClaim === 'accepted' || x.myClaim === 'completed') return '已通过'
   if (x.myClaim === 'need_more') return '补充信息'
@@ -286,6 +281,12 @@ function openOldHelp() {
         <button type="button" class="closed-toggle" @click="showClosed = !showClosed">{{ showClosed ? '隐藏已结束' : '显示已结束' }}</button>
       </div>
 
+      <button type="button" class="match-entry" @click="$emit('nav', 'match')">
+        <span class="me-badge">配对</span>
+        <span class="me-copy"><b>智能匹配报告</b><i>把寻物和招领放在一起，看文本、类别、地点、时间四项依据</i></span>
+        <span class="re-go">查看 →</span>
+      </button>
+
       <button type="button" class="radar-entry" @click="openOldRadar">
         <span class="re-badge">智能</span>
         <span class="re-copy"><b>{{ type === 'lost' ? '寻物雷达' : '招领雷达' }}</b><i>自动比对全站{{ type === 'lost' ? '招领' : '寻物' }}</i></span>
@@ -345,23 +346,13 @@ function openOldHelp() {
         <span>风险 {{ selected.ai.score ?? '—' }}/100</span>
         <p>{{ selected.ai.reason || '智能审核已完成内容分析' }}</p>
       </div>
-      <div v-if="similar.length" class="similar-box">
-        <div class="similar-title">智能相似匹配</div>
-        <div v-for="s in similar" :key="s.id" class="similar-row" @click.stop="openDetail(s)">
-          <b>{{ s.title }}</b><span>{{ s.place || '' }} · {{ s.type === 'lost' ? '寻物' : '招领' }}<em class="similar-pct">{{ s.similarity }}% 相似</em></span>
-          <div v-if="s.similarityDetail?.reasons?.length" class="similar-why">
-            <i v-for="r in s.similarityDetail.reasons" :key="r">{{ r }}</i>
-          </div>
-          <div v-if="s.similarityDetail?.verdict" class="similar-verdict">{{ s.similarityDetail.verdict }}</div>
-        </div>
-      </div>
       <div class="sa" style="margin-top:8px">📍 {{ selected.place || '未填写地点' }} · {{ fmt(selected.createdAt) }}</div>
       <div class="sa" style="margin-top:8px">联系方式：{{ (selected.contact && selected.contact.phone) || '认领时由发布者确认' }}</div>
       <template v-if="selected.status === 'approved'">
         <button v-if="!claimOpen" type="button" class="btn" style="width:100%;margin-top:14px" :disabled="!canClaim(selected)" @click="canClaim(selected) && (claimOpen = true)">{{ actionLabel(selected) }}</button>
         <div v-if="claimOpen" class="claimbox">
-        <div class="tip-small" style="margin:0 0 8px">写下只有失主知道的细节，对方核对后才会通过</div>
-        <button type="button" class="ai-check-btn" :disabled="claimChecking" @click="runClaimCheck">{{ claimChecking ? 'AI 正在比对…' : '✨ AI 核验吻合度' }}</button>
+        <div class="tip-small" style="margin:0 0 8px">{{ selected.type === 'lost' ? '写下你是在哪里、什么时候捡到的，方便失主核对' : '写下只有失主知道的细节，对方核对后才会通过' }}</div>
+        <button type="button" class="ai-check-btn" :disabled="claimChecking" @click="runClaimCheck">{{ claimChecking ? 'AI 正在比对…' : (selected.type === 'lost' ? '✨ AI 核验线索' : '✨ AI 核验吻合度') }}</button>
         <div v-if="claimCheck" class="claim-ai">
           <div class="ca-head"><b>{{ aiVerdict(claimCheck.verdict) }}</b><span>{{ claimCheck.confidence }}% 吻合</span></div>
           <div class="ca-bar"><i :style="{ width: claimCheck.confidence + '%' }"></i></div>
@@ -371,10 +362,10 @@ function openOldHelp() {
           </div>
         </div>
         <div v-if="claimCheckError" class="tip-small" style="color:#A97A00">{{ claimCheckError }}</div>
-        <textarea v-model="claimMsg" maxlength="200" placeholder="例如：伞骨内侧缠过胶带，伞柄上有一张卡通贴纸" style="width:100%;box-sizing:border-box;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:11px;padding:10px;font-family:inherit;font-size:11px;min-height:70px"></textarea>
-        <input v-model="claimPhone" maxlength="30" placeholder="你的联系方式（手机号 / 微信号）" style="width:100%;box-sizing:border-box;margin-top:7px;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:11px;padding:10px;font-family:inherit;font-size:11px">
+        <textarea v-model="claimMsg" maxlength="200" :placeholder="selected.type === 'lost' ? '例如：今天下午在图书馆三楼靠窗座位捡到，伞柄有白色划痕' : '例如：伞骨内侧缠过胶带，伞柄上有一张卡通贴纸'" style="width:100%;box-sizing:border-box;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:11px;padding:10px;font-family:inherit;font-size:11px;min-height:70px"></textarea>
+        <input v-model="claimPhone" maxlength="30" :placeholder="selected.type === 'lost' ? '你的联系方式（方便失主联系你）' : '你的联系方式（手机号 / 微信号）'" style="width:100%;box-sizing:border-box;margin-top:7px;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:11px;padding:10px;font-family:inherit;font-size:11px">
         <div v-if="claimState" class="sa" style="margin-top:6px">{{ claimState }}</div>
-        <button type="button" class="btn" style="width:100%;margin-top:10px" :disabled="claiming" @click="submitClaim">{{ claiming ? '发送中…' : '发送认领申请' }}</button>
+        <button type="button" class="btn" style="width:100%;margin-top:10px" :disabled="claiming" @click="submitClaim">{{ claiming ? '发送中…' : (selected.type === 'lost' ? '发送线索' : '发送认领申请') }}</button>
         <div class="close" @click="claimOpen = false">取消</div>
         </div>
       </template>
@@ -453,5 +444,15 @@ function openOldHelp() {
 .claim-ai p { margin:4px 0; font-size:10px; line-height:1.6; color:#6E607F; }
 .ca-points { display:flex; flex-wrap:wrap; gap:4px; }
 .ca-points span { font-size:9px; background:#F1E8FB; color:#5B2A91; border-radius:5px; padding:2px 5px; }
+</style>
+
+
+
+<style scoped>
+.match-entry { display:flex;align-items:center;gap:9px;width:100%;border:1px solid #D8C8EE;background:linear-gradient(135deg,#F8F2FF,#EEF5FF);border-radius:12px;padding:9px 10px;margin-bottom:8px;font-family:inherit;text-align:left; }
+.me-badge { flex:0 0 auto;font-size:9px;color:#fff;background:#5B2A91;border-radius:5px;padding:3px 5px; }
+.me-copy { flex:1;min-width:0;display:flex;flex-direction:column;gap:2px; }
+.me-copy b { font-size:11px;color:#3B1D63; }
+.me-copy i { font-style:normal;font-size:9px;color:#8E7FA3;line-height:1.5; }
 </style>
 
