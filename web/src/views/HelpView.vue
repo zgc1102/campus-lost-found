@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { computed, onMounted, ref } from 'vue'
 import { api } from '../api'
 
@@ -152,7 +152,8 @@ async function submitHelp() {
       </div>
     </div>
 
-    <div v-if="selected" class="sheet vue-sheet show">
+    <div v-if="selected" class="modal-backdrop" @click="selected = null"></div>
+    <div v-if="selected" class="sheet vue-sheet show help-detail-modal">
       <button type="button" class="sheet-x" aria-label="关闭" @click="selected = null">✕</button>
       <div class="big-thumb" @click="selected.photoUrl && (photoSrc = selected.photoUrl, photoOpen = true)">
         <img v-if="selected.photoUrl" :src="selected.photoUrl" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:16px">
@@ -228,4 +229,10 @@ async function submitHelp() {
 </style>
 
 
+
+
+<style scoped>
+.modal-backdrop { position:fixed; inset:0; z-index:150; background:rgba(10,5,20,.62); }
+.sheet.help-detail-modal { z-index:160; box-shadow:0 26px 70px rgba(12,6,22,.38) !important; clip-path:none !important; }
+</style>
 

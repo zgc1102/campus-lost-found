@@ -332,6 +332,7 @@ function openOldHelp() {
       </div>
     </div>
 
+    <div v-if="selected" class="modal-backdrop" @click="selected = null"></div>
     <div v-if="selected" class="sheet vue-sheet show item-detail-modal">
       <button type="button" class="sheet-x" aria-label="关闭" @click="selected = null">✕</button>
       <div class="detail-modal-grid">
@@ -471,5 +472,17 @@ function openOldHelp() {
 .dm-right { min-width:0; }
 .dm-right .sh { margin-top:0; }
 @media (max-width:640px) { .detail-modal-grid { grid-template-columns:1fr; } .dm-left .big-thumb { min-height:180px; height:180px; } }
+</style>
+
+
+<style scoped>
+.modal-backdrop { position:fixed; inset:0; z-index:150; background:rgba(10,5,20,.62); }
+.sheet.item-detail-modal { z-index:160; width:min(820px,94vw) !important; max-width:94vw !important; }
+.dm-right .sh { padding-right:26px; overflow-wrap:anywhere; line-height:1.35; }
+</style>
+
+
+<style scoped>
+.sheet.item-detail-modal { box-shadow:0 26px 70px rgba(12,6,22,.38) !important; clip-path:none !important; }
 </style>
 
