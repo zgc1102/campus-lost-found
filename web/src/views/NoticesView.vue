@@ -20,8 +20,8 @@ const groups = [
   ['system', '系统']
 ]
 function groupOf(n) {
-  if (n.type === 'pickup' || n.report) return 'tag'
   if (n.itemType === 'help') return 'help'
+  if (n.type === 'pickup' || n.report) return 'tag'
   if (n.itemType === 'lost' || n.itemType === 'found' || ['match', 'claim', 'accepted', 'rejected', 'done'].includes(n.type)) return 'lost'
   return 'system'
 }
@@ -200,7 +200,7 @@ function fmt(ts) {
           <div class="mh">{{ typeLabel(n.type, n.itemType) }}</div>
           <div class="mmeta">{{ n.text }}</div>
           <div v-if="n.type === 'claim' && n.claimId" class="mmeta" style="color:var(--purple)">
-            点这里查看对方填了什么，与自己那条对比 →
+            {{ n.itemType === 'help' ? '看看对方能怎么帮你 →' : '点这里查看对方填了什么，与自己那条对比 →' }}
           </div>
           <div class="mmeta">{{ fmt(n.at) }}</div>
         </div>
@@ -222,10 +222,10 @@ function fmt(ts) {
           <h2>{{ selected.report?.itemName || selected.itemTitle || '通知详情' }}</h2>
           <div class="nd-time">{{ fmt(selected.at) }}</div>
         </div>
-        <div v-if="selected.report" class="nd-state">{{ ({pending:'待确认', contacted:'已联系', published:'已公开', closed:'已找回'})[selected.report.status] || selected.report.status }}</div>
+        <div v-if="selected.report && selected.itemType !== 'help'" class="nd-state">{{ ({pending:'待确认', contacted:'已联系', published:'已公开', closed:'已找回'})[selected.report.status] || selected.report.status }}</div>
       </div>
 
-      <div v-if="selected.report" class="nd-card">
+      <div v-if="selected.report && selected.itemType !== 'help'" class="nd-card">
         <div class="nd-card-title">捡到上报</div>
         <div class="nd-kv"><span>捡到物品</span><b>{{ selected.report.itemName || '捡到物品' }}</b></div>
         <div class="nd-kv"><span>拾光码物品</span><b>{{ selected.report.tagItem || '我的物品' }}</b></div>
@@ -233,7 +233,7 @@ function fmt(ts) {
         <div class="nd-message">{{ selected.report.message }}</div>
       </div>
 
-      <div v-if="selected.report" class="nd-card">
+      <div v-if="selected.report && selected.itemType !== 'help'" class="nd-card">
         <div class="nd-card-title">匿名沟通</div>
         <div v-if="!chat.length" class="nd-message" style="color:#8E7FA3">还没有消息，可以先回复捡到者。</div>
         <div v-for="(m, i) in chat" :key="i" class="nd-chat" :class="m.from === 'owner' ? 'mine' : 'other'">
@@ -245,7 +245,7 @@ function fmt(ts) {
         </div>
       </div>
 
-      <div v-else class="nd-card">
+      <div v-if="!selected.report" class="nd-card">
         <div class="nd-card-title">通知内容</div>
         <div class="nd-message">{{ selected.text }}</div>
         <div v-if="!selected.itemId" class="nd-legacy">这条是旧版通知，只保留了文字记录，没有可操作的上报详情。</div>
@@ -266,7 +266,7 @@ function fmt(ts) {
           <button type="button" class="btn" @click="revealContact">联系捡到的人</button>
           <button v-if="selected.report.status !== 'published' && selected.report.status !== 'closed'" type="button" class="btn ghost" @click="publishReport">公开为招领</button>
           <button v-if="selected.report.status !== 'closed'" type="button" class="btn ghost" @click="closeReport">已找回 / 关闭</button>
-          <button v-if="selected.report.status !== 'closed'" type="button" class="btn ghost" @click="blockReport">屏蔽此人</button>
+          <button type="button" class="btn ghost" @click="blockReport">屏蔽此人</button>
           <button type="button" class="btn ghost" @click="ignoreNotice">不是我的 / 忽略</button>
         </template>
         <template v-else-if="selected.itemType === 'help'">

@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { api } from '../api'
 
@@ -389,7 +389,7 @@ function statusClass(s) {
       <div class="admin-wrap">
         <div v-if="!token" class="login-card">
           <h2>管理员登录</h2>
-          <p>密码在服务器文件夹的「管理员密码.txt」里</p>
+          <p>如忘记密码，请联系项目负责人重置。</p>
           <input v-model="password" type="password" placeholder="输入管理员密码" @keyup.enter="login">
           <button type="button" class="primary" :disabled="loading" @click="login">{{ loading ? '登录中…' : '登录' }}</button>
           <div v-if="error" class="error">{{ error }}</div>

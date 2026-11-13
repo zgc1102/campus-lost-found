@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { api } from '../api'
 
@@ -284,7 +284,6 @@ function openOldHelp() {
             <div class="tt">
               <span class="src-tag">{{ label(it) }}</span>{{ it.title || '未命名物品' }}<span v-if="statusChip(it)" class="st" :class="'st-' + it.status">{{ statusChip(it) }}</span>
             </div>
-            <div v-if="it.summary" class="sum">{{ it.summary }}</div>
             <div class="dd">{{ it.desc || '暂无描述' }}</div>
             <div v-if="it.fields && chipText(it)" class="chips">
               <span v-for="c in chipText(it)" :key="c" class="chip">{{ c }}</span>

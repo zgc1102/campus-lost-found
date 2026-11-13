@@ -95,7 +95,7 @@ function qrError() {
       </div>
       <div class="tag-lookup">
         <input v-model="lookup" maxlength="60" placeholder="扫不出来？输入拾光码，如 SGBEA45A">
-        <button type="button" @click="openLookup">查看</button>
+        <button type="button" @click="openLookup">查询</button>
       </div>
 
       <div class="tag-sec">

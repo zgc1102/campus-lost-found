@@ -143,7 +143,7 @@ async function submit() {
         </div>
       </div>
     </div>
-    <div class="hp-note">智能整理仅作参考，实际以现场和校方失物招领点为准。</div>
+    <div class="hp-note">智能整理仅作参考，请如实描述需求、时间和地点。</div>
     <div v-if="error" class="tip-small" style="color:#c0392b;padding:0 16px">{{ error }}</div>
     <div class="hp-submit"><button class="btn" type="button" :disabled="submitting" @click="submit">{{ submitting ? '发布中…' : '发布求助' }}</button></div>
   </div>

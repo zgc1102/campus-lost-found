@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { api } from '../api'
 
@@ -155,11 +155,16 @@ async function analyzePhoto() {
   if (!photo.value) return
   visionState.value = '正在识别中，请稍后…'
   try {
-    const d = await api.vision(photo.value)
+    const d = await Promise.race([
+      api.vision(photo.value),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('识别超时')), 20000))
+    ])
     if (d && d.ok !== false) {
       const bits = [d.category, d.color, d.features, d.desc].filter(Boolean)
-      if (!form.title.trim() && d.category) form.title = String(d.category).slice(0, 30)
-      if (!form.desc.trim()) {
+      const hadTitle = !!form.title.trim()
+      const hadDesc = !!form.desc.trim()
+      if (!hadTitle && d.category) form.title = String(d.category).slice(0, 30)
+      if (!hadDesc) {
         form.desc = [d.color, d.brand, d.features, d.desc].filter(Boolean).join('，').slice(0, 300)
       }
       if (!form.category) {
@@ -172,7 +177,9 @@ async function analyzePhoto() {
         else form.category = '其他'
       }
       visionState.value = bits.length
-        ? '智能识别完成，已自动填写：' + bits.slice(0, 3).join(' · ')
+        ? (hadTitle || hadDesc
+          ? '智能识别完成，已保留你填写的内容；如需覆盖请点「重新拍照 / 上传」'
+          : '智能识别完成，已自动填写：' + bits.slice(0, 3).join(' · '))
         : '智能识别没有提取到物品特征，请重新上传清晰的物品照片'
     } else {
       visionState.value = '智能识别没看清：' + (d?.reason || '请手动填写标题和描述')

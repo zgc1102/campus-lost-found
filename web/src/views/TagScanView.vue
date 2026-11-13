@@ -87,9 +87,9 @@ async function sendChat() {
       <template v-else>
         <div v-if="tag.deactivated" class="scan-deactivated">
           <div class="scan-icon off">🔖</div>
-          <h2>此码已注销</h2>
+          <h2>{{ tag.inactiveReason === 'returned' ? '物品已找回' : '此码已注销' }}</h2>
           <p>感谢您愿意扫这一下，也感谢您的一份善意。</p>
-          <p>这个拾光码已经被失主主动注销，不能再发送消息了。</p>
+          <p>{{ tag.inactiveReason === 'returned' ? '失主已经确认物品找回，这个拾光码已自动停用。' : '这个拾光码已经被失主主动注销，不能再发送消息了。' }}</p>
           <button type="button" class="primary" @click="$emit('nav', 'home')">了解清华校园拾光里</button>
         </div>
         <template v-else>

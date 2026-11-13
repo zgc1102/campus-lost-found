@@ -90,7 +90,8 @@ function goSlide(i) {
 async function load() {
   loading.value = true
   try {
-    const [list, anns] = await Promise.all([api.items(), api.announcements()])
+    const [list, allAnns] = await Promise.all([api.items(), api.announcements()])
+    const anns = (Array.isArray(allAnns) ? allAnns : []).filter((a) => !/测试|刷新测试|验收测试/.test(String(a.title || '') + String(a.body || '')))
     if (Array.isArray(list)) items.value = list
     if (Array.isArray(anns) && anns.length) {
       const annSlides = anns.slice(0, 2).map((a) => ({
@@ -125,8 +126,8 @@ function openMemo(s) {
   <section class="screen active" id="screen-home">
     <div class="ticker">
       <div class="ticker-track">
-        <span>绿色能源 · 智慧矿山 · 红色引领 · 爱国爱岗 · 孝道 · 清华校园拾光里 · 有温度的服务</span>
-        <span>绿色能源 · 智慧矿山 · 红色引领 · 爱国爱岗 · 孝道 · 清华校园拾光里 · 有温度的服务</span>
+        <span>校园失物招领 · 爱心互助 · 拾光码官方校验 · 不要求转账付款 · 请当面核对物品特征</span>
+        <span>校园失物招领 · 爱心互助 · 拾光码官方校验 · 不要求转账付款 · 请当面核对物品特征</span>
       </div>
     </div>
 

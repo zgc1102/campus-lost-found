@@ -11,6 +11,10 @@ const loading = ref(true)
 const phone = ref('')
 const password = ref('')
 const authMsg = ref('')
+const codeFor = ref(null)
+const codeInput = ref('')
+const codeError = ref('')
+const codeBusy = ref(false)
 const account = ref(localStorage.getItem('sg:account:v1') || '')
 const accountPhone = ref(localStorage.getItem('sg:account:phone') || '')
 const origin = location.origin
@@ -48,6 +52,9 @@ function logout() {
   localStorage.removeItem('sg:account:phone')
   account.value = ''
   accountPhone.value = ''
+  phone.value = ''
+  password.value = ''
+  authMsg.value = ''
   load(true)
 }
 function maskPhone(p) {
@@ -84,17 +91,42 @@ async function actClaim(c, status) {
 }
 
 async function completeClaim(c) {
-  let code = ''
-  if (c.itemType !== 'help') {
-    code = prompt('请输入对方提供的 6 位取件码') || ''
-    if (!code) return
+  if (c.itemType === 'help') {
+    try {
+      await api.claimComplete(c.id, { code: '' })
+      await load(true)
+    } catch (e) {
+      authMsg.value = e.message || '确认失败'
+    }
+    return
   }
+  codeFor.value = c
+  codeInput.value = ''
+  codeError.value = ''
+}
+
+async function submitCode() {
+  if (!codeFor.value) return
+  if (!/^\d{4,6}$/.test(codeInput.value.trim())) {
+    codeError.value = '请输入 4~6 位取件码'
+    return
+  }
+  codeBusy.value = true
+  codeError.value = ''
   try {
-    await api.claimComplete(c.id, { code: code.trim() })
+    await api.claimComplete(codeFor.value.id, { code: codeInput.value.trim() })
+    codeFor.value = null
+    codeInput.value = ''
     await load(true)
   } catch (e) {
-    authMsg.value = e.message || '确认失败'
+    codeError.value = e.message || '取件码不正确'
+  } finally {
+    codeBusy.value = false
   }
+}
+
+function claimStatus(s) {
+  return ({ pending: '待确认', accepted: '已通过', completed: '已完成', rejected: '已拒绝', need_more: '待补充', closed: '已结束' })[s] || s
 }
 function status(x) {
   return ({ pending: '审核中', approved: '进行中', rejected: '未通过', closed: '已结束', claimed: '进行中', removed: '已下架' })[x.status] || x.status
@@ -137,8 +169,8 @@ function fmt(ts) {
         <template v-else>
           <div class="acc-title">登录后，换设备或换网址也能看到「我的发布」<br>第一次输入手机号 + 密码就是注册</div>
           <div class="acc-row">
-            <input v-model="phone" inputmode="numeric" maxlength="20" placeholder="手机号">
-            <input v-model="password" type="password" maxlength="30" placeholder="密码（至少 4 位）">
+            <input v-model="phone" inputmode="numeric" maxlength="20" placeholder="手机号" autocomplete="off">
+            <input v-model="password" type="password" maxlength="30" placeholder="密码（至少 4 位）" autocomplete="new-password">
           </div>
           <button type="button" class="btn" style="width:100%;margin-top:8px" @click="login">登录 / 注册</button>
           <div v-if="authMsg" class="tip-small" style="margin-top:6px;color:#c0392b">{{ authMsg }}</div>
@@ -148,26 +180,30 @@ function fmt(ts) {
       <div v-if="claims.length" style="margin:12px 0">
         <div class="sectitle">认领申请</div>
         <div v-for="c in claims" :key="c.id" class="mini">
-          <div class="mh">{{ c.itemTitle }}<span class="st">{{ c.status }}</span></div>
+          <div class="mh">{{ c.itemTitle }}<span class="st">{{ claimStatus(c.status) }}</span></div>
           <div class="mmeta">{{ c.message }}</div>
-          <div class="mact">
-            <template v-if="c.status === 'accepted'">
-              <button type="button" class="btn" @click="completeClaim(c)">{{ c.itemType === 'help' ? '完成帮助' : '确认归还' }}</button>
-            </template>
-            <template v-else>
-              <button type="button" class="btn" @click="actClaim(c, 'accepted')">{{ c.itemType === 'help' ? '接受帮忙' : '通过' }}</button>
-              <button type="button" class="btn ghost" @click="actClaim(c, 'need_more')">{{ c.itemType === 'help' ? '请补充' : '补充' }}</button>
-              <button type="button" class="btn ghost" @click="actClaim(c, 'rejected')">{{ c.itemType === 'help' ? '婉拒' : '拒绝' }}</button>
-            </template>
+          <div v-if="c.status === 'accepted'" class="mact">
+            <button type="button" class="btn" @click="completeClaim(c)">{{ c.itemType === 'help' ? '完成帮助' : '确认归还' }}</button>
+          </div>
+          <div v-else-if="c.status === 'pending'" class="mact">
+            <button type="button" class="btn" @click="actClaim(c, 'accepted')">{{ c.itemType === 'help' ? '接受帮忙' : '通过' }}</button>
+            <button type="button" class="btn ghost" @click="actClaim(c, 'need_more')">{{ c.itemType === 'help' ? '请补充' : '补充' }}</button>
+            <button type="button" class="btn ghost" @click="actClaim(c, 'rejected')">{{ c.itemType === 'help' ? '婉拒' : '拒绝' }}</button>
+          </div>
+          <div v-if="codeFor && codeFor.id === c.id" class="code-box">
+            <input v-model="codeInput" inputmode="numeric" maxlength="6" placeholder="输入对方提供的 4~6 位取件码">
+            <button type="button" class="btn" :disabled="codeBusy" @click="submitCode">{{ codeBusy ? '确认中…' : '确认归还' }}</button>
+            <button type="button" class="btn ghost" @click="codeFor = null">取消</button>
+            <div v-if="codeError" class="tip-small" style="color:#c0392b">{{ codeError }}</div>
           </div>
         </div>
         <div v-if="sentClaims.length" class="sectitle" style="margin-top:10px">我发出的认领</div>
         <div v-for="c in sentClaims" :key="'s'+c.id" class="mini">
-          <div class="mh">{{ c.itemTitle }}<span class="st">{{ c.status }}</span></div>
+          <div class="mh">{{ c.itemTitle }}<span class="st">{{ claimStatus(c.status) }}</span></div>
           <div class="mmeta">{{ c.message }}</div>
-          <div v-if="c.status === 'accepted'" class="mmeta">取件码：{{ c.returnCode || '向对方索取' }}</div>
+          <div v-if="c.status === 'accepted' && c.itemType !== 'help'" class="mmeta">取件码：{{ c.returnCode || '向对方索取' }}</div>
           <div v-if="c.status === 'accepted' && c.itemType !== 'help'" class="mact">
-            <button type="button" class="btn" @click="completeClaim(c)">{{ c.itemType === 'help' ? '完成帮助' : '确认归还' }}</button>
+            <button type="button" class="btn" @click="completeClaim(c)">确认归还</button>
           </div>
         </div>
       </div>
@@ -232,5 +268,12 @@ function fmt(ts) {
 
 <style scoped>
 .tm-qr { width:112px; height:112px; display:block; margin:8px auto 4px; border-radius:8px; }
+</style>
+
+
+<style scoped>
+.code-box { margin-top:7px; padding:8px; background:#FBF8FF; border:1px solid #EADFF5; border-radius:9px; display:flex; flex-wrap:wrap; gap:6px; }
+.code-box input { flex:1; min-width:140px; border:1px solid #E4D4F7; border-radius:8px; padding:8px; font-family:inherit; font-size:11px; }
+.code-box .btn { width:auto; flex:0 0 auto; padding:8px 10px; }
 </style>
 

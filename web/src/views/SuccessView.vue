@@ -29,7 +29,7 @@ const approved = computed(() => item.value.status === 'approved')
           <button class="btn ghost" type="button" @click="$emit('nav', 'publish', type)">继续发布一条</button>
         </div>
       </div>
-      <div class="faq-note" style="margin-top:16px">💡 提交后由管理员审核，通过后其他同学就能在列表中看到；你可以在「我的发布」里随时查看进度。</div>
+      <div class="faq-note" style="margin-top:16px">💡 {{ approved ? '如需修改，可在「我的发布」里撤回后重新提交。' : '系统会自动审核；需要补充时会在「我的发布」里显示原因。' }}</div>
     </div>
   </section>
 </template>

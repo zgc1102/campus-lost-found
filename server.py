@@ -183,6 +183,7 @@ def _tag_public(tag, base_url="", with_qr=False):
         "createdAt": tag.get("createdAt"),
         "notifyCount": tag.get("notifyCount") or 0,
         "deactivated": not tag.get("active", True),
+        "inactiveReason": ("returned" if tag.get("pausedAt") else "deactivated") if not tag.get("active", True) else "",
         "verified": True,
         "officialHost": "shiguangli.work",
         "createdAt": tag.get("createdAt"),
@@ -4114,6 +4115,10 @@ class Handler(BaseHTTPRequestHandler):
                 item = next((x for x in items if x.get("id") == claim.get("itemId")), None)
                 if not item or item.get("ownerToken") != owner:
                     return self._json({"error": "只有发布者能处理"}, 403)
+                if claim.get("status") in ("completed", "closed"):
+                    return self._json({"error": "这件事已经结束，不能再操作"}, 409)
+                if item.get("status") == "closed":
+                    return self._json({"error": "这条发布已经结束，不能再操作"}, 409)
                 claim["status"] = status
                 claim["updatedAt"] = now_ms()
                 others = []
