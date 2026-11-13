@@ -137,6 +137,7 @@ def save_items(items):
 TAGS_FILE = os.path.join(BASE_DIR, "tags.json")
 TAG_REPORTS_FILE = os.path.join(BASE_DIR, "tag_reports.json")
 HELP_TASKS_FILE = os.path.join(BASE_DIR, "help_tasks.json")
+AI_COMPARE_FILE = os.path.join(BASE_DIR, "ai_compare_cache.json")
 TAG_QR_DIR = os.path.join(BASE_DIR, "tag_qr")
 
 
@@ -162,6 +163,18 @@ def load_help_tasks():
 
 def save_help_tasks(data):
     _save_json(HELP_TASKS_FILE, data)
+
+
+def load_ai_compare_cache():
+    return _load_json(AI_COMPARE_FILE, {})
+
+
+def save_ai_compare_cache(data):
+    _save_json(AI_COMPARE_FILE, data)
+
+
+def ai_compare_key(a_id, b_id):
+    return "|".join(sorted([str(a_id), str(b_id)]))
 
 
 def load_all_claims():
@@ -3374,6 +3387,12 @@ class Handler(BaseHTTPRequestHandler):
                 b = next((x for x in items if x.get("id") == other_id), None)
             if not a or not b:
                 return self._json({"error": "物品不存在"}, 404)
+            cache_key = ai_compare_key(a.get("id"), b.get("id"))
+            with LOCK:
+                cache = load_ai_compare_cache()
+                cached = cache.get(cache_key)
+            if cached:
+                return self._json({"ok": True, "cached": True, **cached})
             cfg = load_ai_config()
             if not (cfg.get("enabled") and cfg.get("api_key") and cfg.get("base_url")):
                 return self._json({"ok": False, "error": "AI 对比暂时不可用"})
@@ -3409,13 +3428,22 @@ class Handler(BaseHTTPRequestHandler):
             except Exception:
                 score = 0
             pts = obj.get("points") if isinstance(obj.get("points"), list) else []
-            return self._json({"ok": True, "score": score,
-                               "verdict": obj.get("verdict") or "medium",
-                               "summary": str(obj.get("summary") or "")[:80],
-                               "points": [str(x)[:40] for x in pts if str(x).strip()][:4],
-                               "textModel": cfg.get("model") or "deepseek-chat",
-                               "imageUsed": bool(visual),
-                               "imageModel": "智谱视觉（发布时图片描述）" if visual else ""})
+            result = {"score": score,
+                      "verdict": obj.get("verdict") or "medium",
+                      "summary": str(obj.get("summary") or "")[:80],
+                      "points": [str(x)[:40] for x in pts if str(x).strip()][:4],
+                      "textModel": cfg.get("model") or "deepseek-chat",
+                      "imageUsed": bool(visual),
+                      "imageModel": "智谱视觉（发布时图片描述）" if visual else "",
+                      "at": now_ms()}
+            with LOCK:
+                cache = load_ai_compare_cache()
+                cache[cache_key] = result
+                if len(cache) > 1000:
+                    for k in sorted(cache, key=lambda x: cache[x].get("at") or 0)[:-1000]:
+                        cache.pop(k, None)
+                save_ai_compare_cache(cache)
+            return self._json({"ok": True, "cached": False, **result})
 
         if path.startswith("/api/items/") and path.endswith("/claim-check"):
             owner = self._owner()
