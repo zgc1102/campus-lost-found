@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { api } from '../api'
 
@@ -130,13 +130,13 @@ function onPhoto(e) {
   reader.onload = () => {
     const img = new Image()
     img.onload = () => {
-      const max = 1200
+      const max = 900
       const scale = Math.min(1, max / Math.max(img.width, img.height))
       const canvas = document.createElement('canvas')
       canvas.width = Math.round(img.width * scale)
       canvas.height = Math.round(img.height * scale)
       canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height)
-      photo.value = canvas.toDataURL('image/jpeg', 0.82)
+      photo.value = canvas.toDataURL('image/jpeg', 0.78)
       analyzePhoto()
     }
     img.src = reader.result
@@ -467,4 +467,5 @@ async function submit() {
 .photo-viewer img { max-width:100%; max-height:86vh; border-radius:10px; object-fit:contain; }
 .photo-viewer button { position:fixed; top:18px; right:18px; width:34px; height:34px; border-radius:50%; border:0; background:rgba(255,255,255,.16); color:#fff; font-size:17px; }
 </style>
+
 

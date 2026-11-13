@@ -2065,6 +2065,23 @@ def vision_moderate(image_b64, mime="image/jpeg"):
 
 
 def vision_analyze(image_b64, mime="image/jpeg"):
+    # 统一下载图片的格式、尺寸和 EXIF 方向，避免模型报 1210 图片解析错误
+    try:
+        import base64 as _b64
+        import io as _io
+        from PIL import Image, ImageOps
+        if "," in image_b64:
+            image_b64 = image_b64.split(",", 1)[1]
+        _raw = _b64.b64decode(image_b64, validate=False)
+        _im = Image.open(_io.BytesIO(_raw))
+        _im = ImageOps.exif_transpose(_im).convert("RGB")
+        _im.thumbnail((900, 900), Image.LANCZOS)
+        _out = _io.BytesIO()
+        _im.save(_out, format="JPEG", quality=82, optimize=True)
+        image_b64 = _b64.b64encode(_out.getvalue()).decode("ascii")
+        mime = "image/jpeg"
+    except Exception:
+        pass
     cfg = vision_config()
     if not cfg["api_key"]:
         return {"ok": False, "reason": "未配置视觉模型（VISION_API_KEY），可先手动选择分类"}
@@ -2096,7 +2113,11 @@ def vision_analyze(image_b64, mime="image/jpeg"):
             m = re.search(r"\{[\s\S]*\}", text)
             obj = json.loads(m.group(0)) if m else {}
         except Exception as e:
-            last = {"ok": False, "reason": str(e)[:120]}
+            _err = str(e)
+            if "1210" in _err or "图片" in _err or "image" in _err.lower():
+                last = {"ok": False, "reason": "图片格式不支持或图片过大，请重新上传一张清晰的物品照片"}
+            else:
+                last = {"ok": False, "reason": "识别服务暂时不可用，请稍后重试或手动填写"}
             continue
         cat = str(obj.get("category") or "").strip()
         color = str(obj.get("color") or "").strip()

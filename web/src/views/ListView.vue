@@ -49,13 +49,13 @@ function onAiPhoto(e) {
   reader.onload = () => {
     const img = new Image()
     img.onload = async () => {
-      const max = 900
+      const max = 720
       const scale = Math.min(1, max / Math.max(img.width, img.height))
       const canvas = document.createElement('canvas')
       canvas.width = Math.round(img.width * scale)
       canvas.height = Math.round(img.height * scale)
       canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height)
-      const photo = canvas.toDataURL('image/jpeg', 0.78)
+      const photo = canvas.toDataURL('image/jpeg', 0.75)
       let info = { photo }
       try {
         const d = await api.vision(photo)
@@ -388,6 +388,7 @@ function openOldHelp() {
 .ape-go { color:#7A3CB0; font-size:18px; }
 .ai-photo-state { margin-top:6px; font-size:10px; color:#7A3CB0; }
 </style>
+
 
 
 
