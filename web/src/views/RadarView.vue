@@ -64,6 +64,9 @@ async function runDetective() {
 function askCampus() {
   emit('nav', 'ask')
 }
+function toolLabel(t) {
+  return ({ scan_items: '扫描公开信息', match: '匹配线索', hotspot: '统计高频区域', read_item: '读取丢失地点', plan: '生成行动建议' })[t] || '智能处理'
+}
 function openMatch(m) {
   selectedMatch.value = m
 }
@@ -78,7 +81,7 @@ function openFullMatch() {
   <section class="screen active" id="screen-radar">
     <div class="topbar">
       <div class="back" @click="$emit('nav', 'home')">‹</div>
-      <div class="t">AI 寻物雷达</div>
+      <div class="t">智能寻物雷达</div>
     </div>
 
     <div class="scroll">
@@ -105,13 +108,13 @@ function openFullMatch() {
 
       <div v-if="steps.length" class="agent-trace">
         <div class="at-head">
-          <b>AI Agent Trace</b>
-          <span class="at-badge">Agent</span><span class="at-badge">RAG</span><span class="at-badge">多模态</span>
+          <b>智能执行过程</b>
+          <span class="at-badge">智能体</span><span class="at-badge">知识库</span><span class="at-badge">多模态</span>
         </div>
         <div class="at-sub">本次扫描的可解释执行链路</div>
         <div v-for="(s, i) in steps" :key="i" class="at-step">
           <span class="at-index">{{ i + 1 }}</span>
-          <span class="at-tool">{{ s.tool }}</span>
+          <span class="at-tool">{{ toolLabel(s.tool) }}</span>
           <span class="at-finding">{{ s.finding }}</span>
         </div>
       </div>
@@ -124,7 +127,7 @@ function openFullMatch() {
             <div class="rd-title">{{ m.item.title }}</div>
             <div class="rd-meta">{{ m.item.place || '未填写地点' }}<span class="rd-conf">{{ m.confidence }}置信</span></div>
             <div class="rd-reasons"><span v-for="r in m.reasons" :key="r">{{ r }}</span></div>
-            <div class="rd-tech"><span>多模态特征</span><span>Agent 检索</span><span>LLM 重排</span></div>
+            <div class="rd-tech"><span>多模态特征</span><span>智能体检索</span><span>大模型重排</span></div>
           </div>
         </article>
       </template>
@@ -140,9 +143,9 @@ function openFullMatch() {
       </div>
 
       <div v-if="matches.length || scanned" class="detective-form">
-        <div class="rf-kicker">LOST DETECTIVE</div>
+        <div class="rf-kicker">寻物侦探</div>
         <div class="rf-title">让侦探推理下一步去哪找</div>
-        <label>今天走过 <i>可以直接叙述，AI 帮你整理</i></label>
+        <label>今天走过 <i>可以直接叙述，智能助手帮你整理</i></label>
         <textarea v-model="route" maxlength="160" placeholder="例如：今天 9 点从图书馆出来，去观畴园吃饭，再回紫荆公寓，最后去快递驿站"></textarea>
         <div class="carry-row">
           <span>平时放在</span>
@@ -155,7 +158,7 @@ function openFullMatch() {
 
       <template v-if="detective">
         <div class="dt-summary" style="margin-top:12px">{{ detective.summary }}</div>
-        <div class="dt-tech"><span>Agent 路线推理</span><span>校园地点 RAG</span><span>工具调用</span></div>
+        <div class="dt-tech"><span>智能体路线推理</span><span>校园地点知识库</span><span>工具调用</span></div>
         <div v-for="(s, i) in detectiveSteps" :key="'ds'+i" class="dt-step"><b>{{ s.tool }}</b><span>{{ s.finding }}</span></div>
         <div class="dt-title">建议按这个顺序找</div>
         <div v-for="(a, i) in detective.actions" :key="i" class="dt-action" :style="{ animationDelay: (i * 0.12) + 's' }">

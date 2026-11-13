@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { api } from '../api'
 
@@ -216,7 +216,7 @@ async function submit() {
       <div class="pub-head">
         <div class="ph-t">{{ isHelp ? '发布一条爱心求助' : '发布一条启事' }}</div>
         <div class="ph-s">发布前先审文字和图片，违规内容发不出去</div>
-        <div class="ph-steps"><span>1 填写</span><i></i><span>2 AI 审核</span><i></i><span>3 上架</span></div>
+        <div class="ph-steps"><span>1 填写</span><i></i><span>2 智能审核</span><i></i><span>3 上架</span></div>
       </div>
       <div class="warn-box">❗禁止发布现金、贵重物品、危险品、药品；虚假信息会被下架并限制发布权限。</div>
 
@@ -232,7 +232,7 @@ async function submit() {
       <div v-if="result" class="okpanel" style="margin-top:14px">
         <div class="big">✓</div>
         <h2>{{ result.status === 'approved' ? '已发布成功' : result.status === 'rejected' ? '内容被拦截' : '已提交，等待审核' }}</h2>
-        <p>{{ result.rejectReason || 'AI 会先审核文字和图片，通过后其他同学才能看到。' }}</p>
+        <p>{{ result.rejectReason || '智能审核会先看文字和图片，通过后其他同学才能看到。' }}</p>
         <button type="button" class="btn" style="width:100%" @click="$emit('nav', isHelp ? 'help' : kind)">返回列表</button>
       </div>
 
@@ -276,7 +276,7 @@ async function submit() {
           <div class="form-item">
             <label>物品描述 <span class="req">*</span></label>
             <textarea v-model="form.desc" maxlength="300" :placeholder="isHelp ? '说明需求、时间和地点' : '颜色、划痕、标记……越具体越容易核对'"></textarea>
-            <div class="tip-small">{{ descCount }}/300 · 超过 60 字建议让 AI 精简</div>
+            <div class="tip-small">{{ descCount }}/300 · 超过 60 字建议让智能助手精简</div>
             <button type="button" class="btn ghost" style="width:100%;margin-top:8px" :disabled="aiLoading" @click="aiFormat">{{ aiLoading ? 'AI 整理中…' : '✨ AI 帮我整理成模板' }}</button>
           </div>
           <div v-if="aiPanel && aiData" class="ai-format" style="display:block">
@@ -389,4 +389,5 @@ async function submit() {
 <style>
 .pub-head { margin-top: 8px; }
 </style>
+
 

@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { ref } from 'vue'
 
 const emit = defineEmits(['nav'])
@@ -20,14 +20,14 @@ function ask() {
     <div class="scroll">
       <div class="hero" style="padding:18px;margin-bottom:12px">
         <h1>初入清华园，你想问什么？</h1>
-        <p>游客、新生、家长都能用：一键问 AI，或让学长学姐为你指路。</p>
+        <p>游客、新生、家长都能用：一键问智能助手，或让学长学姐为你指路。</p>
       </div>
 
       <div class="guide-ai">
-        <div class="gai-t">🤖 问 AI · 进校、吃饭、丢东西，什么都能问</div>
+        <div class="gai-t">🤖 智能问答 · 进校、吃饭、丢东西，什么都能问</div>
         <div class="gai-row">
           <input v-model="question" maxlength="120" placeholder="例如：访客怎么进校？校园卡丢了怎么办？">
-          <button type="button" class="btn" @click="ask">问 AI</button>
+          <button type="button" class="btn" @click="ask">问智能助手</button>
         </div>
         <div class="gai-chips">
           <span @click="question = '访客怎么进清华？'">访客进校</span>
@@ -93,3 +93,4 @@ function ask() {
   min-width: 0;
 }
 </style>
+

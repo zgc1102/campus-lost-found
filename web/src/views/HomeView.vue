@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { api } from '../api'
 
@@ -161,7 +161,7 @@ function openMemo(s) {
       <div class="entry-split">
         <div class="entry-section section-help">
           <div class="entry-head">
-            <div><span class="eh-kicker">MUTUAL AID</span><h2>爱心 · 求助</h2></div>
+            <div><span class="eh-kicker">爱心互助</span><h2>爱心 · 求助</h2></div>
             <span class="eh-count">4 个入口</span>
           </div>
           <div class="entry-list">
@@ -182,7 +182,7 @@ function openMemo(s) {
 
         <div class="entry-section section-lost">
           <div class="entry-head">
-            <div><span class="eh-kicker">LOST &amp; FOUND</span><h2>失物 · 寻物</h2></div>
+            <div><span class="eh-kicker">失物招领</span><h2>失物 · 寻物</h2></div>
             <span class="eh-count">2 个入口</span>
           </div>
           <div class="entry-list">
@@ -205,7 +205,7 @@ function openMemo(s) {
             <span class="tag-go">→</span>
           </button>
           <button type="button" class="lost-cta detective-cta" @click="$emit('nav', 'detective')">
-            <span class="lc-kicker">LOST DETECTIVE</span>
+            <span class="lc-kicker">寻物侦探</span>
             <b>寻物侦探</b>
             <i>按时间线推测下一步去哪找</i>
             <span class="lc-plus">→</span>
@@ -217,7 +217,7 @@ function openMemo(s) {
       <div class="guide-banner" @click="$emit('nav', 'guide')">
         <div class="gb-text">
           <div class="gb-t1">初入清华园，你想问什么？</div>
-          <div class="gb-t2">访客怎么进校？校园卡丢了怎么办？食堂在哪？一键问 AI 或学长学姐。</div>
+          <div class="gb-t2">访客怎么进校？校园卡丢了怎么办？食堂在哪？一键问智能助手或学长学姐。</div>
         </div>
         <div class="gb-arrow">›</div>
       </div>
@@ -244,8 +244,8 @@ function openMemo(s) {
           <span @click="$emit('nav', 'legacy', 'privacy')">隐私权保护</span>
         </div>
         <div class="flic">测试版 · 暂未备案 · 仅用于校园公益</div>
-        <div class="fcopy">Copyright © 2025-2026 清城牧羊 版权所有</div>
-        <div class="ver">v3.2 · 2026-10-26 · 本机 / 同 Wi-Fi / 公网 三种模式自动切换</div>
+        <div class="fcopy">版权所有 © 2025-2026 清城牧羊</div>
+        <div class="ver">版本 3.2 · 2026-10-26 · 本机 / 同一无线网 / 公网 三种模式自动切换</div>
       </div>
     </div>
 
@@ -257,4 +257,5 @@ function openMemo(s) {
 <style scoped>
 
 </style>
+
 

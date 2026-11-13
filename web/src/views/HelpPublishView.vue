@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed, reactive, ref } from 'vue'
 import { api } from '../api'
 
@@ -138,7 +138,7 @@ async function submit() {
         <img v-if="photo" :src="photo" alt="" style="width:100%;max-height:180px;object-fit:cover;border-radius:11px;margin-top:8px">
       </div>
     </div>
-    <div class="hp-note">AI 整理仅作参考，实际以现场和校方失物招领点为准。</div>
+    <div class="hp-note">智能整理仅作参考，实际以现场和校方失物招领点为准。</div>
     <div v-if="error" class="tip-small" style="color:#c0392b;padding:0 16px">{{ error }}</div>
     <div class="hp-submit"><button class="btn" type="button" :disabled="submitting" @click="submit">{{ submitting ? '发布中…' : '发布求助' }}</button></div>
   </div>
@@ -154,4 +154,5 @@ async function submit() {
 .hp-note { font-size: 10.5px; }
 .hp-submit .btn { font-size: 14px; }
 </style>
+
 

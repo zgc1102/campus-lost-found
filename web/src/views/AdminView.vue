@@ -46,7 +46,7 @@ const tabs = [
   ['users', '注册用户'],
   ['phone', '号码白名单'],
   ['announce', '公告'],
-  ['ai', 'AI 配置'],
+  ['ai', '智能配置'],
   ['deploy', '部署日志']
 ]
 
@@ -171,7 +171,7 @@ async function runAi(it) {
   try {
     await api.adminAiReview(it.id, token.value)
     await loadAll(true)
-  } catch (e) { error.value = e.message || 'AI 审核失败' }
+  } catch (e) { error.value = e.message || '智能审核失败' }
   finally { aiBusy.value = '' }
 }
 
@@ -180,23 +180,23 @@ async function applyAi(it) {
   if (it.ai.decision === 'reject') {
     actionTarget.value = it
     actionStatus.value = 'rejected'
-    actionReason.value = 'AI 建议驳回：' + (it.ai.reason || '疑似违规内容')
+    actionReason.value = '智能建议驳回：' + (it.ai.reason || '疑似违规内容')
     return
   }
   if (it.ai.decision === 'approve') {
     await review(it, 'approved')
     return
   }
-  error.value = 'AI 建议人工复核：' + (it.ai.reason || '请人工判断')
+  error.value = '智能建议人工复核：' + (it.ai.reason || '请人工判断')
 }
 
 async function preReviewAll() {
   try {
     error.value = '正在提交 AI 预审…'
     await api.adminAiReviewAll(token.value)
-    error.value = 'AI 预审已提交，正在后台处理'
+    error.value = '智能预审已提交，正在后台处理'
     setTimeout(loadAll, 2500)
-  } catch (e) { error.value = e.message || 'AI 预审失败' }
+  } catch (e) { error.value = e.message || '智能预审失败' }
 }
 
 async function deployCode() {
@@ -368,12 +368,12 @@ function statusClass(s) {
           <div class="brand-mark">拾</div>
           <div>
             <h1>管理后台 · 清华校园拾光里</h1>
-            <p>仅管理员可见 · 审核发布内容 · 管理公告与用户 · Vue Admin 2026-11-08</p>
+            <p>仅管理员可见 · 审核发布内容 · 管理公告与用户 · 管理端 2026-11-08</p>
           </div>
         </div>
         <div class="header-actions" v-if="token">
           <button type="button" @click="loadAll">刷新</button>
-          <button type="button" @click="preReviewAll">AI 预审全部</button>
+          <button type="button" @click="preReviewAll">智能预审全部</button>
           <button type="button" @click="resetDemo">重置演示数据</button>
           <button type="button" :disabled="deploying" @click="deployCode">{{ deploying ? '更新中…' : '更新代码' }}</button>
           <button type="button" @click="logout">退出登录</button>
@@ -382,7 +382,7 @@ function statusClass(s) {
     </header>
     <div v-if="deployMsg" class="deploy-status">
       {{ deployMsg }}
-      <b v-if="deployCountdown > 0">{{ deployCountdown }}s</b>
+      <b v-if="deployCountdown > 0">{{ deployCountdown }}秒</b>
     </div>
 
     <main class="admin-main">
@@ -410,9 +410,9 @@ function statusClass(s) {
           <div class="ai-status">
             <span :class="['dot', config?.enabled ? 'on' : 'off']"></span>
             <template v-if="config?.enabled">
-              AI 审核已启用 · 模型：<b>{{ config.model || '未填写模型' }}</b> · {{ config.has_key ? 'Key 已配置' : 'Key 未配置' }} · 自动审核中
+              智能审核已启用 · 模型：<b>{{ config.model || '未填写模型' }}</b> · {{ config.has_key ? '密钥已配置' : '密钥未配置' }} · 自动审核中
             </template>
-            <template v-else>暂未启用 AI 大模型审核</template>
+            <template v-else>暂未启用智能审核</template>
           </div>
 
           <div class="admin-tabs">
@@ -472,7 +472,7 @@ function statusClass(s) {
               <button v-if="editingAnnId" type="button" class="ghost" @click="editingAnnId = ''; annTitle = ''; annBody = ''">取消编辑</button>
               <h3 style="margin-top:22px">公告列表 · {{ announcements.length }}</h3>
               <div class="ann-row" v-for="a in announcements" :key="a.id">
-                <div><b>{{ a.title }}</b><span>{{ a.body }}</span><em>{{ a.status }}</em></div>
+                <div><b>{{ a.title }}</b><span>{{ a.body }}</span><em>{{ a.status === 'published' ? '已发布' : '草稿' }}</em></div>
                 <div class="row-actions">
                   <button type="button" class="ghost" @click="editAnnouncement(a)">编辑</button>
                   <button type="button" class="ghost" @click="setAnnouncement(a, a.status === 'published' ? 'draft' : 'published')">{{ a.status === 'published' ? '下架' : '发布' }}</button>
@@ -484,18 +484,18 @@ function statusClass(s) {
 
           <template v-else-if="tab === 'ai'">
             <div class="panel" v-if="config">
-              <h3>AI 配置</h3>
-              <label class="check"><input v-model="config.enabled" type="checkbox"> 启用 AI 审核</label>
+              <h3>智能配置</h3>
+              <label class="check"><input v-model="config.enabled" type="checkbox"> 启用 智能审核</label>
               <div class="form-grid">
-                <label><span>Base URL</span><input v-model="config.base_url" class="field"></label>
+                <label><span>接口地址</span><input v-model="config.base_url" class="field"></label>
                 <label><span>模型</span><input v-model="config.model" class="field"></label>
-                <label><span>API Key（留空不修改）</span><input v-model="apiKey" type="password" class="field"></label>
+                <label><span>接口密钥（留空不修改）</span><input v-model="apiKey" type="password" class="field"></label>
                 <label><span>自动通过阈值</span><input v-model.number="config.approve_threshold" type="number" class="field"></label>
                 <label><span>自动驳回阈值</span><input v-model.number="config.reject_threshold" type="number" class="field"></label>
               </div>
               <label class="check"><input v-model="config.auto_approve" type="checkbox"> 自动通过</label>
               <label class="check"><input v-model="config.auto_reject" type="checkbox"> 自动驳回</label>
-              <button type="button" class="primary" @click="saveConfig">保存 AI 配置</button>
+              <button type="button" class="primary" @click="saveConfig">保存 智能配置</button>
               <button type="button" class="ghost" :disabled="aiTesting" @click="testAi">{{ aiTesting ? '测试中…' : '测试连接' }}</button>
               <div v-if="aiTestMsg" class="test-msg">{{ aiTestMsg }}</div>
             </div>
@@ -521,8 +521,8 @@ function statusClass(s) {
                 <div class="ai-head">
                   <span class="tag" :class="it.type === 'lost' ? 'tag-lost' : 'tag-found'">{{ it.type === 'lost' ? '寻物' : '招领' }}</span>
                   <span class="status" :class="statusClass(it.status)">{{ statusText(it.status) }}</span>
-                  <span v-if="it.autoApproved" class="status ai-ok">AI 自动通过</span>
-                  <span v-if="it.autoRejected" class="status ai-no">AI 自动拦截</span>
+                  <span v-if="it.autoApproved" class="status ai-ok">智能自动通过</span>
+                  <span v-if="it.autoRejected" class="status ai-no">智能自动拦截</span>
                   <span v-if="it.phoneStatus === 'yellow' && !it.phoneVerified" class="status phone-warn">📞 号码待确认</span>
                   <span v-if="it.phoneStatus === 'yellow' && it.phoneVerified" class="status ai-ok">号码已确认</span>
                   <span v-if="it.phoneStatus === 'red'" class="status ai-no">📵 号码无效</span>
@@ -530,10 +530,10 @@ function statusClass(s) {
                 </div>
                 <div class="ai-meta">{{ it.place || '未填写地点' }} · {{ fmt(it.createdAt) }}</div>
                 <div class="ai-desc">{{ it.desc }}</div>
-                <div v-if="it.visionDesc" class="ai-vision">🖼 AI 看图：{{ it.visionDesc }}</div>
+                <div v-if="it.visionDesc" class="ai-vision">🖼 智能看图：{{ it.visionDesc }}</div>
                 <div v-if="it.ai" class="ai-review" :class="'ai-' + (it.ai.decision || 'review')">
                   <div class="ai-review-head">
-                    <b>🤖 AI {{ aiLabel(it.ai.decision) }}</b>
+                    <b>🤖 智能{{ aiLabel(it.ai.decision) }}</b>
                     <span>风险 {{ it.ai.score ?? '—' }}/100</span>
                   </div>
                   <div class="ai-review-reason">{{ it.ai.reason || '无说明' }}</div>
@@ -544,7 +544,7 @@ function statusClass(s) {
                   </div>
                 </div>
                 <div v-else class="ai-review-actions">
-                  <button type="button" class="ghost" @click="runAi(it)">🤖 {{ aiBusy === it.id ? '审核中…' : 'AI 审核这条' }}</button>
+                  <button type="button" class="ghost" @click="runAi(it)">🤖 {{ aiBusy === it.id ? '审核中…' : '智能审核这条' }}</button>
                 </div>
                 <div v-if="it.secret" class="ai-secret">🔒 核验特征：{{ it.secret }}</div>
                 <div v-if="it.rejectReason" class="ai-secret" style="border-color:#F3CFCF;color:#A12F2F;background:#FDF2F2">{{ it.status === 'removed' ? '下架理由' : '驳回理由' }}：{{ it.rejectReason }}</div>
@@ -725,4 +725,6 @@ textarea.field { min-height: 78px; resize: vertical; }
 .deploy-status { width:min(1120px,calc(100% - 48px)); margin:12px auto 0; background:#FFF8E8; border:1px solid #F2DFC0; color:#8A5A16; border-radius:10px; padding:9px 12px; font-size:11px; display:flex; align-items:center; justify-content:space-between; }
 .deploy-status b { color:#5B2A91; font-size:13px; }
 </style>
+
+
 

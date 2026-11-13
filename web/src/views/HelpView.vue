@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed, onMounted, ref } from 'vue'
 import { api } from '../api'
 
@@ -140,7 +140,7 @@ async function submitHelp() {
           <div class="body">
             <div class="tt"><span class="src-tag">求助</span>{{ it.title }}<span v-if="it.status === 'closed'" class="help-done">已结束</span></div>
             <div class="dd">{{ it.desc }}</div>
-            <div v-if="it.ai" class="help-ai-line">🤖 AI 审核 {{ aiLabel(it.ai.decision) }} · 风险 {{ it.ai.score ?? '—' }}/100</div>
+            <div v-if="it.ai" class="help-ai-line">🤖 智能审核 {{ aiLabel(it.ai.decision) }} · 风险 {{ it.ai.score ?? '—' }}/100</div>
             <div v-if="chips(it).length" class="chips"><span v-for="c in chips(it)" :key="c" class="chip">{{ c }}</span></div>
             <div class="row">
               <span class="meta">📍 {{ it.place || '未填写地点' }} · {{ fmt(it.createdAt) }}</span>
@@ -161,8 +161,8 @@ async function submitHelp() {
       <div class="sh">{{ selected.title }}</div>
       <div class="sa">{{ selected.desc }}</div>
       <div v-if="selected.ai" class="help-ai-box">
-        <b>🤖 AI 审核 {{ aiLabel(selected.ai.decision) }} · 风险 {{ selected.ai.score ?? '—' }}/100</b>
-        <p>{{ selected.ai.reason || 'AI 已完成内容分析' }}</p>
+        <b>🤖 智能审核 {{ aiLabel(selected.ai.decision) }} · 风险 {{ selected.ai.score ?? '—' }}/100</b>
+        <p>{{ selected.ai.reason || '智能审核已完成内容分析' }}</p>
       </div>
       <div class="sa" style="margin-top:8px">📍 {{ selected.place || '未填写地点' }}</div>
       <div class="sa" style="margin-top:8px">联系方式：{{ (selected.contact && selected.contact.phone) || '对方确认后可见' }}</div>
@@ -226,4 +226,5 @@ async function submitHelp() {
 .help-ai-box b { font-size:10px; color:#5B2A91; }
 .help-ai-box p { margin:3px 0 0; font-size:10px; line-height:1.6; color:#6E607F; }
 </style>
+
 

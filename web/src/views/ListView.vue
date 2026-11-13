@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { api } from '../api'
 
@@ -44,7 +44,7 @@ function openAiPhoto() {
 function onAiPhoto(e) {
   const file = e.target.files && e.target.files[0]
   if (!file) return
-  aiPhotoState.value = 'AI 正在识别照片…'
+  aiPhotoState.value = '智能识别照片中…'
   const reader = new FileReader()
   reader.onload = () => {
     const img = new Image()
@@ -241,7 +241,7 @@ function openOldHelp() {
 
       <button type="button" class="ai-photo-entry" @click="openAiPhoto">
         <span class="ape-ico">📷</span>
-        <span class="ape-copy"><b>AI 拍照识别</b><i>拍一张，自动识别物品、颜色和特征</i></span>
+        <span class="ape-copy"><b>智能拍照识别</b><i>拍一张，自动识别物品、颜色和特征</i></span>
         <span class="ape-go">→</span>
       </button>
       <input ref="aiPhotoInput" type="file" accept="image/*" capture="environment" style="display:none" @change="onAiPhoto">
@@ -253,7 +253,7 @@ function openOldHelp() {
       </div>
 
       <button type="button" class="radar-entry" @click="openOldRadar">
-        <span class="re-badge">AI</span>
+        <span class="re-badge">智能</span>
         <span class="re-copy"><b>{{ type === 'lost' ? '寻物雷达' : '招领雷达' }}</b><i>自动比对全站{{ type === 'lost' ? '招领' : '寻物' }}</i></span>
         <span class="re-go">扫描 →</span>
       </button>
@@ -308,12 +308,12 @@ function openOldHelp() {
       <div v-if="selected.isMine" class="sa" style="margin-top:6px;color:var(--purple)">这是你自己发布的内容，不能认领自己的发布。</div>
       <div class="sa">{{ selected.desc || '暂无描述' }}</div>
       <div v-if="selected.ai" class="pub-ai" :class="'pub-ai-' + (selected.ai.decision || 'review')">
-        <b>🤖 AI 审核 {{ ({approve:'建议通过', reject:'建议驳回', review:'建议复核'})[selected.ai.decision] || '已分析' }}</b>
+        <b>🤖 智能审核 {{ ({approve:'建议通过', reject:'建议驳回', review:'建议复核'})[selected.ai.decision] || '已分析' }}</b>
         <span>风险 {{ selected.ai.score ?? '—' }}/100</span>
-        <p>{{ selected.ai.reason || 'AI 已完成内容分析' }}</p>
+        <p>{{ selected.ai.reason || '智能审核已完成内容分析' }}</p>
       </div>
       <div v-if="similar.length" class="similar-box">
-        <div class="similar-title">AI 相似匹配</div>
+        <div class="similar-title">智能相似匹配</div>
         <div v-for="s in similar" :key="s.id" class="similar-row" @click.stop="openDetail(s)">
           <b>{{ s.title }}</b><span>{{ s.place || '' }} · {{ s.type === 'lost' ? '寻物' : '招领' }}<em class="similar-pct">{{ s.similarity }}% 相似</em></span>
           <div v-if="s.similarityDetail?.reasons?.length" class="similar-why">
@@ -388,4 +388,6 @@ function openOldHelp() {
 .ape-go { color:#7A3CB0; font-size:18px; }
 .ai-photo-state { margin-top:6px; font-size:10px; color:#7A3CB0; }
 </style>
+
+
 
