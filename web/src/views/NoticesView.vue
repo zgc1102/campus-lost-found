@@ -12,6 +12,23 @@ const contact = ref('')
 const actionMsg = ref('')
 const chat = ref([])
 const chatText = ref('')
+const compareOpen = ref(false)
+
+function grams(s) {
+  const x = String(s || '').replace(/\s+/g, '')
+  const set = new Set()
+  for (let i = 0; i < Math.max(0, x.length - 1); i++) set.add(x.slice(i, i + 2))
+  return set
+}
+function currentSimilarity() {
+  const it = selected.value?.item
+  if (!it) return 0
+  const a = grams((it.title || '') + (it.desc || ''))
+  const b = grams((selected.value?.claimMessage || selected.value?.text || selected.value?.report?.message || ''))
+  const union = new Set([...a, ...b])
+  if (!union.size) return 0
+  return Math.round(([...a].filter((x) => b.has(x)).length / union.size) * 100)
+}
 const groups = [
   ['all', '全部'],
   ['lost', '失物'],
@@ -72,6 +89,7 @@ function openNotice(n) {
   actionMsg.value = ''
   chat.value = []
   chatText.value = ''
+  compareOpen.value = false
   if (n.reportId) loadChat(n.reportId)
   if (!n.read) {
     n.read = true
@@ -285,13 +303,44 @@ function fmt(ts) {
             <button type="button" class="btn ghost" @click="helpAction('rejected')">婉拒</button>
           </template>
           <button v-if="selected.claimId && selected.claimStatus === 'accepted'" type="button" class="btn" @click="completeHelp">完成帮助</button>
-          <button type="button" class="btn ghost" @click="goItem">查看求助详情</button>
+          <button v-if="selected.item" type="button" class="btn ghost" @click="compareOpen = true">查看匹配报告</button>
           <button type="button" class="btn ghost" @click="ignoreNotice">忽略</button>
         </template>
         <template v-else>
-          <button v-if="selected.itemId && selected.type !== 'pickup'" type="button" class="btn ghost" @click="goItem">查看对应内容</button>
+          <button v-if="selected.item" type="button" class="btn ghost" @click="compareOpen = true">查看匹配报告</button>
           <button type="button" class="btn ghost" @click="ignoreNotice">忽略</button>
         </template>
+      </div>
+    </div>
+
+    <div v-if="compareOpen && selected.item" class="compare-overlay" @click.self="compareOpen = false">
+      <div class="compare-card">
+        <button type="button" class="compare-x" @click="compareOpen = false">✕</button>
+        <div class="compare-kicker">匹配对比报告</div>
+        <h2>{{ selected.item.title || '对应物品' }}</h2>
+        <div class="compare-grid">
+          <div class="compare-col">
+            <div class="cc-tag">发布物品</div>
+            <div class="cc-title">{{ selected.item.title || '未命名' }}</div>
+            <div class="cc-meta">{{ selected.item.place || '未填写地点' }} · {{ fmt(selected.item.createdAt) }}</div>
+            <p>{{ selected.item.desc || '暂无描述' }}</p>
+          </div>
+          <div class="compare-col">
+            <div class="cc-tag other">{{ selected.itemType === 'help' ? '帮忙申请' : (selected.item.type === 'lost' ? '提供线索' : '认领留言') }}</div>
+            <div class="cc-title">{{ selected.claimMessage || selected.report?.message || selected.text }}</div>
+            <div class="cc-meta">{{ selected.claimAi ? '申请时已做 AI 核验' : '未做 AI 核验' }}</div>
+            <p>{{ selected.claimAi?.reason || '可以打开原物品详情，对照描述后人工判断。' }}</p>
+          </div>
+        </div>
+        <div class="compare-scores">
+          <div><b>{{ selected.claimAi ? selected.claimAi.confidence + '%' : '—' }}</b><span>申请时 AI 吻合度</span></div>
+          <div><b>{{ currentSimilarity() }}%</b><span>当前文本相似度</span></div>
+        </div>
+        <div class="compare-note">两个分数都不是证据，只用于帮助失主判断；最终请当面核对物品特征。</div>
+        <div class="compare-actions">
+          <button type="button" class="btn" @click="compareOpen = false">关闭报告</button>
+          <button type="button" class="btn ghost" @click="compareOpen = false; goItem()">打开完整物品详情</button>
+        </div>
       </div>
     </div>
   </section>
@@ -370,5 +419,29 @@ function fmt(ts) {
 .nd-ai-check p { margin:3px 0; font-size:10px; line-height:1.6; color:#6E607F; }
 .nd-ai-points { display:flex; flex-wrap:wrap; gap:4px; margin-top:4px; }
 .nd-ai-points i { font-style:normal; font-size:9px; color:#5B2A91; background:#F1E8FB; border-radius:5px; padding:2px 5px; }
+</style>
+
+
+<style scoped>
+.compare-overlay { position:fixed;inset:0;z-index:400;background:rgba(20,8,34,.48);display:flex;align-items:center;justify-content:center;padding:14px; }
+.compare-card { position:relative;width:min(760px,94vw);max-height:88vh;overflow-y:auto;background:#fff;border-radius:18px;padding:16px; }
+.compare-x { position:absolute;right:10px;top:10px;border:0;background:#F3EEFA;color:#5B2A91;width:26px;height:26px;border-radius:50%; }
+.compare-kicker { font-size:9px;color:#A99BB9;letter-spacing:.1em; }
+.compare-card h2 { margin:3px 0 10px;font-size:17px;color:#3B1D63;padding-right:26px; }
+.compare-grid { display:grid;grid-template-columns:1fr 1fr;gap:9px; }
+.compare-col { border:1px solid #EADFF5;border-radius:12px;padding:9px;background:#FCFAFF; }
+.cc-tag { display:inline-block;font-size:8.5px;color:#5B2A91;background:#F1E8FB;border-radius:4px;padding:1px 4px; }
+.cc-tag.other { color:#2F5FA8;background:#EEF4FF; }
+.cc-title { margin-top:5px;font-size:12px;font-weight:600;color:#3B1D63; }
+.cc-meta { font-size:9px;color:#8E7FA3;margin-top:3px; }
+.compare-col p { margin:5px 0 0;font-size:9.5px;line-height:1.6;color:#6E607F; }
+.compare-scores { display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:9px; }
+.compare-scores div { background:#FBF8FF;border:1px solid #EADFF5;border-radius:10px;padding:8px;text-align:center; }
+.compare-scores b { display:block;font-size:18px;color:#5B2A91; }
+.compare-scores span { font-size:9px;color:#8E7FA3; }
+.compare-note { margin-top:7px;font-size:9px;line-height:1.6;color:#A97A00; }
+.compare-actions { display:flex;gap:8px;margin-top:10px; }
+.compare-actions .btn { flex:1; }
+@media (max-width:600px) { .compare-grid { grid-template-columns:1fr; } }
 </style>
 

@@ -2620,6 +2620,7 @@ class Handler(BaseHTTPRequestHandler):
                     row["itemType"] = it.get("type") or ""
                     row["itemTitle"] = it.get("title") or ""
                     row["itemStatus"] = it.get("status") or ""
+                    row["item"] = public_item(it, owner)
                 cl = claim_map.get(n.get("claimId"))
                 if cl:
                     row["claimStatus"] = cl.get("status") or "pending"
