@@ -161,10 +161,10 @@ async function analyzePhoto() {
         else form.category = '其他'
       }
       visionState.value = bits.length
-        ? 'AI 识别完成，已自动填写：' + bits.slice(0, 3).join(' · ')
-        : 'AI 已完成识别，请核对标题和描述'
+        ? '智能识别完成，已自动填写：' + bits.slice(0, 3).join(' · ')
+        : '智能识别已完成，请核对标题和描述'
     } else {
-      visionState.value = 'AI 没看清：' + (d?.reason || '请手动填写标题和描述')
+      visionState.value = '智能识别没看清：' + (d?.reason || '请手动填写标题和描述')
     }
   } catch (e) {
     visionState.value = 'AI 识别失败，请手动填写标题和描述'
@@ -331,7 +331,7 @@ async function submit() {
         </div>
 
         <div v-if="form.title || form.desc" class="ai-pub-preview">
-          <div class="app-head">AI 发布预览 <span>提交前先看一眼</span></div>
+          <div class="app-head">智能发布预览 <span>提交前先看一眼</span></div>
           <b>{{ form.title || '还没写标题' }}</b>
           <p>{{ form.desc || '还没写描述' }}</p>
           <div class="app-meta">{{ form.category || '未分类' }} · {{ form.place || '未填写地点' }}</div>
@@ -421,5 +421,6 @@ async function submit() {
 .ai-pub-preview p { margin:4px 0; font-size:10.5px; line-height:1.7; color:#6E607F; }
 .app-meta { font-size:9px; color:#A99BB9; margin-top:3px; }
 </style>
+
 
 

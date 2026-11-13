@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { api } from '../api'
 
@@ -245,7 +245,7 @@ function openMemo(s) {
         </div>
         <div class="flic">测试版 · 暂未备案 · 仅用于校园公益</div>
         <div class="fcopy">版权所有 © 2025-2026 清城牧羊</div>
-        <div class="ver">版本 3.2 · 2026-10-26 · 本机 / 同一无线网 / 公网 三种模式自动切换</div>
+        <div class="ver">版本 3.2.1 · 2026-11-13 · 智能识别 / 发布预览 / 全中文界面</div>
       </div>
     </div>
 
