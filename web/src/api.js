@@ -48,6 +48,9 @@ export const api = {
   claim(id, body) {
     return call('/items/' + encodeURIComponent(id) + '/claims', { method: 'POST', body: JSON.stringify(body || {}) })
   },
+  claimCheck(id, message) {
+    return call('/items/' + encodeURIComponent(id) + '/claim-check', { method: 'POST', body: JSON.stringify({ message }) })
+  },
   report(id) {
     return call('/items/' + encodeURIComponent(id) + '/report', { method: 'POST' })
   },

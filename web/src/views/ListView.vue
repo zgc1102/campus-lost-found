@@ -17,6 +17,9 @@ const claimState = ref('')
 const claiming = ref(false)
 const reportState = ref('')
 const claimOpen = ref(false)
+const claimCheck = ref(null)
+const claimChecking = ref(false)
+const claimCheckError = ref('')
 const photoOpen = ref(false)
 const similar = ref([])
 const showClosed = ref(false)
@@ -31,6 +34,8 @@ async function openDetail(it) {
   claimOpen.value = false
   photoOpen.value = false
   similar.value = []
+  claimCheck.value = null
+  claimCheckError.value = ''
   try {
     const r = await api.similar(it.id)
     if (Array.isArray(r)) similar.value = r
@@ -91,6 +96,31 @@ async function submitClaim() {
     claiming.value = false
   }
 }
+
+async function runClaimCheck() {
+  if (!selected.value) return
+  if (claimMsg.value.trim().length < 2) {
+    claimCheckError.value = '先写下你记得的物品特征，再做核验'
+    return
+  }
+  claimChecking.value = true
+  claimCheckError.value = ''
+  claimCheck.value = null
+  try {
+    const r = await api.claimCheck(selected.value.id, claimMsg.value.trim())
+    if (r && r.ok && r.check) claimCheck.value = r.check
+    else claimCheckError.value = r?.error || 'AI 核验暂时不可用，可以直接提交'
+  } catch (e) {
+    claimCheckError.value = e.message || 'AI 核验暂时不可用，可以直接提交'
+  } finally {
+    claimChecking.value = false
+  }
+}
+
+function aiVerdict(v) {
+  return v === 'match' ? '特征吻合' : v === 'mismatch' ? '特征不一致' : '需要人工核对'
+}
+
 async function reportItem() {
   if (!selected.value || !confirm('确认举报这条信息？')) return
   try {
@@ -331,6 +361,16 @@ function openOldHelp() {
         <button v-if="!claimOpen" type="button" class="btn" style="width:100%;margin-top:14px" :disabled="!canClaim(selected)" @click="canClaim(selected) && (claimOpen = true)">{{ actionLabel(selected) }}</button>
         <div v-if="claimOpen" class="claimbox">
         <div class="tip-small" style="margin:0 0 8px">写下只有失主知道的细节，对方核对后才会通过</div>
+        <button type="button" class="ai-check-btn" :disabled="claimChecking" @click="runClaimCheck">{{ claimChecking ? 'AI 正在比对…' : '✨ AI 核验吻合度' }}</button>
+        <div v-if="claimCheck" class="claim-ai">
+          <div class="ca-head"><b>{{ aiVerdict(claimCheck.verdict) }}</b><span>{{ claimCheck.confidence }}% 吻合</span></div>
+          <div class="ca-bar"><i :style="{ width: claimCheck.confidence + '%' }"></i></div>
+          <p v-if="claimCheck.reason">{{ claimCheck.reason }}</p>
+          <div v-if="claimCheck.points?.length" class="ca-points">
+            <span v-for="p in claimCheck.points" :key="p">{{ p }}</span>
+          </div>
+        </div>
+        <div v-if="claimCheckError" class="tip-small" style="color:#A97A00">{{ claimCheckError }}</div>
         <textarea v-model="claimMsg" maxlength="200" placeholder="例如：伞骨内侧缠过胶带，伞柄上有一张卡通贴纸" style="width:100%;box-sizing:border-box;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:11px;padding:10px;font-family:inherit;font-size:11px;min-height:70px"></textarea>
         <input v-model="claimPhone" maxlength="30" placeholder="你的联系方式（手机号 / 微信号）" style="width:100%;box-sizing:border-box;margin-top:7px;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:11px;padding:10px;font-family:inherit;font-size:11px">
         <div v-if="claimState" class="sa" style="margin-top:6px">{{ claimState }}</div>
@@ -400,4 +440,18 @@ function openOldHelp() {
 
 
 
+
+
+<style scoped>
+.ai-check-btn { width:100%; border:1px solid #D8C8EE; background:#F7F0FF; color:#5B2A91; border-radius:9px; padding:8px; font-family:inherit; font-size:11px; margin-bottom:7px; }
+.claim-ai { background:#FBF8FF; border:1px solid #EADFF7; border-radius:10px; padding:9px; margin-bottom:8px; }
+.ca-head { display:flex; justify-content:space-between; align-items:center; font-size:11px; color:#3B1D63; }
+.ca-head b { color:#5B2A91; }
+.ca-head span { font-size:10px; color:#7A5AA8; }
+.ca-bar { height:5px; background:#EDE4F8; border-radius:99px; overflow:hidden; margin:6px 0; }
+.ca-bar i { display:block; height:100%; background:linear-gradient(90deg,#8A52C7,#5B2A91); border-radius:99px; }
+.claim-ai p { margin:4px 0; font-size:10px; line-height:1.6; color:#6E607F; }
+.ca-points { display:flex; flex-wrap:wrap; gap:4px; }
+.ca-points span { font-size:9px; background:#F1E8FB; color:#5B2A91; border-radius:5px; padding:2px 5px; }
+</style>
 

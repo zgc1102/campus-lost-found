@@ -256,6 +256,14 @@ function fmt(ts) {
         <div class="nd-card-title">帮忙说明</div>
         <div class="nd-message">{{ selected.claimMessage || selected.report?.message || selected.text }}</div>
         <div v-if="selected.claimContact" class="nd-contact">对方联系方式：{{ selected.claimContact }}</div>
+        <div v-if="selected.claimAi" class="nd-ai-check">
+          <b>AI 特征核验：{{ selected.claimAi.confidence }}% 吻合</b>
+          <span>{{ ({match:'特征吻合', mismatch:'特征不一致', unclear:'需要人工核对'})[selected.claimAi.verdict] || '需要人工核对' }}</span>
+          <p v-if="selected.claimAi.reason">{{ selected.claimAi.reason }}</p>
+          <div v-if="selected.claimAi.points?.length" class="nd-ai-points">
+            <i v-for="p in selected.claimAi.points" :key="p">{{ p }}</i>
+          </div>
+        </div>
         <div v-if="selected.claimStatus" class="nd-state" style="margin-top:8px">{{ ({pending:'待处理', accepted:'进行中', completed:'已完成', rejected:'已婉拒', need_more:'待补充'})[selected.claimStatus] || selected.claimStatus }}</div>
       </div>
 
@@ -352,5 +360,15 @@ function fmt(ts) {
 
 <style scoped>
 .unread-sum { margin-left:auto; align-self:center; font-size:9px; color:#8E7FA3; white-space:nowrap; padding-right:4px; }
+</style>
+
+
+<style scoped>
+.nd-ai-check { margin-top:8px; padding:9px; border-radius:9px; background:#FBF8FF; border:1px solid #EADFF7; }
+.nd-ai-check b { display:block; font-size:10.5px; color:#5B2A91; }
+.nd-ai-check > span { font-size:9px; color:#A97A00; }
+.nd-ai-check p { margin:3px 0; font-size:10px; line-height:1.6; color:#6E607F; }
+.nd-ai-points { display:flex; flex-wrap:wrap; gap:4px; margin-top:4px; }
+.nd-ai-points i { font-style:normal; font-size:9px; color:#5B2A91; background:#F1E8FB; border-radius:5px; padding:2px 5px; }
 </style>
 

@@ -182,6 +182,7 @@ function fmt(ts) {
         <div v-for="c in claims" :key="c.id" class="mini">
           <div class="mh">{{ c.itemTitle }}<span class="st">{{ claimStatus(c.status) }}</span></div>
           <div class="mmeta">{{ c.message }}</div>
+          <div v-if="c.aiCheck" class="claim-ai-line">AI 核验 {{ c.aiCheck.confidence }}% · {{ ({match:'特征吻合',mismatch:'不一致',unclear:'需人工核对'})[c.aiCheck.verdict] || '需人工核对' }}</div>
           <div v-if="c.status === 'accepted'" class="mact">
             <button type="button" class="btn" @click="completeClaim(c)">{{ c.itemType === 'help' ? '完成帮助' : '确认归还' }}</button>
           </div>
@@ -201,6 +202,7 @@ function fmt(ts) {
         <div v-for="c in sentClaims" :key="'s'+c.id" class="mini">
           <div class="mh">{{ c.itemTitle }}<span class="st">{{ claimStatus(c.status) }}</span></div>
           <div class="mmeta">{{ c.message }}</div>
+          <div v-if="c.aiCheck" class="claim-ai-line">AI 核验 {{ c.aiCheck.confidence }}% · {{ ({match:'特征吻合',mismatch:'不一致',unclear:'需人工核对'})[c.aiCheck.verdict] || '需人工核对' }}</div>
           <div v-if="c.status === 'accepted' && c.itemType !== 'help'" class="mmeta">取件码：{{ c.returnCode || '向对方索取' }}</div>
           <div v-if="c.status === 'accepted' && c.itemType !== 'help'" class="mact">
             <button type="button" class="btn" @click="completeClaim(c)">确认归还</button>
@@ -281,5 +283,10 @@ function fmt(ts) {
 .code-box { margin-top:7px; padding:8px; background:#FBF8FF; border:1px solid #EADFF5; border-radius:9px; display:flex; flex-wrap:wrap; gap:6px; }
 .code-box input { flex:1; min-width:140px; border:1px solid #E4D4F7; border-radius:8px; padding:8px; font-family:inherit; font-size:11px; }
 .code-box .btn { width:auto; flex:0 0 auto; padding:8px 10px; }
+</style>
+
+
+<style scoped>
+.claim-ai-line { margin-top:3px; font-size:9.5px; color:#5B2A91; background:#F7F0FF; border-radius:5px; padding:3px 5px; display:inline-block; }
 </style>
 

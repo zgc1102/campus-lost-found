@@ -2617,6 +2617,7 @@ class Handler(BaseHTTPRequestHandler):
                     row["claimMessage"] = cl.get("message") or ""
                     row["claimContact"] = (cl.get("contact") if cl.get("status") in ("accepted", "completed")
                                            else mask_contact(cl.get("contact")))
+                    row["claimAi"] = cl.get("aiCheck") or None
                 mine.append(row)
             mine.sort(key=lambda x: x.get("at") or 0, reverse=True)
             unread = sum(1 for n in mine if not n.get("read"))
@@ -3349,6 +3350,29 @@ class Handler(BaseHTTPRequestHandler):
                 CHECK_CACHE.pop(k, None)
             return self._json({"checkId": cid, "ai": ai, "suggestion": suggestion,
                                "type": item["type"]})
+
+        if path.startswith("/api/items/") and path.endswith("/claim-check"):
+            owner = self._owner()
+            if not owner:
+                return self._json({"error": "请先登录"}, 401)
+            item_id = path[len("/api/items/"):-len("/claim-check")]
+            body = self._read_body()
+            message = str(body.get("message") or "").strip()[:200]
+            if len(message) < 2:
+                return self._json({"error": "请先写下你的认领说明"}, 400)
+            with LOCK:
+                items = load_items()
+                target = next((x for x in items if x.get("id") == item_id), None)
+            if not target:
+                return self._json({"error": "内容不存在"}, 404)
+            if target.get("ownerToken") == owner:
+                return self._json({"error": "这是你自己发布的内容"}, 400)
+            if target.get("status") != "approved":
+                return self._json({"error": "这条已经结束，不能再认领"}, 409)
+            chk = claim_ai_check(target, {"message": message})
+            if not chk:
+                return self._json({"ok": False, "error": "AI 核验暂时不可用，可以先提交人工核对"})
+            return self._json({"ok": True, "check": chk})
 
         if path.startswith("/api/items/") and path.endswith("/claims"):
             owner = self._owner()
