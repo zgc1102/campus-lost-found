@@ -1,6 +1,7 @@
 ﻿<script setup>
 import { computed, onMounted, ref } from 'vue'
 import { api } from '../api'
+import CountUp from '../components/CountUp.vue'
 
 const emit = defineEmits(['nav'])
 const items = ref([])
@@ -133,7 +134,7 @@ function scoreLevel(n) { return n >= 75 ? '高' : n >= 50 ? '中' : '低' }
       <div v-else class="pair-list">
         <article v-for="(p, i) in visible" :key="p.lost.id + p.found.id" class="pair-card" @click="openPair(p)">
           <div class="pair-score" :class="'level-' + scoreLevel(p.total)">
-            <b>{{ p.total }}</b><span>匹配分</span>
+            <b><CountUp :value="p.total" /></b><span>匹配分</span>
           </div>
           <div class="pair-body">
             <div class="pair-head">
@@ -171,7 +172,7 @@ function scoreLevel(n) { return n >= 75 ? '高' : n >= 50 ? '中' : '低' }
               <circle cx="60" cy="60" r="22" class="ring-track"></circle>
               <circle cx="60" cy="60" r="22" class="ring-value" :stroke="ringColor" :style="{ '--ring-offset': ringOffset + 'px' }"></circle>
             </svg>
-            <b>{{ selectedPair.total }}</b>
+            <b><CountUp :value="selectedPair.total" /></b>
           </div>
         </div>
 
@@ -323,4 +324,6 @@ function scoreLevel(n) { return n >= 75 ? '高' : n >= 50 ? '中' : '低' }
 .ri-keywords span { font-size:8px;color:#8E7FA3;margin-right:2px; }
 .ri-keywords i { font-style:normal;font-size:8px;color:#5B2A91;background:#F1E8FB;border-radius:4px;padding:2px 4px; }
 </style>
+
+
 

@@ -3,6 +3,7 @@ import { ref } from 'vue'
 
 const emit = defineEmits(['nav'])
 const active = ref(null)
+const photoError = ref(false)
 const spots = [
   { name: '西门（主校门）', icon: '🌟', x: 9, y: 34, desc: '清华最具代表性的校门，题字“清华大学”于此，访客主要入校口之一，紧邻圆明园。' },
   { name: '观畴园（食堂）', icon: '🍚', x: 34, y: 22, desc: '万人食堂，位于校园中北部，游客可扫码就餐，菜品丰富、性价比高。' },
@@ -28,6 +29,10 @@ const photos = {
   '近春园（荷塘）': 'https://www.tsinghua.edu.cn/__local/0/DB/2D/DBA5A25DA78C44ED8C2DE6C1A10_2423BADD_1C3823.jpg',
   '艺术博物馆': 'https://www.tsinghua.edu.cn/__local/0/E9/B5/123588172AED93BD0193C0D83FA_DED4F3EB_901C6.jpg',
   '综合体育馆': 'https://www.tsinghua.edu.cn/__local/F/F9/68/A5A677B7D9B84F28D44A2452AFF_D369F59E_17F17B.jpg'
+}
+function openSpot(s) {
+  photoError.value = false
+  active.value = s
 }
 function shortName(n) { return n.replace(/（.*?）/, '') }
 function up(i) {
@@ -71,7 +76,7 @@ function up(i) {
         <div class="road" style="left:0;top:62%;width:100%"></div>
         <div class="route" style="left:14%;top:36%;width:46%;transform:rotate(26deg)"></div>
         <div class="legend"><b>图例</b><br>🏛️ 校门/礼堂 · 📚 图书馆<br>🍚 食堂 · 🏥 医疗 · 🏟️ 场馆<br>🌊 水系 · 🌳 绿地</div>
-        <button v-for="(s, i) in spots" :key="s.name" type="button" class="spot" :class="{ up: up(i) }" :style="{ left: s.x + '%', top: s.y + '%' }" @click="active = s">
+        <button v-for="(s, i) in spots" :key="s.name" type="button" class="spot" :class="{ up: up(i) }" :style="{ left: s.x + '%', top: s.y + '%' }" @click="openSpot(s)">
           <span class="badge">{{ s.icon }}</span><span class="sl">{{ shortName(s.name) }}</span>
         </button>
       </div>
@@ -79,15 +84,23 @@ function up(i) {
     </div>
 
     <div v-if="active" class="sheet show">
-      <button type="button" class="sheet-x" @click="active = null">收起</button>
+      <button type="button" class="sheet-x" @click="active = null">✕</button>
       <div class="big-thumb">
-        <img v-if="photos[active.name]" :src="photos[active.name]" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:12px">
+        <img v-if="photos[active.name] && !photoError" :src="photos[active.name]" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:12px;background:linear-gradient(135deg,#EFE3D0,#DCC9EE)" @error="photoError = true">
         <span v-else>📍</span>
       </div>
       <div class="sh">{{ active.name }}</div>
       <div class="sa">{{ active.desc }}</div>
       <div class="sa" style="margin-top:8px">{{ photos[active.name] ? '📷 实景图来源：清华大学官网公开组图' : '📷 校园实景图（待补充，敬请期待）' }}</div>
-      <div class="close" @click="active = null">收起</div>
+
     </div>
   </section>
 </template>
+
+
+<style scoped>
+#screen-map { background:#fbf7ef !important; }
+.map-wrap { background:#f3ead6 !important; }
+.sheet.show { background:#fff; }
+</style>
+

@@ -1,6 +1,7 @@
-﻿<script setup>
+<script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { api } from '../api'
+import CountUp from '../components/CountUp.vue'
 
 const props = defineProps({
   type: { type: String, default: 'lost' }
@@ -363,7 +364,7 @@ function openOldHelp() {
         </div>
         <button type="button" class="ai-check-btn" :disabled="claimChecking" @click="runClaimCheck">{{ claimChecking ? 'AI 正在比对…' : (selected.type === 'lost' ? '✨ 帮我核对一下线索' : '✨ AI 核验吻合度') }}</button>
         <div v-if="claimCheck" class="claim-ai">
-          <div class="ca-head"><b>{{ aiVerdict(claimCheck.verdict) }}</b><span>参考可信度 {{ claimCheck.confidence }}%</span></div>
+          <div class="ca-head"><b>{{ aiVerdict(claimCheck.verdict) }}</b><span>参考可信度 <CountUp :value="claimCheck.confidence" suffix="%" /></span></div>
           <div class="ca-bar"><i :style="{ width: claimCheck.confidence + '%' }"></i></div>
           <p v-if="claimCheck.reason">{{ claimCheck.reason }}</p>
           <div v-if="claimCheck.points?.length" class="ca-points">
@@ -519,4 +520,5 @@ function openOldHelp() {
 <style scoped>
 .ca-disclaimer { margin-top:5px; font-size:9px; line-height:1.55; color:#A99BB9; }
 </style>
+
 
