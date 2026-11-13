@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { api } from '../api'
 import CountUp from '../components/CountUp.vue'
@@ -24,6 +24,11 @@ const claimCheckError = ref('')
 const recommend = ref([])
 const compareTarget = ref(null)
 const compareScore = ref(0)
+const myItems = ref([])
+const ownTarget = ref(null)
+const ownScore = ref(0)
+const ownReasons = ref([])
+const ownOpen = ref(false)
 const photoOpen = ref(false)
 const showClosed = ref(false)
 const aiPhotoInput = ref(null)
@@ -63,6 +68,60 @@ function useRec() {
   compareTarget.value = null
   openDetail(target)
 }
+
+function colorsOf(x) {
+  const s = String((x?.title || '') + (x?.desc || ''))
+  return ['黑色', '白色', '蓝色', '红色', '紫色', '绿色', '灰色', '银色', '粉色', '黄色'].filter((c) => s.includes(c))
+}
+function ownCompare(a, b) {
+  const text = simpleScore(a, b)
+  const ca = colorsOf(a)
+  const cb = colorsOf(b)
+  const colorConflict = ca.length && cb.length && !ca.some((x) => cb.includes(x))
+  const sameCat = a.cat && a.cat === b.cat
+  const samePlace = a.place && b.place && (String(a.place).includes(String(b.place)) || String(b.place).includes(String(a.place)))
+  let score = text * 0.45
+  if (sameCat) score += 20
+  if (samePlace) score += 15
+  if (colorConflict) score -= 35
+  if (ca.length && cb.length && ca.some((x) => cb.includes(x))) score += 12
+  const total = Math.max(0, Math.min(99, Math.round(score)))
+  const reasons = []
+  if (colorConflict) reasons.push(`颜色冲突：${ca.join('/')} vs ${cb.join('/')}`)
+  else if (ca.some((x) => cb.includes(x))) reasons.push(`颜色一致：${ca.filter((x) => cb.includes(x)).join('/')}`)
+  if (sameCat) reasons.push('类别一致')
+  else reasons.push('类别不同')
+  if (samePlace) reasons.push('地点接近')
+  else reasons.push('地点不同')
+  if (text >= 25) reasons.push(`描述有 ${text}% 重合`)
+  else reasons.push('描述重合较少')
+  return { total, reasons, text, sameCat, samePlace, colorConflict }
+}
+function openOwnCompare(target) {
+  if (!selected.value || !target) return
+  const r = ownCompare(selected.value, target)
+  ownTarget.value = target
+  ownScore.value = r.total
+  ownReasons.value = r.reasons
+  ownOpen.value = true
+}
+function useOwnTarget() {
+  if (!ownTarget.value) return
+  const target = ownTarget.value
+  ownOpen.value = false
+  openDetail(target)
+}
+async function loadMine() {
+  try {
+    const list = await api.mine()
+    if (Array.isArray(list)) myItems.value = list
+  } catch (_) { myItems.value = [] }
+}
+const ownCandidates = computed(() => {
+  if (!selected.value) return []
+  const want = selected.value.type === 'lost' ? 'found' : 'lost'
+  return myItems.value.filter((x) => x.type === want && x.id !== selected.value.id)
+})
 function openDetail(it) {
   selected.value = it
   claimMsg.value = ''
@@ -73,6 +132,7 @@ function openDetail(it) {
   claimCheck.value = null
   claimCheckError.value = ''
   buildRecommend(it)
+  loadMine()
 }
 
 function openAiPhoto() {
@@ -398,6 +458,15 @@ function openOldHelp() {
           <b>{{ r.matchPct }}%</b>
         </button>
       </div>
+      <div class="own-box">
+        <div class="own-title">与我发布的进行 AI 对比</div>
+        <div v-if="ownCandidates.length" class="own-list">
+          <button v-for="o in ownCandidates" :key="o.id" type="button" class="own-row" @click.stop="openOwnCompare(o)">
+            <span>{{ o.title }}</span><i>{{ o.place || '未填写地点' }}</i><b>对比 →</b>
+          </button>
+        </div>
+        <div v-else class="own-empty">你还没有发布过{{ selected.type === 'lost' ? '招领' : '寻物' }}，登录并发布后可以在这里对比。</div>
+      </div>
       <div class="sa" style="margin-top:8px">📍 {{ selected.place || '未填写地点' }} · {{ fmt(selected.createdAt) }}</div>
       <div class="sa" style="margin-top:8px">联系方式：{{ (selected.contact && selected.contact.phone) || '认领时由发布者确认' }}</div>
       <template v-if="selected.status === 'approved'">
@@ -440,6 +509,42 @@ function openOldHelp() {
       </div>
       </div>
 
+    </div>
+    <div v-if="ownOpen && ownTarget" class="rec-overlay own-overlay" @click.self="ownOpen = false">
+      <div class="own-modal">
+        <button type="button" class="rec-close" @click="ownOpen = false">✕</button>
+        <div class="rec-kicker">AI 对比 · 只和我的发布比</div>
+        <div class="own-modal-head">
+          <div>
+            <h2>{{ selected.type === 'lost' ? '与你丢失物品的参考相似度' : '与你捡到物品的参考相似度' }}</h2>
+            <div class="own-sub">不是概率，是文字、颜色、类别、地点的综合参考</div>
+          </div>
+          <div class="own-ring" :class="ownScore >= 70 ? 'high' : ownScore >= 40 ? 'mid' : 'low'">
+            <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="22" class="own-track" /><circle cx="60" cy="60" r="22" class="own-fill" :style="{ '--off': (138.2 * (1 - ownScore / 100)).toFixed(1) + 'px' }" /></svg>
+            <CountUp :value="ownScore" suffix="%" />
+          </div>
+        </div>
+        <div class="own-cols">
+          <div class="own-card left">
+            <span>当前查看</span>
+            <b>{{ selected.title }}</b>
+            <p>{{ selected.desc }}</p>
+            <i>{{ selected.place || '未填写地点' }}</i>
+          </div>
+          <div class="own-card right">
+            <span>我的发布</span>
+            <b>{{ ownTarget.title }}</b>
+            <p>{{ ownTarget.desc }}</p>
+            <i>{{ ownTarget.place || '未填写地点' }}</i>
+          </div>
+        </div>
+        <div class="own-reasons"><span v-for="r in ownReasons" :key="r">{{ r }}</span></div>
+        <div class="rec-note">相似度不是证据；颜色冲突会明显降分，最终请自行认真核对。</div>
+        <div class="rec-actions">
+          <button type="button" class="btn" @click="ownOpen = false">关闭</button>
+          <button type="button" class="btn ghost" @click="useOwnTarget">查看我的这条</button>
+        </div>
+      </div>
     </div>
     <div v-if="compareTarget" class="rec-overlay" @click.self="compareTarget = null">
       <div class="rec-modal">
@@ -619,3 +724,39 @@ function openOldHelp() {
 @media (max-width:600px) { .rec-cols { grid-template-columns:1fr; } }
 </style>
 
+
+<style scoped>
+.own-box { margin-top:9px; border-top:1px dashed #EADFF5; padding-top:7px; }
+.own-title { font-size:10px; color:#5B2A91; font-weight:600; margin-bottom:4px; }
+.own-list { display:flex; flex-direction:column; gap:4px; }
+.own-row { display:flex; gap:5px; align-items:center; border:1px solid #EADFF5; background:#FBF8FF; border-radius:7px; padding:6px 7px; font-family:inherit; text-align:left; cursor:pointer; }
+.own-row span { flex:1; min-width:0; font-size:10px; color:#3B1D63; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.own-row i { font-style:normal; font-size:8px; color:#8E7FA3; }
+.own-row b { font-size:9px; color:#5B2A91; white-space:nowrap; }
+.own-empty { font-size:9px; line-height:1.6; color:#A99BB9; }
+.own-modal { position:relative; width:min(780px,94vw); max-height:90vh; overflow-y:auto; background:#fff; border-radius:18px; padding:16px; }
+.own-modal-head { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+.own-modal-head h2 { margin:2px 0; font-size:17px; color:#3B1D63; }
+.own-sub { font-size:9px; color:#8E7FA3; }
+.own-ring { position:relative; width:72px; height:72px; flex:0 0 72px; }
+.own-ring svg { width:72px; height:72px; transform:rotate(-90deg); }
+.own-track { fill:none; stroke:#F0E8F8; stroke-width:7; }
+.own-fill { fill:none; stroke:#C0392B; stroke-width:7; stroke-linecap:round; stroke-dasharray:138.2; stroke-dashoffset:138.2; animation:ownRing .8s ease forwards; }
+.own-ring.high .own-fill { stroke:#2F7D46; }
+.own-ring.mid .own-fill { stroke:#C58A00; }
+@keyframes ownRing { to { stroke-dashoffset: var(--off); } }
+.own-ring .count-up { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:700; color:#3B1D63; }
+.own-cols { display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-top:10px; }
+.own-card { border:1px solid #EADFF5; border-radius:11px; padding:9px; background:#FCFAFF; animation:ownCard .28s ease both; }
+.own-card.left { animation-name:ownLeft; }
+.own-card.right { animation-name:ownRight; }
+@keyframes ownLeft { from { opacity:0; transform:translateX(18px); } to { opacity:1; transform:none; } }
+@keyframes ownRight { from { opacity:0; transform:translateX(-18px); } to { opacity:1; transform:none; } }
+.own-card span { font-size:8px; color:#5B2A91; background:#F1E8FB; border-radius:4px; padding:1px 4px; }
+.own-card b { display:block; margin-top:5px; font-size:12px; color:#3B1D63; }
+.own-card p { margin:3px 0; font-size:9.5px; line-height:1.55; color:#6E607F; }
+.own-card i { font-style:normal; font-size:8px; color:#8E7FA3; }
+.own-reasons { display:flex; flex-wrap:wrap; gap:4px; margin-top:8px; }
+.own-reasons span { font-size:8.5px; color:#5B2A91; background:#F1E8FB; border-radius:4px; padding:2px 5px; }
+@media (max-width:600px) { .own-cols { grid-template-columns:1fr; } .own-modal-head h2 { font-size:15px; } }
+</style>
