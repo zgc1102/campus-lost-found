@@ -357,13 +357,24 @@ function openOldHelp() {
         <button v-if="!claimOpen" type="button" class="btn" style="width:100%;margin-top:14px" :disabled="!canClaim(selected)" @click="canClaim(selected) && (claimOpen = true)">{{ actionLabel(selected) }}</button>
         <div v-if="claimOpen" class="claimbox">
         <div class="tip-small" style="margin:0 0 8px">{{ selected.type === 'lost' ? '写下你是在哪里、什么时候捡到的，方便失主核对' : '写下只有失主知道的细节，对方核对后才会通过' }}</div>
-        <button type="button" class="ai-check-btn" :disabled="claimChecking" @click="runClaimCheck">{{ claimChecking ? 'AI 正在比对…' : (selected.type === 'lost' ? '✨ AI 核验线索' : '✨ AI 核验吻合度') }}</button>
+        <div class="ai-check-help">
+          <b>AI 核验线索是干什么的？</b>
+          <span>把你写的线索和失主描述做一次对比，看看地点、时间和物品特征是否对得上。它只是给你和失主一个参考，不会自动拒绝，也不影响你正常提交。</span>
+        </div>
+        <button type="button" class="ai-check-btn" :disabled="claimChecking" @click="runClaimCheck">{{ claimChecking ? 'AI 正在比对…' : (selected.type === 'lost' ? '✨ 帮我核对一下线索' : '✨ AI 核验吻合度') }}</button>
         <div v-if="claimCheck" class="claim-ai">
           <div class="ca-head"><b>{{ aiVerdict(claimCheck.verdict) }}</b><span>{{ claimCheck.confidence }}% 吻合</span></div>
           <div class="ca-bar"><i :style="{ width: claimCheck.confidence + '%' }"></i></div>
           <p v-if="claimCheck.reason">{{ claimCheck.reason }}</p>
           <div v-if="claimCheck.points?.length" class="ca-points">
             <span v-for="p in claimCheck.points" :key="p">{{ p }}</span>
+          </div>
+          <div class="ca-advice">
+            {{ selected.type === 'lost'
+              ? (claimCheck.confidence >= 60
+                ? '线索里已经包含了一些关键特征，但最终仍要由失主当面核对。'
+                : '目前线索可能只覆盖了地点或时间。建议再补充：颜色、外观、划痕、包装等特征，失主更容易判断。')
+              : 'AI 只做辅助比对，最终是否通过仍由失主决定。' }}
           </div>
         </div>
         <div v-if="claimCheckError" class="tip-small" style="color:#A97A00">{{ claimCheckError }}</div>
@@ -484,5 +495,21 @@ function openOldHelp() {
 
 <style scoped>
 .sheet.item-detail-modal { box-shadow:0 26px 70px rgba(12,6,22,.38) !important; clip-path:none !important; }
+</style>
+
+
+<style scoped>
+.ai-check-help { background:#F7F2FD; border:1px solid #EADFF5; border-radius:9px; padding:8px 9px; margin-bottom:7px; }
+.ai-check-help b { display:block; font-size:10.5px; color:#5B2A91; margin-bottom:2px; }
+.ai-check-help span { display:block; font-size:10px; line-height:1.65; color:#7A6B8E; }
+.ca-advice { margin-top:6px; font-size:9.5px; line-height:1.6; color:#8E6A00; }
+.sheet.item-detail-modal { width:min(960px,94vw) !important; max-width:94vw !important; padding:22px !important; }
+.detail-modal-grid { gap:20px; }
+.dm-left .big-thumb { min-height:360px; }
+.dm-right .sh { font-size:20px; }
+.dm-right .sa { font-size:13px; line-height:1.75; }
+.dm-right .claimbox { padding:12px; }
+.dm-right .claimbox textarea, .dm-right .claimbox input { font-size:13px !important; padding:12px !important; }
+@media (max-width:640px) { .sheet.item-detail-modal { width:94vw !important; padding:16px !important; } .dm-left .big-thumb { min-height:200px; } }
 </style>
 
