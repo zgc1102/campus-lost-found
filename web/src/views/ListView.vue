@@ -557,7 +557,7 @@ function openOldHelp() {
         <div class="own-model">
           <b>分析方式</b>
           <span>文字：本地文本相似度引擎 + 颜色/类别/地点规则</span>
-          <span>{{ ownHasPhoto ? '图片：双方有图，可对照图片自行判断（当前未做视觉比对）' : '图片：双方没有图片，未做图片识别' }}</span>
+          <span v-if="ownHasPhoto">图片：双方有图，可对照图片自行判断（当前未做视觉比对）</span>
         </div>
         <div class="rec-note">相似度不是证据；颜色冲突会明显降分，最终请自行认真核对。</div>
         <div class="rec-actions">
