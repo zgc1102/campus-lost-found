@@ -31,6 +31,7 @@ const submitting = ref(false)
 const result = ref(null)
 const error = ref('')
 const photo = ref('')
+const photoOpen = ref(false)
 const visionState = ref('')
 const needPhoneConfirm = ref(false)
 const phoneConfirmed = ref(false)
@@ -70,7 +71,10 @@ onMounted(() => {
       if (!form.desc) {
         form.desc = [ai.color, ai.brand, ai.features, ai.desc].filter(Boolean).join('，').slice(0, 300)
       }
-      visionState.value = 'AI 识别：' + [ai.category, ai.color, ai.features].filter(Boolean).join(' · ')
+      const bits = [ai.category, ai.color, ai.features].filter(Boolean)
+      visionState.value = bits.length
+        ? '智能识别完成，已自动填写：' + bits.slice(0, 3).join(' · ')
+        : '智能识别没看清这张图片，请重新上传清晰的物品照片'
       sessionStorage.removeItem('sg:aiPhoto')
     }
   } catch (_) {}
@@ -142,6 +146,7 @@ function onPhoto(e) {
 
 function resetPhoto() {
   photo.value = ''
+  photoOpen.value = false
   visionState.value = ''
   if (fileInput.value) fileInput.value.value = ''
 }
@@ -168,12 +173,12 @@ async function analyzePhoto() {
       }
       visionState.value = bits.length
         ? '智能识别完成，已自动填写：' + bits.slice(0, 3).join(' · ')
-        : '智能识别已完成，请核对标题和描述'
+        : '智能识别没有提取到物品特征，请重新上传清晰的物品照片'
     } else {
       visionState.value = '智能识别没看清：' + (d?.reason || '请手动填写标题和描述')
     }
   } catch (e) {
-    visionState.value = 'AI 识别失败，请手动填写标题和描述'
+    visionState.value = '智能识别失败，请重新上传清晰的物品照片，或手动填写标题和描述'
   }
 }
 
@@ -324,7 +329,7 @@ async function submit() {
               <div class="ub-s">智能识别物品、颜色和特征，自动帮写描述</div>
             </div>
             <div v-else class="photo-picked">
-              <img :src="photo" alt="预览">
+              <img :src="photo" alt="预览" @click="photoOpen = true">
               <div v-if="visionState" class="vision-pill" :class="{ busy: visionState.includes('正在'), ok: visionState.includes('完成'), bad: visionState.includes('没看清') || visionState.includes('失败') }">
                 <i v-if="visionState.includes('正在')" class="vision-spin"></i>
                 <i v-else-if="visionState.includes('完成')">✓</i>
@@ -332,6 +337,10 @@ async function submit() {
                 <span>{{ visionState }}</span>
               </div>
               <button type="button" class="photo-change" @click="resetPhoto">重新拍照 / 上传</button>
+            </div>
+            <div v-if="photoOpen" class="photo-viewer" @click="photoOpen = false">
+              <img :src="photo" alt="查看大图">
+              <button type="button" @click.stop="photoOpen = false">✕</button>
             </div>
             <input ref="fileInput" type="file" accept="image/*" capture="environment" style="display:none" @change="onPhoto">
           </div>
@@ -450,5 +459,12 @@ async function submit() {
 .vision-spin { display:block !important; }
 .photo-change { width:100%; margin-top:6px; border:1px dashed #D8C8EE; background:#FBF8FF; color:#5B2A91; border-radius:9px; padding:7px; font-family:inherit; font-size:10px; }
 @keyframes spin { to { transform:rotate(360deg); } }
+</style>
+
+
+<style scoped>
+.photo-viewer { position:fixed; inset:0; z-index:999; background:rgba(18,8,30,.94); display:flex; align-items:center; justify-content:center; padding:18px; }
+.photo-viewer img { max-width:100%; max-height:86vh; border-radius:10px; object-fit:contain; }
+.photo-viewer button { position:fixed; top:18px; right:18px; width:34px; height:34px; border-radius:50%; border:0; background:rgba(255,255,255,.16); color:#fff; font-size:17px; }
 </style>
 

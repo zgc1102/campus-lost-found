@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { computed, reactive, ref } from 'vue'
 import { api } from '../api'
 
@@ -35,6 +35,7 @@ const meta = {
 const active = ref(props.helpCat || 'help_borrow')
 const form = reactive({ title: '', desc: '', place: '', phone: '' })
 const photo = ref('')
+const photoOpen = ref(false)
 const submitting = ref(false)
 const error = ref('')
 const fileInput = ref(null)
@@ -135,7 +136,11 @@ async function submit() {
         <label>照片（选填）</label>
         <label class="hp-photo" @click.prevent="fileInput && fileInput.click()">点击上传一张照片，方便对方判断</label>
         <input ref="fileInput" type="file" accept="image/*" style="display:none" @change="onPhoto">
-        <img v-if="photo" :src="photo" alt="" style="width:100%;max-height:180px;object-fit:cover;border-radius:11px;margin-top:8px">
+        <img v-if="photo" :src="photo" alt="" style="width:100%;max-height:180px;object-fit:cover;border-radius:11px;margin-top:8px" @click="photoOpen = true">
+        <div v-if="photoOpen" class="hp-photo-viewer" @click="photoOpen = false">
+          <img :src="photo" alt="查看大图">
+          <button type="button" @click.stop="photoOpen = false">✕</button>
+        </div>
       </div>
     </div>
     <div class="hp-note">智能整理仅作参考，实际以现场和校方失物招领点为准。</div>
@@ -155,4 +160,11 @@ async function submit() {
 .hp-submit .btn { font-size: 14px; }
 </style>
 
+
+
+<style scoped>
+.hp-photo-viewer { position:fixed; inset:0; z-index:999; background:rgba(18,8,30,.94); display:flex; align-items:center; justify-content:center; padding:18px; }
+.hp-photo-viewer img { max-width:100%; max-height:86vh; border-radius:10px; object-fit:contain; }
+.hp-photo-viewer button { position:fixed; top:18px; right:18px; width:34px; height:34px; border-radius:50%; border:0; background:rgba(255,255,255,.16); color:#fff; font-size:17px; }
+</style>
 
