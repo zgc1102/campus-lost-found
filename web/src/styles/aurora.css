@@ -841,3 +841,13 @@ body:has(.sheet.show) .bottom-nav{transform:translate(-50%,120%)!important;}
   .bottom-nav { width: 100%; max-width: 1180px; }
 }
 
+
+/* 中部弹窗：普通详情/认领弹层统一居中，不再从底部顶上来 */
+.sheet.show:not(.help-screen):not(.tag-screen):not(.agent-sheet) {
+  top: 50% !important; bottom: auto !important;
+  left: 50% !important; transform: translate(-50%, -50%) !important;
+  width: min(560px, 92vw) !important; max-width: 92vw !important;
+  max-height: 88vh !important; overflow-y: auto !important;
+  border-radius: 18px !important; animation: none !important;
+}
+

@@ -61,7 +61,25 @@ const visible = computed(() => {
   if (tab.value === 'low') return allPairs.value.filter((p) => p.total < 60)
   return allPairs.value
 })
+const highCount = computed(() => allPairs.value.filter((p) => p.total >= 60).length)
 const selectedPair = computed(() => selected.value)
+const ringOffset = computed(() => {
+  const n = selectedPair.value?.total || 0
+  return (138.2 * (1 - n / 100)).toFixed(1)
+})
+const ringColor = computed(() => scoreColor(selectedPair.value?.total || 0))
+function scoreColor(n) { return n >= 70 ? '#2F7D46' : n >= 40 ? '#C58A00' : '#C0392B' }
+function commonFeatures(p) {
+  if (!p) return []
+  const norm = (s) => String(s || '').replace(/[\s，。！？、；：]/g, '')
+  const a = norm((p.lost.title || '') + (p.lost.desc || ''))
+  const b = norm((p.found.title || '') + (p.found.desc || ''))
+  const out = []
+  for (const w of ['黑色', '白色', '蓝色', '红色', '雨伞', '校园卡', '耳机', '水杯', '书包', '图书馆', '食堂', '教室', '钥匙', '手机', '电脑', '划痕', '挂件']) {
+    if (a.includes(w) && b.includes(w)) out.push(w)
+  }
+  return out.slice(0, 6)
+}
 
 onMounted(async () => {
   try {
@@ -96,7 +114,13 @@ function scoreLevel(n) { return n >= 75 ? '高' : n >= 50 ? '中' : '低' }
         <div>
           <b>系统自动配对</b>
           <p>同时比对寻物与招领的文本、类别、地点和时间，给出可解释的匹配报告。</p>
+          <div class="engine-line">本次匹配引擎：本地可解释匹配 v1 · 文本 n-gram + 类别 / 地点 / 时间权重</div>
         </div>
+      </div>
+      <div v-if="highCount" class="match-push" @click="tab = 'high'">
+        <b>系统匹配提醒</b>
+        <span>发现 {{ highCount }} 组高相似配对，建议优先核对</span>
+        <i>查看 →</i>
       </div>
       <div class="match-tabs">
         <button type="button" :class="{ on: tab === 'all' }" @click="tab = 'all'">全部 {{ allPairs.length }}</button>
@@ -142,7 +166,13 @@ function scoreLevel(n) { return n >= 75 ? '高' : n >= 50 ? '中' : '低' }
             <h2>综合匹配分 {{ selectedPair.total }} 分</h2>
             <div class="report-sub">{{ scoreLevel(selectedPair.total) }}匹配 · 仅供参考，最终请当面核对</div>
           </div>
-          <div class="report-ring" :class="'level-' + scoreLevel(selectedPair.total)">{{ selectedPair.total }}</div>
+          <div class="report-ring-wrap">
+            <svg viewBox="0 0 120 120" class="ring-svg">
+              <circle cx="60" cy="60" r="22" class="ring-track"></circle>
+              <circle cx="60" cy="60" r="22" class="ring-value" :stroke="ringColor" :style="{ '--ring-offset': ringOffset + 'px' }"></circle>
+            </svg>
+            <b>{{ selectedPair.total }}</b>
+          </div>
         </div>
 
         <div class="report-cols">
@@ -180,6 +210,16 @@ function scoreLevel(n) { return n >= 75 ? '高' : n >= 50 ? '中' : '低' }
         <div class="report-reasons">
           <div class="rr-title">匹配理由</div>
           <div v-for="r in selectedPair.reasons" :key="r" class="rr-item">• {{ r }}</div>
+          <div v-if="commonFeatures(selectedPair).length" class="rr-common">
+            共同特征：<span v-for="w in commonFeatures(selectedPair)" :key="w">{{ w }}</span>
+          </div>
+        </div>
+
+        <div class="report-detail">
+          <div><b>文本</b><span>{{ selectedPair.text }}% 重合，{{ selectedPair.text >= 30 ? '标题/描述有明显共同词' : '共同词较少，主要靠其他维度' }}</span></div>
+          <div><b>类别</b><span>{{ selectedPair.lost.cat === selectedPair.found.cat ? '两边分类一致' : '两边分类不同，不能只凭分类判断' }}</span></div>
+          <div><b>地点</b><span>{{ selectedPair.place ? '地点相同或包含，可信度加分' : '地点没有重合，需要人工确认' }}</span></div>
+          <div><b>时间</b><span>{{ selectedPair.time >= 50 ? '发布时间接近' : '时间间隔较远，注意是否同一件物品' }}</span></div>
         </div>
 
         <div class="report-actions">
@@ -252,3 +292,23 @@ function scoreLevel(n) { return n >= 75 ? '高' : n >= 50 ? '中' : '低' }
 .report-actions .btn { flex:1; }
 @media (max-width:600px) { .report-cols { grid-template-columns:1fr; } .match-modal { padding:0;align-items:flex-end; } .match-report { max-height:92vh;border-radius:18px 18px 0 0; } }
 </style>
+
+<style scoped>
+.engine-line { margin-top:6px; font-size:8.5px; color:#5B2A91; background:#F1E8FB; border-radius:5px; padding:3px 5px; display:inline-block; }
+.match-push { display:flex; align-items:center; gap:7px; background:#EAF7EE; border:1px solid #CFE8D6; color:#2F7D46; border-radius:11px; padding:8px 10px; margin-bottom:9px; font-size:10px; cursor:pointer; }
+.match-push b { font-size:10px; }
+.match-push span { flex:1; color:#4F6B57; }
+.match-push i { font-style:normal; font-size:9px; }
+.report-ring-wrap { position:relative; width:60px; height:60px; flex:0 0 60px; }
+.ring-svg { width:60px; height:60px; transform:rotate(-90deg); }
+.ring-track { fill:none; stroke:#F0E8F8; stroke-width:7; }
+.ring-value { fill:none; stroke-width:7; stroke-linecap:round; stroke-dasharray:138.2; stroke-dashoffset:138.2; animation:ringFill .9s ease forwards; }
+@keyframes ringFill { to { stroke-dashoffset: var(--ring-offset); } }
+.report-ring-wrap b { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:17px; color:#3B1D63; }
+.rr-common { margin-top:5px; font-size:9px; color:#5B2A91; }
+.rr-common span { display:inline-block; background:#F1E8FB; border-radius:4px; padding:1px 4px; margin:2px 2px 0 0; }
+.report-detail { margin-top:8px; border-top:1px dashed #EADFF5; padding-top:7px; }
+.report-detail div { display:flex; gap:6px; font-size:9px; line-height:1.6; color:#6E607F; margin-top:3px; }
+.report-detail b { flex:0 0 26px; color:#5B2A91; }
+</style>
+
