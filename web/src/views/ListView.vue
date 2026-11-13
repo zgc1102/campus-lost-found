@@ -103,11 +103,11 @@ async function reportItem() {
 
 const copy = computed(() => props.type === 'lost'
   ? {
-      title: '失物招领', kicker: 'LOST & FOUND', hint: '捡到的东西在这里等主人', other: '寻物启事', publish: '发布启事',
+      title: '失物招领', kicker: '失物招领', hint: '捡到的东西在这里等主人', other: '寻物启事', publish: '发布启事',
       warning: '⚠️ 认领提示：认领物品前，请务必核对物品独有特征，请勿仅凭照片认领，谨防冒领。<br>交接请选择公共场所，不要前往偏僻地点，谨慎公开手机号、微信等私人联系方式。'
     }
   : {
-      title: '寻物启事', kicker: 'LOST & FOUND', hint: '看到的同学可以帮一把', other: '失物招领', publish: '发布启事',
+      title: '寻物启事', kicker: '失物招领', hint: '看到的同学可以帮一把', other: '失物招领', publish: '发布启事',
       warning: '⚠️ 防骗提示：主动联系你并提供“验证码 / 转账 / 付费解锁”的，基本都是骗子。<br>真实认领请当面核对物品细节，平台不会收取任何费用。'
     })
 
@@ -388,6 +388,7 @@ function openOldHelp() {
 .ape-go { color:#7A3CB0; font-size:18px; }
 .ai-photo-state { margin-top:6px; font-size:10px; color:#7A3CB0; }
 </style>
+
 
 
 

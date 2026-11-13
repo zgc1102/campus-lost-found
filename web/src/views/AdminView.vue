@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { api } from '../api'
 
@@ -192,7 +192,7 @@ async function applyAi(it) {
 
 async function preReviewAll() {
   try {
-    error.value = '正在提交 AI 预审…'
+    error.value = '正在提交智能预审…'
     await api.adminAiReviewAll(token.value)
     error.value = '智能预审已提交，正在后台处理'
     setTimeout(loadAll, 2500)
@@ -725,6 +725,7 @@ textarea.field { min-height: 78px; resize: vertical; }
 .deploy-status { width:min(1120px,calc(100% - 48px)); margin:12px auto 0; background:#FFF8E8; border:1px solid #F2DFC0; color:#8A5A16; border-radius:10px; padding:9px 12px; font-size:11px; display:flex; align-items:center; justify-content:space-between; }
 .deploy-status b { color:#5B2A91; font-size:13px; }
 </style>
+
 
 
 
