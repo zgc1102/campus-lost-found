@@ -142,19 +142,32 @@ function onPhoto(e) {
 
 async function analyzePhoto() {
   if (!photo.value) return
-  visionState.value = 'AI 正在识别照片…'
+  visionState.value = '正在识别中，请稍后…'
   try {
     const d = await api.vision(photo.value)
     if (d && d.ok !== false) {
-      const bits = [d.category, d.color, d.desc].filter(Boolean)
+      const bits = [d.category, d.color, d.features, d.desc].filter(Boolean)
       if (!form.title.trim() && d.category) form.title = String(d.category).slice(0, 30)
-      if (!form.desc.trim() && bits.length) form.desc = bits.join('，').slice(0, 200)
-      visionState.value = 'AI 识别：' + (bits.join(' · ') || '已识别')
+      if (!form.desc.trim()) {
+        form.desc = [d.color, d.brand, d.features, d.desc].filter(Boolean).join('，').slice(0, 300)
+      }
+      if (!form.category) {
+        const c = String(d.category || '')
+        if (/校园卡|证件|身份证|学生证/.test(c)) form.category = '证件'
+        else if (/耳机|电脑|手机|充电|键盘|电子/.test(c)) form.category = '电子设备'
+        else if (/衣|裤|鞋|帽|围巾/.test(c)) form.category = '衣物'
+        else if (/水杯|杯子|保温/.test(c)) form.category = '水杯'
+        else if (/书包|背包|包/.test(c)) form.category = '书包'
+        else form.category = '其他'
+      }
+      visionState.value = bits.length
+        ? 'AI 识别完成，已自动填写：' + bits.slice(0, 3).join(' · ')
+        : 'AI 已完成识别，请核对标题和描述'
     } else {
-      visionState.value = ''
+      visionState.value = 'AI 没看清：' + (d?.reason || '请手动填写标题和描述')
     }
   } catch (e) {
-    visionState.value = ''
+    visionState.value = 'AI 识别失败，请手动填写标题和描述'
   }
 }
 
@@ -317,6 +330,14 @@ async function submit() {
           </div>
         </div>
 
+        <div v-if="form.title || form.desc" class="ai-pub-preview">
+          <div class="app-head">AI 发布预览 <span>提交前先看一眼</span></div>
+          <b>{{ form.title || '还没写标题' }}</b>
+          <p>{{ form.desc || '还没写描述' }}</p>
+          <div class="app-meta">{{ form.category || '未分类' }} · {{ form.place || '未填写地点' }}</div>
+          <div v-if="visionState" class="app-meta">{{ visionState }}</div>
+        </div>
+
         <div v-if="error" class="warn-box" style="margin-bottom:10px">{{ error }}</div>
         <label v-if="needPhoneConfirm" style="display:flex;align-items:center;gap:6px;font-size:10px;color:var(--sub);margin-bottom:10px">
           <input v-model="phoneConfirmed" type="checkbox" style="width:auto;margin:0;accent-color:var(--primary)">
@@ -324,9 +345,9 @@ async function submit() {
         </label>
 
         <button type="button" class="submit-btn" :disabled="submitting" @click="submit">
-          {{ submitting ? '提交中…' : '提交发布 · AI 先审核' }}
+          {{ submitting ? '提交中…' : '提交发布 · 智能先审核' }}
         </button>
-        <div class="pub-note">提交后先审文字和图片，通过后同学才能看到；AI 匹配仅供参考，实际以现场和校方失物招领点为准</div>
+        <div class="pub-note">提交后先审文字和图片，通过后同学才能看到；智能匹配仅供参考，实际以现场和校方失物招领点为准</div>
         <button type="button" class="btn ghost" style="width:100%;margin:10px 0 20px;padding:11px" @click="fillDemo">一键填入示例，快速体验</button>
       </template>
     </div>
@@ -388,6 +409,17 @@ async function submit() {
 
 <style>
 .pub-head { margin-top: 8px; }
+</style>
+
+
+
+<style scoped>
+.ai-pub-preview { background:#FBF8FF; border:1px solid #E4D4F7; border-radius:13px; padding:11px 12px; margin:0 0 10px; }
+.app-head { display:flex; justify-content:space-between; font-size:10px; color:#5B2A91; font-weight:600; margin-bottom:7px; }
+.app-head span { color:#A99BB9; font-weight:400; }
+.ai-pub-preview b { display:block; font-size:13px; color:#3B1D63; }
+.ai-pub-preview p { margin:4px 0; font-size:10.5px; line-height:1.7; color:#6E607F; }
+.app-meta { font-size:9px; color:#A99BB9; margin-top:3px; }
 </style>
 
 
