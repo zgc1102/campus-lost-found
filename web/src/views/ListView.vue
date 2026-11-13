@@ -112,6 +112,26 @@ function ownCompare(a, b) {
   else reasons.push('描述重合较少')
   return { total, reasons, text, sameCat, samePlace, colorConflict }
 }
+function compareCacheKey(a, b) {
+  return [String(a), String(b)].sort().join('|')
+}
+function readCompareCache(key) {
+  try {
+    const all = JSON.parse(localStorage.getItem('sg:aiCompareCache') || '{}')
+    return all[key] || null
+  } catch (_) { return null }
+}
+function writeCompareCache(key, value) {
+  try {
+    const all = JSON.parse(localStorage.getItem('sg:aiCompareCache') || '{}')
+    all[key] = value
+    const keys = Object.keys(all)
+    if (keys.length > 300) {
+      keys.sort((a, b) => (all[a].at || 0) - (all[b].at || 0)).slice(0, keys.length - 300).forEach((k) => delete all[k])
+    }
+    localStorage.setItem('sg:aiCompareCache', JSON.stringify(all))
+  } catch (_) {}
+}
 function openOwnCompare(target) {
   if (!selected.value || !target) return
   const r = ownCompare(selected.value, target)
@@ -124,6 +144,18 @@ function openOwnCompare(target) {
   ownCached.value = false
   ownAiLoading.value = true
   ownOpen.value = true
+  const key = compareCacheKey(selected.value.id, target.id)
+  const cached = readCompareCache(key)
+  if (cached) {
+    ownScore.value = cached.score
+    ownAiSummary.value = cached.summary
+    ownAiModel.value = cached.textModel
+    ownAiImage.value = cached.imageUsed ? cached.imageModel : ''
+    if (Array.isArray(cached.points) && cached.points.length) ownReasons.value = cached.points
+    ownCached.value = true
+    ownAiLoading.value = false
+    return
+  }
   api.compareAI(selected.value.id, target.id).then((res) => {
     if (!res || !res.ok) return
     if (Number.isFinite(Number(res.score))) ownScore.value = Number(res.score)
@@ -132,6 +164,10 @@ function openOwnCompare(target) {
     ownAiModel.value = res.textModel || 'DeepSeek'
     ownAiImage.value = res.imageUsed ? (res.imageModel || '智谱视觉') : ''
     if (Array.isArray(res.points) && res.points.length) ownReasons.value = res.points
+    writeCompareCache(key, {
+      score: ownScore.value, summary: ownAiSummary.value, points: ownReasons.value,
+      textModel: ownAiModel.value, imageUsed: !!res.imageUsed, imageModel: ownAiImage.value, at: Date.now()
+    })
   }).catch(() => {}).finally(() => { ownAiLoading.value = false })
 }
 function useOwnTarget() {
