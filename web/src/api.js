@@ -36,8 +36,8 @@ async function call(path, options = {}) {
 }
 
 export const api = {
-  items() {
-    return call('/items')
+  items(includeClosed = false) {
+    return call('/items' + (includeClosed ? '?include_closed=1' : ''))
   },
   announcements() {
     return call('/announcements').catch(() => [])

@@ -123,11 +123,12 @@ const visible = computed(() => {
 
 onMounted(load)
 watch(() => props.type, () => { query.value = '' })
+watch(showClosed, () => load())
 
 async function load() {
   loading.value = true
   try {
-    const list = await api.items()
+    const list = await api.items(showClosed.value)
     if (Array.isArray(list)) items.value = list
     const focus = sessionStorage.getItem('sg:focusItem')
     if (focus) {

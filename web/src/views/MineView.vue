@@ -205,6 +205,12 @@ function fmt(ts) {
           <div v-if="c.status === 'accepted' && c.itemType !== 'help'" class="mact">
             <button type="button" class="btn" @click="completeClaim(c)">确认归还</button>
           </div>
+          <div v-if="codeFor && codeFor.id === c.id" class="code-box">
+            <input v-model="codeInput" inputmode="numeric" maxlength="6" placeholder="输入对方提供的 4~6 位取件码">
+            <button type="button" class="btn" :disabled="codeBusy" @click="submitCode">{{ codeBusy ? '确认中…' : '确认归还' }}</button>
+            <button type="button" class="btn ghost" @click="codeFor = null">取消</button>
+            <div v-if="codeError" class="tip-small" style="color:#c0392b">{{ codeError }}</div>
+          </div>
         </div>
       </div>
 

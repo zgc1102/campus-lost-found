@@ -2431,9 +2431,11 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 _qs0 = parse_qs(urlparse(self.path).query)
                 _limit0 = int((_qs0.get("limit") or ["0"])[0] or 0)
+                _closed0 = str((_qs0.get("include_closed") or ["0"])[0]) == "1"
             except Exception:
                 _limit0 = 0
-            _ckey = (owner or "") + "|" + str(_limit0)
+                _closed0 = False
+            _ckey = (owner or "") + "|" + str(_limit0) + "|" + ("1" if _closed0 else "0")
             with ITEMS_CACHE_LOCK:
                 _hit = (ITEMS_CACHE["key"] == _ckey and time.time() - ITEMS_CACHE["at"] < 10)
                 _craw, _cetag = ITEMS_CACHE["raw"], ITEMS_CACHE["etag"]
@@ -2450,7 +2452,7 @@ class Handler(BaseHTTPRequestHandler):
                                    "Vary": "X-Owner"})
             with LOCK:
                 items = [public_item(x, owner) for x in load_items()
-                         if x.get("status") in PUBLIC_STATUS and public_visible(x)]
+                         if x.get("status") in PUBLIC_STATUS and (_closed0 or public_visible(x))]
                 _claims = load_claims()
             _my_claims = {c.get("itemId"): c for c in _claims if c.get("from") == owner}
             for _x in items:

@@ -814,3 +814,17 @@ body:has(.sheet.show) .bottom-nav{transform:translate(-50%,120%)!important;}
   .screen .scroll { padding-left: 24px; padding-right: 24px; }
 }
 
+
+@media (max-width: 899px) {
+  .bottom-nav { bottom: 0 !important; padding-bottom: calc(4px + env(safe-area-inset-bottom)) !important; }
+}
+
+
+/* 视觉微调：只做轻量层次，不改变原有布局 */
+.btn { box-shadow: 0 4px 12px rgba(59,29,99,.10); }
+.item { transition: transform .16s ease, box-shadow .16s ease; }
+@media (hover: hover) {
+  .item:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(59,29,99,.10); }
+}
+.home-stats b { background: linear-gradient(135deg,#3B1D63,#8A52C7); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
