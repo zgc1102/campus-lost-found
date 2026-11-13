@@ -30,7 +30,7 @@ const params = new URLSearchParams(location.search)
 const initial = params.get('view')
 const tagCode = ref(params.get('tag') || params.get('code') || '')
 const isAdmin = location.pathname.replace(/\/+$/, '') === '/admin'
-const initialView = isAdmin ? 'admin' : (tagCode.value ? 'tag-scan' : ['lost', 'found', 'help', 'publish', 'help-publish', 'radar', 'tag', 'mine', 'guide', 'map', 'ask', 'notices', 'info', 'search', 'admin', 'legacy', 'success', 'lend', 'borrow', 'memorial', 'faq', 'phones'].includes(initial) ? initial : 'home')
+const initialView = isAdmin ? 'admin' : (tagCode.value ? 'tag-scan' : ['lost', 'found', 'help', 'publish', 'help-publish', 'radar', 'match', 'tag', 'mine', 'guide', 'map', 'ask', 'notices', 'info', 'search', 'admin', 'legacy', 'success', 'lend', 'borrow', 'memorial', 'faq', 'phones'].includes(initial) ? initial : 'home')
 const view = ref(initialView)
 const publishType = ref(params.get('type') || 'lost')
 const helpCat = ref(params.get('cat') || 'help_borrow')
