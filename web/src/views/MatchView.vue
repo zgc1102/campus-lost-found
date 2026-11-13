@@ -218,8 +218,8 @@ function scoreLevel(n) { return n >= 75 ? '高' : n >= 50 ? '中' : '低' }
 .pair-meta { margin-top:3px;font-size:9px;color:#8E7FA3; }
 .pair-bars { display:flex;gap:7px;flex-wrap:wrap;margin-top:4px;font-size:8.5px;color:#7A6B8E; }
 .pair-go { font-size:9px;color:#5B2A91;white-space:nowrap; }
-.match-modal { position:fixed;inset:0;z-index:300;background:rgba(20,8,34,.48);display:flex;align-items:center;justify-content:center;padding:14px; }
-.match-report { width:min(760px,100%);max-height:90vh;overflow-y:auto;background:#fff;border-radius:18px;padding:16px;position:relative; }
+.match-modal { position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:300;background:rgba(20,8,34,.48);display:flex;align-items:center;justify-content:center;padding:14px; }
+.match-report { width:min(860px,92vw);max-height:90vh;overflow-y:auto;background:#fff;border-radius:18px;padding:16px;position:relative; }
 .report-close { position:absolute;right:10px;top:10px;border:0;background:#F3EEFA;color:#5B2A91;width:26px;height:26px;border-radius:50%;font-size:14px; }
 .report-head { display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding-right:26px;border-bottom:1px solid #F0E8F8;padding-bottom:10px; }
 .report-kicker { font-size:9px;color:#A99BB9;letter-spacing:.1em; }
