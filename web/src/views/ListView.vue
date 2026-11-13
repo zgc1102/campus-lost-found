@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { api } from '../api'
 import CountUp from '../components/CountUp.vue'
@@ -535,7 +535,7 @@ function openOldHelp() {
             <div class="own-ai-summary"><b>AI 参考总结</b>{{ ownSummary }}</div>
           </div>
           <div class="own-ring" :class="ownScore >= 70 ? 'high' : ownScore >= 40 ? 'mid' : 'low'">
-            <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="22" class="own-track" /><circle cx="60" cy="60" r="22" class="own-fill" :style="{ '--off': (138.2 * (1 - ownScore / 100)).toFixed(1) + 'px' }" /></svg>
+            <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="44" class="own-track" /><circle cx="60" cy="60" r="44" class="own-fill" :style="{ '--off': (276.5 * (1 - ownScore / 100)).toFixed(1) + 'px' }" /></svg>
             <CountUp :value="ownScore" suffix="%" />
           </div>
         </div>
@@ -761,11 +761,11 @@ function openOldHelp() {
 .own-ring { position:relative; width:72px; height:72px; flex:0 0 72px; }
 .own-ring svg { width:72px; height:72px; transform:rotate(-90deg); }
 .own-track { fill:none; stroke:#F0E8F8; stroke-width:7; }
-.own-fill { fill:none; stroke:#C0392B; stroke-width:7; stroke-linecap:round; stroke-dasharray:138.2; stroke-dashoffset:138.2; animation:ownRing .8s ease forwards; }
+.own-fill { fill:none; stroke:#C0392B; stroke-width:7; stroke-linecap:round; stroke-dasharray:276.5; stroke-dashoffset:276.5; animation:ownRing .8s ease forwards; }
 .own-ring.high .own-fill { stroke:#2F7D46; }
 .own-ring.mid .own-fill { stroke:#C58A00; }
 @keyframes ownRing { to { stroke-dashoffset: var(--off); } }
-.own-ring .count-up { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:700; color:#3B1D63; }
+.own-ring .count-up { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:26px; font-weight:700; color:#3B1D63; line-height:1; letter-spacing:-1px; font-variant-numeric:tabular-nums; }
 .own-cols { display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-top:10px; }
 .own-card { border:1px solid #EADFF5; border-radius:11px; padding:9px; background:#FCFAFF; animation:ownCard .28s ease both; }
 .own-card.left { animation-name:ownLeft; }
@@ -788,8 +788,9 @@ function openOldHelp() {
 .own-model { margin-top:7px; padding-top:6px; border-top:1px dashed #EADFF5; display:flex; flex-direction:column; gap:2px; }
 .own-model b { font-size:9px; color:#5B2A91; }
 .own-model span { font-size:8.5px; line-height:1.55; color:#8E7FA3; }
-.own-ring { width:88px; height:88px; flex:0 0 88px; }
-.own-ring svg { width:88px; height:88px; }
+.own-ring { width:112px; height:112px; flex:0 0 112px; }
+.own-ring svg { width:112px; height:112px; }
 .own-ring .count-up { font-size:22px; }
 .own-modal-head h2 { font-size:18px; line-height:1.35; }
 </style>
+
