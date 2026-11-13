@@ -796,3 +796,12 @@ body:has(.sheet.show) .bottom-nav{transform:translate(-50%,120%)!important;}
   .ticker-track { animation-duration: 60s; }
 }
 
+
+@media (max-width: 759px) {
+  html, body, #app { height: auto !important; min-height: 100% !important; overflow-y: auto !important; overflow-x: hidden !important; }
+  body { display: block !important; }
+  .phone { height: auto !important; min-height: 100dvh !important; overflow: visible !important; }
+  .screen { height: auto !important; min-height: 100dvh !important; }
+  .screen .scroll { flex: none !important; height: auto !important; overflow: visible !important; }
+}
+

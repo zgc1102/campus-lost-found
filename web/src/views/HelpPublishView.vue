@@ -2,7 +2,10 @@
 import { computed, reactive, ref } from 'vue'
 import { api } from '../api'
 
-const props = defineProps({ helpCat: { type: String, default: 'help_borrow' } })
+const props = defineProps({
+  helpCat: { type: String, default: 'help_borrow' },
+  editItem: { type: Object, default: null }
+})
 const emit = defineEmits(['nav'])
 
 const cats = [
@@ -35,6 +38,15 @@ const photo = ref('')
 const submitting = ref(false)
 const error = ref('')
 const fileInput = ref(null)
+if (props.editItem) {
+  const e = props.editItem
+  active.value = e.cat || e.helpCat || props.helpCat
+  form.title = e.title || ''
+  form.desc = e.desc || ''
+  form.place = e.place || ''
+  form.phone = (e.contact && e.contact.phone) || ''
+  photo.value = e.photoUrl || e.photo || ''
+}
 const current = computed(() => cats.find((c) => c.id === active.value) || cats[0])
 const currentMeta = computed(() => meta[active.value] || meta.help_borrow)
 
@@ -64,7 +76,7 @@ async function submit() {
   if (form.desc.trim().length < 5) { error.value = '具体说明再写清楚一点'; return }
   submitting.value = true
   try {
-    const saved = await api.create({
+    const payload = {
       type: 'help',
       cat: active.value,
       helpCat: active.value,
@@ -73,7 +85,10 @@ async function submit() {
       place: form.place.trim() || '未填写地点',
       contact: { phone: form.phone.trim() },
       photo: photo.value || null
-    })
+    }
+    const saved = props.editItem
+      ? await api.update(props.editItem.id, payload)
+      : await api.create(payload)
     try { sessionStorage.setItem('sg:lastResult', JSON.stringify(saved)) } catch (e) {}
     emit('nav', 'success')
   } catch (e) {

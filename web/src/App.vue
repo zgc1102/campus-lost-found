@@ -98,6 +98,13 @@ function publish(type, cat) {
 
 function editItem(item) {
   editingItem.value = item
+  if (item.type === 'help') {
+    publishType.value = 'help'
+    helpPublishCat.value = item.cat || item.helpCat || 'help_borrow'
+    view.value = 'help-publish'
+    history.replaceState({}, '', location.pathname + '?view=help-publish&cat=' + helpPublishCat.value)
+    return
+  }
   publishType.value = item.type === 'found' ? 'found' : 'lost'
   view.value = 'publish'
   history.replaceState({}, '', location.pathname + '?view=publish&type=' + publishType.value)
@@ -112,7 +119,7 @@ function editItem(item) {
     <HomeView v-if="view === 'home'" @nav="go" />
     <ListView v-else-if="view === 'lost' || view === 'found'" :type="view" @nav="go" @publish="publish" />
     <HelpView v-else-if="view === 'help'" :key="helpCat" :initial-cat="helpCat" @nav="go" @publish="publish" />
-    <HelpPublishView v-else-if="view === 'help-publish'" :help-cat="helpPublishCat" @nav="go" />
+    <HelpPublishView v-else-if="view === 'help-publish'" :key="editingItem ? editingItem.id : 'new-' + helpPublishCat" :help-cat="helpPublishCat" :edit-item="editingItem" @nav="go" />
     <PublishView v-else-if="view === 'publish'" :key="publishType + '-' + helpCat + '-' + (editingItem ? editingItem.id : 'new')" :type="publishType" :help-cat="helpCat" :edit-item="editingItem" @nav="go" />
     <RadarView v-else-if="view === 'radar'" @nav="go" />
     <TagScanView v-else-if="view === 'tag-scan'" :code="tagCode" @nav="go" />

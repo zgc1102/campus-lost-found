@@ -1743,6 +1743,11 @@ def agent_detective(item, items):
     hotspots = _hotspot_stats(items)
     group = _place_group(item.get("place"))
     tips = _place_tips(group)
+    _ptext = (item.get("title") or "") + " " + (item.get("desc") or "")
+    _personal = bool(re.search(r"裤衩|内裤|内衣|袜子|毛巾|睡衣|衣物|校服", _ptext))
+    if _personal:
+        group = "宿舍"
+        tips = ["先回自己的宿舍床位 / 衣柜找", "宿舍楼层的公共浴室 / 澡堂", "宿舍洗衣房和晾衣区", "宿舍楼管值班室"]
     actions = []
     if matches:
         top = matches[0]
@@ -1755,7 +1760,7 @@ def agent_detective(item, items):
     for t in tips[:3]:
         actions.append({"title": "去%s找找" % t, "detail": "按丢失地点推断，这里最可能先被送到。", "itemId": ""})
     for h in hotspots[:2]:
-        if h["place"] == group:
+        if _personal or h["place"] == group:
             continue
         actions.append({
             "title": "顺路看一眼%s" % h["place"],
@@ -3322,6 +3327,17 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"error": "缺少设备标识"}, 400)
             item_id = path[len("/api/items/"):-len("/claims")]
             body = self._read_body()
+            with LOCK:
+                _items0 = load_items()
+                _target0 = next((x for x in _items0 if x.get("id") == item_id), None)
+            if not _target0:
+                return self._json({"error": "not found"}, 404)
+            if _target0.get("ownerToken") == owner:
+                return self._json({"error": "这是你自己发布的内容，不能认领自己的发布"}, 400)
+            if _target0.get("status") == "claimed":
+                return self._json({"error": "这个物品已经被别人认领了"}, 400)
+            if _target0.get("status") != "approved":
+                return self._json({"error": "这条已经不在可认领状态"}, 400)
             message = str(body.get("message") or "").strip()[:200]
             contact = str(body.get("contact") or "").strip()[:30]
             _ok, _why = moderate_text(message + " " + contact, "认领申请", allow_help=True)

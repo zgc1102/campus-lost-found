@@ -163,6 +163,7 @@ function chipText(x) {
   return Object.values(x.fields).filter(Boolean).slice(0, 3)
 }
 function actionLabel(x) {
+  if (x.isMine) return '你发布的'
   if (x.myClaim === 'pending') return '已申请'
   if (x.myClaim === 'accepted' || x.myClaim === 'completed') return '已通过'
   if (x.myClaim === 'need_more') return '补充信息'
@@ -175,7 +176,7 @@ function statusChip(x) {
   return map[x.status] || ''
 }
 function canClaim(x) {
-  return x.status === 'approved' && !['pending', 'accepted', 'completed'].includes(x.myClaim)
+  return !x.isMine && x.status === 'approved' && !['pending', 'accepted', 'completed'].includes(x.myClaim)
 }
 function openOldPublish() {
   emit('publish', props.type)
@@ -304,6 +305,7 @@ function openOldHelp() {
         <span v-else>{{ thumbText(selected) }}</span>
       </div>
       <div class="sh">{{ selected.title || '未命名物品' }}</div>
+      <div v-if="selected.isMine" class="sa" style="margin-top:6px;color:var(--purple)">这是你自己发布的内容，不能认领自己的发布。</div>
       <div class="sa">{{ selected.desc || '暂无描述' }}</div>
       <div v-if="selected.ai" class="pub-ai" :class="'pub-ai-' + (selected.ai.decision || 'review')">
         <b>🤖 AI 审核 {{ ({approve:'建议通过', reject:'建议驳回', review:'建议复核'})[selected.ai.decision] || '已分析' }}</b>
