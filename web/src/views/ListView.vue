@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { api } from '../api'
 
@@ -333,7 +333,7 @@ function openOldHelp() {
     </div>
 
     <div v-if="selected" class="sheet vue-sheet show">
-      <button type="button" class="sheet-x" @click="selected = null">收起</button>
+      <button type="button" class="sheet-x" aria-label="关闭" @click="selected = null">✕</button>
       <div class="big-thumb" @click="selected.photoUrl && (photoOpen = true)">
         <img v-if="selected.photoUrl" :src="selected.photoUrl" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:16px">
         <span v-else>{{ thumbText(selected) }}</span>
@@ -374,7 +374,7 @@ function openOldHelp() {
       </div>
       <div v-if="reportState" class="sa" style="margin-top:6px">{{ reportState }}</div>
       <div class="close" @click="reportItem">🚩 举报这条信息</div>
-      <div class="close" @click="selected = null">收起</div>
+
     </div>
     <div v-if="photoOpen && selected && selected.photoUrl" class="img-viewer" style="display:flex" @click="photoOpen = false">
       <img :src="selected.photoUrl" alt="">
@@ -455,4 +455,5 @@ function openOldHelp() {
 .me-copy b { font-size:11px;color:#3B1D63; }
 .me-copy i { font-style:normal;font-size:9px;color:#8E7FA3;line-height:1.5; }
 </style>
+
 

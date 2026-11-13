@@ -153,7 +153,7 @@ async function submitHelp() {
     </div>
 
     <div v-if="selected" class="sheet vue-sheet show">
-      <button type="button" class="sheet-x" @click="selected = null">收起</button>
+      <button type="button" class="sheet-x" aria-label="关闭" @click="selected = null">✕</button>
       <div class="big-thumb" @click="selected.photoUrl && (photoSrc = selected.photoUrl, photoOpen = true)">
         <img v-if="selected.photoUrl" :src="selected.photoUrl" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:16px">
         <span v-else>{{ thumb(selected) }}</span>
@@ -175,7 +175,7 @@ async function submitHelp() {
         <div v-if="goState" class="sa" style="margin-top:6px">{{ goState }}</div>
         <button type="button" class="btn" style="width:100%;margin-top:12px" :disabled="going" @click="submitHelp">{{ going ? '发送中…' : '发送' }}</button>
       </template>
-      <div class="close" @click="selected = null">收起</div>
+
     </div>
     <div v-if="photoOpen" class="help-photo-viewer" @click="photoOpen = false">
       <img :src="photoSrc" alt="查看大图">
@@ -226,5 +226,6 @@ async function submitHelp() {
 .help-ai-box b { font-size:10px; color:#5B2A91; }
 .help-ai-box p { margin:3px 0 0; font-size:10px; line-height:1.6; color:#6E607F; }
 </style>
+
 
 

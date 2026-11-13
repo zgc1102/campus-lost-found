@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed, onMounted, ref } from 'vue'
 import { api } from '../api'
 
@@ -162,7 +162,7 @@ function scoreLevel(n) { return n >= 75 ? '高' : n >= 50 ? '中' : '低' }
         <button type="button" class="report-close" @click="closePair">✕</button>
         <div class="report-head">
           <div>
-            <div class="report-kicker">匹配详情</div>
+            <div class="report-kicker">匹配详情 · 本地可解释匹配 v1</div>
             <h2>综合匹配分 {{ selectedPair.total }} 分</h2>
             <div class="report-sub">{{ scoreLevel(selectedPair.total) }}匹配 · 仅供参考，最终请当面核对</div>
           </div>
@@ -197,6 +197,10 @@ function scoreLevel(n) { return n >= 75 ? '高' : n >= 50 ? '中' : '低' }
             <p>{{ selectedPair.found.desc || '暂无描述' }}</p>
             <div class="ri-meta">捡到时间：{{ fmt(selectedPair.found.createdAt) }}</div>
             <div class="ri-meta">联系人：{{ selectedPair.found.contact?.phone || '未公开' }}</div>
+            <div v-if="commonFeatures(selectedPair).length" class="ri-keywords">
+              <span>共同关键词</span>
+              <i v-for="w in commonFeatures(selectedPair)" :key="w">{{ w }}</i>
+            </div>
           </div>
         </div>
 
@@ -223,7 +227,7 @@ function scoreLevel(n) { return n >= 75 ? '高' : n >= 50 ? '中' : '低' }
         </div>
 
         <div class="report-actions">
-          <button type="button" class="btn" @click="closePair">继续看其他匹配</button>
+          <button type="button" class="btn" @click="closePair">关闭报告</button>
           <button type="button" class="btn ghost" @click="emit('nav', 'found'); closePair()">去看寻物启事</button>
         </div>
       </div>
@@ -258,8 +262,8 @@ function scoreLevel(n) { return n >= 75 ? '高' : n >= 50 ? '中' : '低' }
 .pair-meta { margin-top:3px;font-size:9px;color:#8E7FA3; }
 .pair-bars { display:flex;gap:7px;flex-wrap:wrap;margin-top:4px;font-size:8.5px;color:#7A6B8E; }
 .pair-go { font-size:9px;color:#5B2A91;white-space:nowrap; }
-.match-modal { position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:300;background:rgba(20,8,34,.48);display:flex;align-items:center;justify-content:center;padding:14px; }
-.match-report { width:min(860px,92vw);max-height:90vh;overflow-y:auto;background:#fff;border-radius:18px;padding:16px;position:relative; }
+.match-modal { position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:300;background:rgba(10,5,20,.72);display:flex;align-items:center;justify-content:center;padding:14px; }
+.match-report { width:min(880px,92vw);max-height:90vh;overflow-y:auto;background:#fff;border-radius:18px;padding:16px;position:relative; }
 .report-close { position:absolute;right:10px;top:10px;border:0;background:#F3EEFA;color:#5B2A91;width:26px;height:26px;border-radius:50%;font-size:14px; }
 .report-head { display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding-right:26px;border-bottom:1px solid #F0E8F8;padding-bottom:10px; }
 .report-kicker { font-size:9px;color:#A99BB9;letter-spacing:.1em; }
@@ -268,7 +272,7 @@ function scoreLevel(n) { return n >= 75 ? '高' : n >= 50 ? '中' : '低' }
 .report-ring { width:54px;height:54px;flex:0 0 54px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:700;background:#F1E8FB;color:#5B2A91;border:4px solid #D8C2F2; }
 .report-ring.level-高 { background:#EAF7EE;border-color:#B9DFC4;color:#2F7D46; }
 .report-ring.level-低 { background:#FFF7E8;border-color:#F1D9A6;color:#9A6A00; }
-.report-cols { display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px; }
+.report-cols { display:grid;grid-template-columns:1.15fr 1fr;gap:10px;margin-top:10px; }
 .report-item { border:1px solid #EADFF5;border-radius:12px;padding:9px;background:#FCFAFF; }
 .ri-top { display:flex;justify-content:space-between;font-size:8.5px;color:#8E7FA3;margin-bottom:5px; }
 .ri-tag { color:#5B2A91;background:#F1E8FB;border-radius:4px;padding:1px 4px; }
@@ -310,5 +314,13 @@ function scoreLevel(n) { return n >= 75 ? '高' : n >= 50 ? '中' : '低' }
 .report-detail { margin-top:8px; border-top:1px dashed #EADFF5; padding-top:7px; }
 .report-detail div { display:flex; gap:6px; font-size:9px; line-height:1.6; color:#6E607F; margin-top:3px; }
 .report-detail b { flex:0 0 26px; color:#5B2A91; }
+</style>
+
+
+
+<style scoped>
+.ri-keywords { margin-top:7px;display:flex;flex-wrap:wrap;gap:4px;align-items:center; }
+.ri-keywords span { font-size:8px;color:#8E7FA3;margin-right:2px; }
+.ri-keywords i { font-style:normal;font-size:8px;color:#5B2A91;background:#F1E8FB;border-radius:4px;padding:2px 4px; }
 </style>
 

@@ -107,3 +107,10 @@ body {
   .bottom-nav { left: 0 !important; }
   .screen .scroll { padding-left: 14px; padding-right: 14px; }
 }
+
+/* 防止弹窗/切换时出现横向抖动 */
+html { overflow-y: scroll !important; scrollbar-gutter: stable; }
+body { overflow-y: scroll !important; }
+.screen.active, .item, .mini, .entry-card, .sheet, .rd-match, .dt-action { animation: none !important; }
+@media (hover: hover) { .item:hover { transform: none !important; } }
+
