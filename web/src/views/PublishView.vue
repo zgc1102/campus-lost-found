@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { api } from '../api'
 
@@ -140,6 +140,12 @@ function onPhoto(e) {
   reader.readAsDataURL(file)
 }
 
+function resetPhoto() {
+  photo.value = ''
+  visionState.value = ''
+  if (fileInput.value) fileInput.value.value = ''
+}
+
 async function analyzePhoto() {
   if (!photo.value) return
   visionState.value = '正在识别中，请稍后…'
@@ -193,7 +199,6 @@ async function submit() {
       desc: form.desc.trim(),
       place: form.place.trim() || '未填写地点',
       eventTime: form.eventTime || '',
-      secret: form.secret.trim(),
       contact: { phone: form.phone.trim() },
       photo: photo.value || null,
       phoneConfirmed: phoneConfirmed.value
@@ -285,7 +290,7 @@ async function submit() {
         </div>
 
         <div class="form-card">
-          <div class="fc-title"><span>02</span>描述与独有特征</div>
+          <div class="fc-title"><span>02</span>描述</div>
           <div class="form-item">
             <label>物品描述 <span class="req">*</span></label>
             <textarea v-model="form.desc" maxlength="300" :placeholder="isHelp ? '说明需求、时间和地点' : '颜色、划痕、标记……越具体越容易核对'"></textarea>
@@ -303,10 +308,9 @@ async function submit() {
               <button type="button" class="btn ghost" @click="aiPanel = false">不用了</button>
             </div>
           </div>
-          <div v-if="!isHelp" class="form-item">
-            <label>独有特征（选填，仅审核员可见）</label>
-            <textarea v-model="form.secret" maxlength="100" placeholder="只有失主知道的细节，例如：卡背面写了名字"></textarea>
-            <div class="tip-small">不会公开展示，用来防止冒领</div>
+          <div v-if="false" class="form-item">
+            <label>独有特征</label>
+            <textarea v-model="form.secret" maxlength="100"></textarea>
           </div>
         </div>
 
@@ -314,14 +318,22 @@ async function submit() {
           <div class="fc-title"><span>03</span>图片与联系方式</div>
           <div class="form-item">
             <label>物品图片（选填，1 张）</label>
-            <div class="upload-box" @click="fileInput && fileInput.click()">
+            <div v-if="!photo" class="upload-box" @click="fileInput && fileInput.click()">
               <div class="ub-ico">📷</div>
               <div class="ub-t">点击上传 / 拍照</div>
-              <div class="ub-s">AI 会识别物品、颜色和特征，自动帮写描述</div>
+              <div class="ub-s">智能识别物品、颜色和特征，自动帮写描述</div>
+            </div>
+            <div v-else class="photo-picked">
+              <img :src="photo" alt="预览">
+              <div v-if="visionState" class="vision-pill" :class="{ busy: visionState.includes('正在'), ok: visionState.includes('完成'), bad: visionState.includes('没看清') || visionState.includes('失败') }">
+                <i v-if="visionState.includes('正在')" class="vision-spin"></i>
+                <i v-else-if="visionState.includes('完成')">✓</i>
+                <i v-else>!</i>
+                <span>{{ visionState }}</span>
+              </div>
+              <button type="button" class="photo-change" @click="resetPhoto">重新拍照 / 上传</button>
             </div>
             <input ref="fileInput" type="file" accept="image/*" capture="environment" style="display:none" @change="onPhoto">
-            <img v-if="photo" :src="photo" alt="预览" style="width:100%;max-height:180px;object-fit:cover;border-radius:10px;margin-top:8px">
-            <div v-if="visionState" class="sa" style="margin-top:5px">{{ visionState }}</div>
           </div>
           <div class="form-item">
             <label>联系电话（选填）</label>
@@ -423,4 +435,20 @@ async function submit() {
 </style>
 
 
+
+
+<style scoped>
+.photo-picked { position:relative; }
+.photo-picked img { width:100%; max-height:210px; object-fit:cover; border-radius:11px; display:block; }
+.vision-pill { display:flex; align-items:center; gap:6px; margin-top:7px; padding:7px 9px; border-radius:9px; font-size:10px; line-height:1.5; background:#F4EEFB; color:#5B2A91; }
+.vision-pill i { width:15px; height:15px; flex:0 0 15px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-style:normal; font-size:10px; }
+.vision-pill.busy i { border:2px solid #D8C8EE; border-top-color:#5B2A91; animation:spin 1s linear infinite; }
+.vision-pill.ok { background:#EAF7EE; color:#2F7D46; }
+.vision-pill.ok i { background:#2F7D46; color:#fff; }
+.vision-pill.bad { background:#FDF2F2; color:#A94A4A; }
+.vision-pill.bad i { background:#F3CFCF; color:#A94A4A; }
+.vision-spin { display:block !important; }
+.photo-change { width:100%; margin-top:6px; border:1px dashed #D8C8EE; background:#FBF8FF; color:#5B2A91; border-radius:9px; padding:7px; font-family:inherit; font-size:10px; }
+@keyframes spin { to { transform:rotate(360deg); } }
+</style>
 
