@@ -21,12 +21,49 @@ const claimOpen = ref(false)
 const claimCheck = ref(null)
 const claimChecking = ref(false)
 const claimCheckError = ref('')
+const recommend = ref([])
+const compareTarget = ref(null)
+const compareScore = ref(0)
 const photoOpen = ref(false)
 const showClosed = ref(false)
 const aiPhotoInput = ref(null)
 const aiPhotoState = ref('')
 
-async function openDetail(it) {
+async function simpleScore(a, b) {
+  const grams = (s) => {
+    const x = String(s || '').replace(/\s+/g, '')
+    const set = new Set()
+    for (let i = 0; i < Math.max(0, x.length - 1); i++) set.add(x.slice(i, i + 2))
+    return set
+  }
+  const ga = grams((a.title || '') + (a.desc || ''))
+  const gb = grams((b.title || '') + (b.desc || ''))
+  const union = new Set([...ga, ...gb])
+  let pct = union.size ? Math.round(([...ga].filter((x) => gb.has(x)).length / union.size) * 100) : 0
+  if (a.cat && a.cat === b.cat) pct += 10
+  if (a.place && b.place && (String(a.place).includes(String(b.place)) || String(b.place).includes(String(a.place)))) pct += 10
+  return Math.min(99, pct)
+}
+function buildRecommend(it) {
+  const opposite = it.type === 'lost' ? 'found' : 'lost'
+  recommend.value = items.value
+    .filter((x) => x.type === opposite && ['approved', 'claimed'].includes(x.status) && x.id !== it.id)
+    .map((x) => ({ ...x, matchPct: simpleScore(it, x) }))
+    .filter((x) => x.matchPct >= 20)
+    .sort((a, b) => b.matchPct - a.matchPct)
+    .slice(0, 3)
+}
+function openRec(target) {
+  compareTarget.value = target
+  compareScore.value = simpleScore(selected.value, target)
+}
+function useRec() {
+  if (!compareTarget.value) return
+  const target = compareTarget.value
+  compareTarget.value = null
+  openDetail(target)
+}
+function openDetail(it) {
   selected.value = it
   claimMsg.value = ''
   claimPhone.value = ''
@@ -35,6 +72,7 @@ async function openDetail(it) {
   photoOpen.value = false
   claimCheck.value = null
   claimCheckError.value = ''
+  buildRecommend(it)
 }
 
 function openAiPhoto() {
@@ -352,6 +390,14 @@ function openOldHelp() {
         <span>风险 {{ selected.ai.score ?? '—' }}/100</span>
         <p>{{ selected.ai.reason || '智能审核已完成内容分析' }}</p>
       </div>
+      <div v-if="recommend.length" class="rec-box">
+        <div class="rec-title">系统推荐相似 {{ selected.type === 'lost' ? '招领' : '寻物' }}</div>
+        <button v-for="r in recommend" :key="r.id" type="button" class="rec-row" @click.stop="openRec(r)">
+          <span class="rec-name">{{ r.title || '未命名' }}</span>
+          <span class="rec-meta">{{ r.place || '未填写地点' }}</span>
+          <b>{{ r.matchPct }}%</b>
+        </button>
+      </div>
       <div class="sa" style="margin-top:8px">📍 {{ selected.place || '未填写地点' }} · {{ fmt(selected.createdAt) }}</div>
       <div class="sa" style="margin-top:8px">联系方式：{{ (selected.contact && selected.contact.phone) || '认领时由发布者确认' }}</div>
       <template v-if="selected.status === 'approved'">
@@ -394,6 +440,32 @@ function openOldHelp() {
       </div>
       </div>
 
+    </div>
+    <div v-if="compareTarget" class="rec-overlay" @click.self="compareTarget = null">
+      <div class="rec-modal">
+        <button type="button" class="rec-close" @click="compareTarget = null">✕</button>
+        <div class="rec-kicker">系统匹配报告</div>
+        <h2>{{ compareScore }}% 相似</h2>
+        <div class="rec-cols">
+          <div class="rec-col">
+            <span>{{ selected.type === 'lost' ? '你的寻物' : '你的招领' }}</span>
+            <b>{{ selected.title }}</b>
+            <p>{{ selected.desc }}</p>
+            <i>{{ selected.place || '未填写地点' }}</i>
+          </div>
+          <div class="rec-col">
+            <span>{{ compareTarget.type === 'lost' ? '寻物启事' : '招领启事' }}</span>
+            <b>{{ compareTarget.title }}</b>
+            <p>{{ compareTarget.desc }}</p>
+            <i>{{ compareTarget.place || '未填写地点' }}</i>
+          </div>
+        </div>
+        <div class="rec-note">系统根据标题、描述、类别和地点计算，仅供参考，最终请人工核对。</div>
+        <div class="rec-actions">
+          <button type="button" class="btn" @click="compareTarget = null">关闭</button>
+          <button type="button" class="btn ghost" @click="useRec">{{ compareTarget.type === 'lost' ? '查看这条寻物' : '查看这条招领' }}</button>
+        </div>
+      </div>
     </div>
     <div v-if="photoOpen && selected && selected.photoUrl" class="img-viewer" style="display:flex" @click="photoOpen = false">
       <img :src="selected.photoUrl" alt="">
@@ -522,3 +594,27 @@ function openOldHelp() {
 </style>
 
 
+
+<style scoped>
+.rec-box { margin-top:9px; border-top:1px dashed #EADFF5; padding-top:7px; }
+.rec-title { font-size:10px; color:#8E7FA3; margin-bottom:4px; }
+.rec-row { width:100%; display:flex; align-items:center; gap:5px; border:0; background:#FBF8FF; border-radius:7px; padding:6px 7px; margin-bottom:4px; font-family:inherit; text-align:left; cursor:pointer; }
+.rec-name { flex:1; min-width:0; font-size:10px; color:#3B1D63; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.rec-meta { font-size:8px; color:#8E7FA3; white-space:nowrap; }
+.rec-row b { font-size:10px; color:#5B2A91; }
+.rec-overlay { position:fixed; inset:0; z-index:400; background:rgba(10,5,20,.72); display:flex; align-items:center; justify-content:center; padding:14px; }
+.rec-modal { position:relative; width:min(680px,94vw); max-height:88vh; overflow-y:auto; background:#fff; border-radius:18px; padding:16px; }
+.rec-close { position:absolute; right:10px; top:10px; border:0; background:#F3EEFA; color:#5B2A91; width:26px; height:26px; border-radius:50%; }
+.rec-kicker { font-size:9px; color:#A99BB9; letter-spacing:.1em; }
+.rec-modal h2 { margin:3px 0 10px; font-size:19px; color:#3B1D63; }
+.rec-cols { display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+.rec-col { border:1px solid #EADFF5; border-radius:10px; padding:9px; background:#FCFAFF; }
+.rec-col span { font-size:8px; color:#5B2A91; background:#F1E8FB; padding:1px 4px; border-radius:4px; }
+.rec-col b { display:block; font-size:12px; color:#3B1D63; margin-top:5px; }
+.rec-col p { font-size:9.5px; line-height:1.6; color:#6E607F; }
+.rec-col i { font-style:normal; font-size:8px; color:#8E7FA3; }
+.rec-note { margin-top:8px; font-size:9px; color:#A97A00; }
+.rec-actions { display:flex; gap:8px; margin-top:10px; }
+.rec-actions .btn { flex:1; }
+@media (max-width:600px) { .rec-cols { grid-template-columns:1fr; } }
+</style>

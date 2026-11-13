@@ -5,6 +5,7 @@ import { api } from '../api'
 const emit = defineEmits(['nav'])
 
 const items = ref([])
+const unread = ref(0)
 const loading = ref(true)
 const slideIndex = ref(0)
 const defaultSlides = [
@@ -90,9 +91,10 @@ function goSlide(i) {
 async function load() {
   loading.value = true
   try {
-    const [list, allAnns] = await Promise.all([api.items(), api.announcements()])
+    const [list, allAnns, noticeRes] = await Promise.all([api.items(), api.announcements(), api.notices().catch(() => ({ unread: 0 }))])
     const anns = (Array.isArray(allAnns) ? allAnns : []).filter((a) => !/测试|刷新测试|验收测试/.test(String(a.title || '') + String(a.body || '')))
     if (Array.isArray(list)) items.value = list
+    unread.value = Number(noticeRes?.unread || 0)
     if (Array.isArray(anns) && anns.length) {
       const annSlides = anns.slice(0, 2).map((a) => ({
         star: a.pinned ? '📌' : '📢',
@@ -137,7 +139,7 @@ function openMemo(s) {
       </button>
       <div class="t">清华校园拾光里<small class="build-badge">v3.2.2</small></div>
       <button type="button" class="help-btn" title="使用引导" @click="replayTour">?</button>
-      <div class="bell" title="通知" @click="$emit('nav', 'notices')">🔔</div>
+      <div class="bell" title="通知" @click="$emit('nav', 'notices')">🔔<span v-if="unread" class="bell-dot">{{ unread > 99 ? '99+' : unread }}</span></div>
       <div class="login" title="我的发布" @click="$emit('nav', 'mine')">
         <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" width="18" height="18"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
       </div>
@@ -265,3 +267,8 @@ function openMemo(s) {
 .build-badge { margin-left:5px; font-size:8px; font-weight:400; color:#E8D9FF; background:rgba(255,255,255,.16); border-radius:4px; padding:1px 4px; vertical-align:middle; }
 </style>
 
+
+<style scoped>
+.bell { position:relative; }
+.bell-dot { position:absolute; top:-4px; right:-7px; min-width:13px; height:13px; padding:0 3px; border-radius:99px; background:#E05A5A; color:#fff; font-size:7px; line-height:13px; text-align:center; }
+</style>
