@@ -120,6 +120,8 @@ async function loadMine() {
 const ownCandidates = computed(() => {
   if (!selected.value) return []
   const want = selected.value.type === 'lost' ? 'found' : 'lost'
+  const fromList = items.value.filter((x) => x.type === want && x.isMine && x.id !== selected.value.id)
+  if (fromList.length) return fromList
   return myItems.value.filter((x) => x.type === want && x.id !== selected.value.id)
 })
 function openDetail(it) {
