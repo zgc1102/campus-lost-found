@@ -280,7 +280,7 @@ function fmt(ts) {
         <div v-if="selected.claimContact" class="nd-contact">对方联系方式：{{ selected.claimContact }}</div>
         <div v-if="selected.claimAi" class="nd-ai-check">
           <b>AI 参考可信度：{{ selected.claimAi.confidence }}%</b>
-          <span>{{ ({match:'特征吻合', mismatch:'特征不一致', unclear:'需要人工核对'})[selected.claimAi.verdict] || '需要人工核对' }}</span>
+          <span>{{ ({match:'特征吻合', mismatch:'特征不一致', unclear:'请自行核对'})[selected.claimAi.verdict] || '请自行核对' }}</span>
           <p v-if="selected.claimAi.reason">{{ selected.claimAi.reason }}</p>
           <div v-if="selected.claimAi.points?.length" class="nd-ai-points">
             <i v-for="p in selected.claimAi.points" :key="p">{{ p }}</i>
@@ -333,7 +333,7 @@ function fmt(ts) {
             <div class="cc-tag other">{{ selected.itemType === 'help' ? '帮忙申请' : (selected.item.type === 'lost' ? '提供线索' : '认领留言') }}</div>
             <div class="cc-title">{{ selected.claimMessage || selected.report?.message || selected.text }}</div>
             <div class="cc-meta">{{ selected.claimAi ? '申请时已做 AI 核验' : '未做 AI 核验' }}</div>
-            <p>{{ selected.claimAi?.reason || '可以打开原物品详情，对照描述后人工判断。' }}</p>
+            <p>{{ selected.claimAi?.reason || '可以打开原物品详情，对照描述后自行判断。' }}</p>
           </div>
         </div>
         <div class="compare-scores">
@@ -450,5 +450,6 @@ function fmt(ts) {
 .compare-actions .btn { flex:1; }
 @media (max-width:600px) { .compare-grid { grid-template-columns:1fr; } }
 </style>
+
 
 

@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { api } from '../api'
 import CountUp from '../components/CountUp.vue'
@@ -460,7 +460,7 @@ function openOldHelp() {
             <i>{{ compareTarget.place || '未填写地点' }}</i>
           </div>
         </div>
-        <div class="rec-note">系统根据标题、描述、类别和地点计算，仅供参考，最终请人工核对。</div>
+        <div class="rec-note">系统根据标题、描述、类别和地点计算，仅供参考，最终请自行认真核对。</div>
         <div class="rec-actions">
           <button type="button" class="btn" @click="compareTarget = null">关闭</button>
           <button type="button" class="btn ghost" @click="useRec">{{ compareTarget.type === 'lost' ? '查看这条寻物' : '查看这条招领' }}</button>
@@ -618,3 +618,4 @@ function openOldHelp() {
 .rec-actions .btn { flex:1; }
 @media (max-width:600px) { .rec-cols { grid-template-columns:1fr; } }
 </style>
+

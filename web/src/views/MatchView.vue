@@ -43,7 +43,7 @@ function makePair(lost, found) {
   if (cat) reasons.push('物品类别一致')
   if (place) reasons.push(`地点都在${placeA}`)
   if (time >= 50) reasons.push('发布时间接近')
-  if (!cat) reasons.push('类别不同，建议人工核对')
+  if (!cat) reasons.push('类别不同，建议自行核对')
   return { lost, found, text, image, place: place ? 100 : 0, time, total, reasons }
 }
 
@@ -223,7 +223,7 @@ function scoreLevel(n) { return n >= 75 ? '高' : n >= 50 ? '中' : '低' }
         <div class="report-detail">
           <div><b>文本</b><span>{{ selectedPair.text }}% 重合，{{ selectedPair.text >= 30 ? '标题/描述有明显共同词' : '共同词较少，主要靠其他维度' }}</span></div>
           <div><b>类别</b><span>{{ selectedPair.lost.cat === selectedPair.found.cat ? '两边分类一致' : '两边分类不同，不能只凭分类判断' }}</span></div>
-          <div><b>地点</b><span>{{ selectedPair.place ? '地点相同或包含，可信度加分' : '地点没有重合，需要人工确认' }}</span></div>
+          <div><b>地点</b><span>{{ selectedPair.place ? '地点相同或包含，可信度加分' : '地点没有重合，需要自行确认' }}</span></div>
           <div><b>时间</b><span>{{ selectedPair.time >= 50 ? '发布时间接近' : '时间间隔较远，注意是否同一件物品' }}</span></div>
         </div>
 
@@ -324,6 +324,7 @@ function scoreLevel(n) { return n >= 75 ? '高' : n >= 50 ? '中' : '低' }
 .ri-keywords span { font-size:8px;color:#8E7FA3;margin-right:2px; }
 .ri-keywords i { font-style:normal;font-size:8px;color:#5B2A91;background:#F1E8FB;border-radius:4px;padding:2px 4px; }
 </style>
+
 
 
 

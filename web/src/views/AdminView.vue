@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { api } from '../api'
 
@@ -157,7 +157,7 @@ async function toggleBan(a) {
 }
 
 function aiLabel(d) {
-  return d === 'approve' ? '建议通过' : d === 'reject' ? '建议驳回' : '建议人工复核'
+  return d === 'approve' ? '建议通过' : d === 'reject' ? '建议驳回' : '建议重点复核'
 }
 function aiSource(a) {
   if (!a) return ''
@@ -187,7 +187,7 @@ async function applyAi(it) {
     await review(it, 'approved')
     return
   }
-  error.value = '智能建议人工复核：' + (it.ai.reason || '请人工判断')
+  error.value = '智能建议重点复核：' + (it.ai.reason || '请自行判断')
 }
 
 async function preReviewAll() {
@@ -725,6 +725,7 @@ textarea.field { min-height: 78px; resize: vertical; }
 .deploy-status { width:min(1120px,calc(100% - 48px)); margin:12px auto 0; background:#FFF8E8; border:1px solid #F2DFC0; color:#8A5A16; border-radius:10px; padding:9px 12px; font-size:11px; display:flex; align-items:center; justify-content:space-between; }
 .deploy-status b { color:#5B2A91; font-size:13px; }
 </style>
+
 
 
 

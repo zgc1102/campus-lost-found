@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 清华校园拾光里 · 服务端 v4
@@ -3381,7 +3381,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"error": "这条已经结束，不能再认领"}, 409)
             chk = claim_ai_check(target, {"message": message})
             if not chk:
-                return self._json({"ok": False, "error": "AI 核验暂时不可用，可以先提交人工核对"})
+                return self._json({"ok": False, "error": "AI 核验暂时不可用，可以先提交并自行核对"})
             return self._json({"ok": True, "check": chk})
 
         if path.startswith("/api/items/") and path.endswith("/claims"):
@@ -4662,4 +4662,5 @@ if __name__ == "__main__":
     except Exception:
         pass
     main()
+
 
