@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 清华校园拾光里 · 服务端 v4
@@ -3360,6 +3360,62 @@ class Handler(BaseHTTPRequestHandler):
                 CHECK_CACHE.pop(k, None)
             return self._json({"checkId": cid, "ai": ai, "suggestion": suggestion,
                                "type": item["type"]})
+
+        if path.startswith("/api/items/") and path.endswith("/compare-ai"):
+            owner = self._owner()
+            if not owner:
+                return self._json({"error": "请先登录"}, 401)
+            item_id = path[len("/api/items/"):-len("/compare-ai")]
+            body = self._read_body()
+            other_id = str(body.get("otherId") or "")
+            with LOCK:
+                items = load_items()
+                a = next((x for x in items if x.get("id") == item_id), None)
+                b = next((x for x in items if x.get("id") == other_id), None)
+            if not a or not b:
+                return self._json({"error": "物品不存在"}, 404)
+            cfg = load_ai_config()
+            if not (cfg.get("enabled") and cfg.get("api_key") and cfg.get("base_url")):
+                return self._json({"ok": False, "error": "AI 对比暂时不可用"})
+            visual = []
+            if a.get("visionDesc"):
+                visual.append("A图片描述：" + str(a.get("visionDesc"))[:200])
+            if b.get("visionDesc"):
+                visual.append("B图片描述：" + str(b.get("visionDesc"))[:200])
+            prompt = (
+                "你是校园失物招领的核对助手。请比较下面两条信息，判断是否可能指向同一件物品。\n"
+                "A标题：%s\nA描述：%s\nA地点：%s\n"
+                "B标题：%s\nB描述：%s\nB地点：%s\n"
+                "%s\n"
+                "只输出 JSON：{\"score\":0-99,\"verdict\":\"high|medium|low\","
+                "\"summary\":\"40字以内的人话总结\",\"points\":[\"一致点或冲突点1\",\"一致点或冲突点2\"]}。"
+                "颜色明显冲突、物品类型不同要显著降分；不要编造图片里没有的信息。"
+                % (a.get("title") or "", a.get("desc") or "", a.get("place") or "",
+                   b.get("title") or "", b.get("desc") or "", b.get("place") or "",
+                   "\n".join(visual))
+            )
+            try:
+                data = _post_chat(cfg.get("base_url").rstrip("/") + "/chat/completions",
+                                  {"model": cfg.get("model") or "deepseek-chat", "temperature": 0,
+                                   "messages": [{"role": "user", "content": prompt}]},
+                                  cfg.get("api_key"), timeout=30)
+                text = data["choices"][0]["message"]["content"] or ""
+                m = re.search(r"\{[\s\S]*\}", text)
+                obj = json.loads(m.group(0)) if m else {}
+            except Exception as e:
+                return self._json({"ok": False, "error": "AI 对比暂时不可用：" + str(e)[:80]})
+            try:
+                score = max(0, min(99, int(obj.get("score") or 0)))
+            except Exception:
+                score = 0
+            pts = obj.get("points") if isinstance(obj.get("points"), list) else []
+            return self._json({"ok": True, "score": score,
+                               "verdict": obj.get("verdict") or "medium",
+                               "summary": str(obj.get("summary") or "")[:80],
+                               "points": [str(x)[:40] for x in pts if str(x).strip()][:4],
+                               "textModel": cfg.get("model") or "deepseek-chat",
+                               "imageUsed": bool(visual),
+                               "imageModel": "智谱视觉（发布时图片描述）" if visual else ""})
 
         if path.startswith("/api/items/") and path.endswith("/claim-check"):
             owner = self._owner()

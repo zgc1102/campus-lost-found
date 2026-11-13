@@ -51,6 +51,9 @@ export const api = {
   claimCheck(id, message) {
     return call('/items/' + encodeURIComponent(id) + '/claim-check', { method: 'POST', body: JSON.stringify({ message }) })
   },
+  compareAI(id, otherId) {
+    return call('/items/' + encodeURIComponent(id) + '/compare-ai', { method: 'POST', body: JSON.stringify({ otherId }) })
+  },
   report(id) {
     return call('/items/' + encodeURIComponent(id) + '/report', { method: 'POST' })
   },

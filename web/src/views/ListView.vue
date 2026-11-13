@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { api } from '../api'
 import CountUp from '../components/CountUp.vue'
@@ -30,6 +30,10 @@ const ownTarget = ref(null)
 const ownScore = ref(0)
 const ownReasons = ref([])
 const ownOpen = ref(false)
+const ownAiSummary = ref('')
+const ownAiModel = ref('')
+const ownAiImage = ref('')
+const ownAiLoading = ref(false)
 const ownSummary = computed(() => {
   if (!ownTarget.value || !selected.value) return ''
   const r = ownCompare(selected.value, ownTarget.value)
@@ -113,7 +117,19 @@ function openOwnCompare(target) {
   ownTarget.value = target
   ownScore.value = r.total
   ownReasons.value = r.reasons
+  ownAiSummary.value = ownSummary.value
+  ownAiModel.value = '本地规则'
+  ownAiImage.value = ''
+  ownAiLoading.value = true
   ownOpen.value = true
+  api.compareAI(selected.value.id, target.id).then((res) => {
+    if (!res || !res.ok) return
+    if (Number.isFinite(Number(res.score))) ownScore.value = Number(res.score)
+    ownAiSummary.value = res.summary || ownAiSummary.value
+    ownAiModel.value = res.textModel || 'DeepSeek'
+    ownAiImage.value = res.imageUsed ? (res.imageModel || '智谱视觉') : ''
+    if (Array.isArray(res.points) && res.points.length) ownReasons.value = res.points
+  }).catch(() => {}).finally(() => { ownAiLoading.value = false })
 }
 function useOwnTarget() {
   if (!ownTarget.value) return
@@ -532,7 +548,7 @@ function openOldHelp() {
           <div>
             <h2>{{ selected.type === 'lost' ? '与你丢失物品的参考相似度' : '与你捡到物品的参考相似度' }}</h2>
             <div class="own-sub">不是概率，是文字、颜色、类别、地点的综合参考</div>
-            <div class="own-ai-summary"><b>AI 参考总结</b>{{ ownSummary }}</div>
+            <div class="own-ai-summary"><b>AI 参考总结</b>{{ ownAiLoading ? 'DeepSeek 正在分析两条描述…' : ownAiSummary }}</div>
           </div>
           <div class="own-ring" :class="ownScore >= 70 ? 'high' : ownScore >= 40 ? 'mid' : 'low'">
             <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="44" class="own-track" /><circle cx="60" cy="60" r="44" class="own-fill" :style="{ '--off': (276.5 * (1 - ownScore / 100)).toFixed(1) + 'px' }" /></svg>
@@ -556,8 +572,8 @@ function openOldHelp() {
         <div class="own-reasons"><span v-for="r in ownReasons" :key="r">{{ r }}</span></div>
         <div class="own-model">
           <b>分析方式</b>
-          <span>文字：本地文本相似度引擎 + 颜色/类别/地点规则</span>
-          <span v-if="ownHasPhoto">图片：双方有图，可对照图片自行判断（当前未做视觉比对）</span>
+          <span>文字：{{ ownAiModel || '本地规则' }} + 本地颜色/类别/地点规则</span>
+          <span v-if="ownAiImage">图片：{{ ownAiImage }}</span>
         </div>
         <div class="rec-note">相似度不是证据；颜色冲突会明显降分，最终请自行认真核对。</div>
         <div class="rec-actions">
