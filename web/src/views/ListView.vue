@@ -44,7 +44,7 @@ const showClosed = ref(false)
 const aiPhotoInput = ref(null)
 const aiPhotoState = ref('')
 
-async function simpleScore(a, b) {
+function simpleScore(a, b) {
   const grams = (s) => {
     const x = String(s || '').replace(/\s+/g, '')
     const set = new Set()
