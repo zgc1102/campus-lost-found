@@ -30,6 +30,15 @@ const ownTarget = ref(null)
 const ownScore = ref(0)
 const ownReasons = ref([])
 const ownOpen = ref(false)
+const ownSummary = computed(() => {
+  if (!ownTarget.value || !selected.value) return ''
+  const r = ownCompare(selected.value, ownTarget.value)
+  if (r.total >= 70) return '颜色、类别、描述和地点有多项吻合，值得优先核对，但仍需当面确认。'
+  if (r.colorConflict) return '最大差异是颜色对不上，单凭这一点就不像同一件物品，建议不要只凭描述认领。'
+  if (!r.samePlace && r.text < 25) return '颜色没有明显冲突，但地点和描述重合都较少，目前只能算弱相关线索。'
+  return '有一些词面上的重合，但关键特征还不够一致，建议补充更多细节后再判断。'
+})
+const ownHasPhoto = computed(() => !!(selected.value?.photoUrl && ownTarget.value?.photoUrl))
 const photoOpen = ref(false)
 const showClosed = ref(false)
 const aiPhotoInput = ref(null)
@@ -523,6 +532,7 @@ function openOldHelp() {
           <div>
             <h2>{{ selected.type === 'lost' ? '与你丢失物品的参考相似度' : '与你捡到物品的参考相似度' }}</h2>
             <div class="own-sub">不是概率，是文字、颜色、类别、地点的综合参考</div>
+            <div class="own-ai-summary"><b>AI 参考总结</b>{{ ownSummary }}</div>
           </div>
           <div class="own-ring" :class="ownScore >= 70 ? 'high' : ownScore >= 40 ? 'mid' : 'low'">
             <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="22" class="own-track" /><circle cx="60" cy="60" r="22" class="own-fill" :style="{ '--off': (138.2 * (1 - ownScore / 100)).toFixed(1) + 'px' }" /></svg>
@@ -544,6 +554,11 @@ function openOldHelp() {
           </div>
         </div>
         <div class="own-reasons"><span v-for="r in ownReasons" :key="r">{{ r }}</span></div>
+        <div class="own-model">
+          <b>分析方式</b>
+          <span>文字：本地文本相似度引擎 + 颜色/类别/地点规则</span>
+          <span>{{ ownHasPhoto ? '图片：双方有图，可对照图片自行判断（当前未做视觉比对）' : '图片：双方没有图片，未做图片识别' }}</span>
+        </div>
         <div class="rec-note">相似度不是证据；颜色冲突会明显降分，最终请自行认真核对。</div>
         <div class="rec-actions">
           <button type="button" class="btn" @click="ownOpen = false">关闭</button>
@@ -766,3 +781,15 @@ function openOldHelp() {
 @media (max-width:600px) { .own-cols { grid-template-columns:1fr; } .own-modal-head h2 { font-size:15px; } }
 </style>
 
+
+<style scoped>
+.own-ai-summary { margin-top:6px; font-size:10px; line-height:1.6; color:#6E607F; background:#FBF8FF; border-radius:6px; padding:6px 7px; }
+.own-ai-summary b { color:#5B2A91; margin-right:4px; }
+.own-model { margin-top:7px; padding-top:6px; border-top:1px dashed #EADFF5; display:flex; flex-direction:column; gap:2px; }
+.own-model b { font-size:9px; color:#5B2A91; }
+.own-model span { font-size:8.5px; line-height:1.55; color:#8E7FA3; }
+.own-ring { width:88px; height:88px; flex:0 0 88px; }
+.own-ring svg { width:88px; height:88px; }
+.own-ring .count-up { font-size:22px; }
+.own-modal-head h2 { font-size:18px; line-height:1.35; }
+</style>
