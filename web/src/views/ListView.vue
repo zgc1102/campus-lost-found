@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { api } from '../api'
 import CountUp from '../components/CountUp.vue'
@@ -409,12 +409,6 @@ function openOldHelp() {
         <button type="button" class="closed-toggle" @click="showClosed = !showClosed">{{ showClosed ? '隐藏已结束' : '显示已结束' }}</button>
       </div>
 
-      <button type="button" class="match-entry" @click="$emit('nav', 'match')">
-        <span class="me-badge">配对</span>
-        <span class="me-copy"><b>智能匹配报告</b><i>把寻物和招领放在一起，看文本、类别、地点、时间四项依据</i></span>
-        <span class="re-go">查看 →</span>
-      </button>
-
       <button type="button" class="radar-entry" @click="openOldRadar">
         <span class="re-badge">智能</span>
         <span class="re-copy"><b>{{ type === 'lost' ? '寻物雷达' : '招领雷达' }}</b><i>自动比对全站{{ type === 'lost' ? '招领' : '寻物' }}</i></span>
@@ -483,7 +477,7 @@ function openOldHelp() {
         <div class="rec-title">系统推荐相似 {{ selected.type === 'lost' ? '招领' : '寻物' }}</div>
         <button v-for="r in recommend" :key="r.id" type="button" class="rec-row" @click.stop="openRec(r)">
           <span class="rec-name">{{ r.title || '未命名' }}</span>
-          <span class="rec-meta">{{ r.place || '未填写地点' }}</span>
+          <span class="rec-meta">{{ r.place || '未填写地点' }} · {{ fmt(r.createdAt) }}</span>
           <b>{{ r.matchPct }}%</b>
         </button>
       </div>
@@ -492,7 +486,7 @@ function openOldHelp() {
         <div v-if="myLoading" class="own-empty">正在读取我的发布…</div>
         <div v-else-if="ownCandidates.length" class="own-list">
           <button v-for="o in ownCandidates" :key="o.id" type="button" class="own-row" @click.stop="openOwnCompare(o)">
-            <span>{{ o.title }}</span><i>{{ o.place || '未填写地点' }}</i><b>对比 →</b>
+            <span>{{ o.title }}</span><i>{{ o.place || '未填写地点' }} · {{ fmt(o.createdAt) }}</i><b>对比 →</b>
           </button>
         </div>
         <div v-else class="own-empty">你还没有发布过{{ selected.type === 'lost' ? '招领' : '寻物' }}，登录并发布后可以在这里对比。</div>
@@ -548,7 +542,7 @@ function openOldHelp() {
           <div>
             <h2>{{ selected.type === 'lost' ? '与你丢失物品的参考相似度' : '与你捡到物品的参考相似度' }}</h2>
             <div class="own-sub">不是概率，是文字、颜色、类别、地点的综合参考</div>
-            <div class="own-ai-summary"><b>AI 参考总结</b>{{ ownAiLoading ? 'DeepSeek 正在分析两条描述…' : ownAiSummary }}</div>
+            <div class="own-ai-summary"><b>AI 参考总结</b><span v-if="ownAiLoading" class="own-loading"><i class="own-spin"></i> AI 正在对比中，请稍后…</span><template v-else>{{ ownAiSummary }}</template></div>
           </div>
           <div class="own-ring" :class="ownScore >= 70 ? 'high' : ownScore >= 40 ? 'mid' : 'low'">
             <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="44" class="own-track" /><circle cx="60" cy="60" r="44" class="own-fill" :style="{ '--off': (276.5 * (1 - ownScore / 100)).toFixed(1) + 'px' }" /></svg>
@@ -560,13 +554,13 @@ function openOldHelp() {
             <span>当前查看</span>
             <b>{{ selected.title }}</b>
             <p>{{ selected.desc }}</p>
-            <i>{{ selected.place || '未填写地点' }}</i>
+            <i>{{ selected.place || '未填写地点' }} · {{ fmt(selected.createdAt) }}</i>
           </div>
           <div class="own-card right">
             <span>我的发布</span>
             <b>{{ ownTarget.title }}</b>
             <p>{{ ownTarget.desc }}</p>
-            <i>{{ ownTarget.place || '未填写地点' }}</i>
+            <i>{{ ownTarget.place || '未填写地点' }} · {{ fmt(ownTarget.createdAt) }}</i>
           </div>
         </div>
         <div class="own-reasons"><span v-for="r in ownReasons" :key="r">{{ r }}</span></div>
@@ -592,7 +586,7 @@ function openOldHelp() {
             <span>{{ selected.type === 'lost' ? '你的寻物' : '你的招领' }}</span>
             <b>{{ selected.title }}</b>
             <p>{{ selected.desc }}</p>
-            <i>{{ selected.place || '未填写地点' }}</i>
+            <i>{{ selected.place || '未填写地点' }} · {{ fmt(selected.createdAt) }}</i>
           </div>
           <div class="rec-col">
             <span>{{ compareTarget.type === 'lost' ? '寻物启事' : '招领启事' }}</span>
@@ -777,15 +771,15 @@ function openOldHelp() {
 .own-ring { position:relative; width:72px; height:72px; flex:0 0 72px; }
 .own-ring svg { width:72px; height:72px; transform:rotate(-90deg); }
 .own-track { fill:none; stroke:#F0E8F8; stroke-width:7; }
-.own-fill { fill:none; stroke:#C0392B; stroke-width:7; stroke-linecap:round; stroke-dasharray:276.5; stroke-dashoffset:276.5; animation:ownRing .8s ease forwards; }
+.own-fill { fill:none; stroke:#C0392B; stroke-width:7; stroke-linecap:round; stroke-dasharray:276.5; stroke-dashoffset:276.5; animation:ownRing 1.15s ease forwards; }
 .own-ring.high .own-fill { stroke:#2F7D46; }
 .own-ring.mid .own-fill { stroke:#C58A00; }
 @keyframes ownRing { to { stroke-dashoffset: var(--off); } }
 .own-ring .count-up { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:26px; font-weight:700; color:#3B1D63; line-height:1; letter-spacing:-1px; font-variant-numeric:tabular-nums; }
 .own-cols { display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-top:10px; }
-.own-card { border:1px solid #EADFF5; border-radius:11px; padding:9px; background:#FCFAFF; animation:ownCard .28s ease both; }
-.own-card.left { animation-name:ownLeft; }
-.own-card.right { animation-name:ownRight; }
+.own-card { border:1px solid #EADFF5; border-radius:11px; padding:9px; background:#FCFAFF; animation:ownCard .55s cubic-bezier(.2,.7,.3,1) both; }
+.own-card.left { animation: ownLeft .55s cubic-bezier(.2,.7,.3,1) both; }
+.own-card.right { animation: ownRight .55s cubic-bezier(.2,.7,.3,1) both; }
 @keyframes ownLeft { from { opacity:0; transform:translateX(18px); } to { opacity:1; transform:none; } }
 @keyframes ownRight { from { opacity:0; transform:translateX(-18px); } to { opacity:1; transform:none; } }
 .own-card span { font-size:8px; color:#5B2A91; background:#F1E8FB; border-radius:4px; padding:1px 4px; }
@@ -808,5 +802,13 @@ function openOldHelp() {
 .own-ring svg { width:112px; height:112px; }
 .own-ring .count-up { font-size:22px; }
 .own-modal-head h2 { font-size:18px; line-height:1.35; }
+</style>
+
+
+
+<style scoped>
+.own-loading { color:#A97A00; font-weight:400; }
+.own-spin { display:inline-block; width:10px; height:10px; border:2px solid #E8D8B0; border-top-color:#A97A00; border-radius:50%; animation:spin .8s linear infinite; vertical-align:-1px; margin-right:4px; }
+@keyframes spin { to { transform:rotate(360deg); } }
 </style>
 

@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { computed, onMounted, ref } from 'vue'
 import { api } from '../api'
 import CountUp from '../components/CountUp.vue'
@@ -148,7 +148,7 @@ function scoreLevel(n) { return n >= 75 ? '高' : n >= 50 ? '中' : '低' }
               <i>↔</i>
               <b>{{ p.found.title || '未命名招领' }}</b>
             </div>
-            <div class="pair-meta">{{ p.lost.place || '未填写地点' }} · {{ p.found.place || '未填写地点' }}</div>
+            <div class="pair-meta">{{ p.lost.place || '未填写地点' }} · {{ fmt(p.lost.createdAt) }} ↔ {{ p.found.place || '未填写地点' }} · {{ fmt(p.found.createdAt) }}</div>
             <div class="pair-bars">
               <span>文本 {{ p.text }}</span><span>类别 {{ p.lost.cat && p.lost.cat === p.found.cat ? '一致' : '不同' }}</span><span>地点 {{ p.place }}</span><span>时间 {{ p.time }}</span>
             </div>
