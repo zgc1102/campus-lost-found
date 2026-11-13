@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed, onMounted, ref } from 'vue'
 import { api } from '../api'
 
@@ -115,6 +115,10 @@ async function sendChat() {
 
 function goItem() {
   if (!selected.value?.itemId) return
+  if (!selected.value.item || ['removed', 'hidden'].includes(selected.value.item.status)) {
+    actionMsg.value = '此物品已下架，没有更多信息了'
+    return
+  }
   sessionStorage.setItem('sg:focusItem', selected.value.itemId)
   const t = selected.value.itemType === 'help' ? 'help' : selected.value.itemType === 'lost' ? 'lost' : 'found'
   selected.value = null
@@ -275,7 +279,7 @@ function fmt(ts) {
         <div class="nd-message">{{ selected.claimMessage || selected.report?.message || selected.text }}</div>
         <div v-if="selected.claimContact" class="nd-contact">对方联系方式：{{ selected.claimContact }}</div>
         <div v-if="selected.claimAi" class="nd-ai-check">
-          <b>AI 特征核验：{{ selected.claimAi.confidence }}% 吻合</b>
+          <b>AI 参考可信度：{{ selected.claimAi.confidence }}%</b>
           <span>{{ ({match:'特征吻合', mismatch:'特征不一致', unclear:'需要人工核对'})[selected.claimAi.verdict] || '需要人工核对' }}</span>
           <p v-if="selected.claimAi.reason">{{ selected.claimAi.reason }}</p>
           <div v-if="selected.claimAi.points?.length" class="nd-ai-points">
@@ -333,13 +337,15 @@ function fmt(ts) {
           </div>
         </div>
         <div class="compare-scores">
-          <div><b>{{ selected.claimAi ? selected.claimAi.confidence + '%' : '—' }}</b><span>申请时 AI 吻合度</span></div>
+          <div><b>{{ selected.claimAi ? selected.claimAi.confidence + '%' : '—' }}</b><span>申请时 AI 参考可信度</span></div>
           <div><b>{{ currentSimilarity() }}%</b><span>当前文本相似度</span></div>
         </div>
         <div class="compare-note">两个分数都不是证据，只用于帮助失主判断；最终请当面核对物品特征。</div>
         <div class="compare-actions">
           <button type="button" class="btn" @click="compareOpen = false">关闭报告</button>
-          <button type="button" class="btn ghost" @click="compareOpen = false; goItem()">打开完整物品详情</button>
+          <button type="button" class="btn ghost" :disabled="!selected.item || ['removed','hidden'].includes(selected.item.status)" @click="compareOpen = false; goItem()">
+            {{ !selected.item || ['removed','hidden'].includes(selected.item.status) ? '此物品已下架' : '打开完整物品详情' }}
+          </button>
         </div>
       </div>
     </div>
@@ -444,4 +450,5 @@ function fmt(ts) {
 .compare-actions .btn { flex:1; }
 @media (max-width:600px) { .compare-grid { grid-template-columns:1fr; } }
 </style>
+
 

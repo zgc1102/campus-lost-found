@@ -121,3 +121,10 @@ body { overflow-y: scroll !important; }
   clip-path: inset(0 -100vmax);
 }
 
+
+/* 轻量切换动画：只变透明度，不产生位移 */
+@keyframes softPageIn { from { opacity: .55; } to { opacity: 1; } }
+@keyframes softModalIn { from { opacity: 0; } to { opacity: 1; } }
+.screen.active { animation: softPageIn .18s ease both !important; }
+.sheet.show:not(.help-screen):not(.tag-screen):not(.agent-sheet) { animation: softModalIn .16s ease both !important; }
+

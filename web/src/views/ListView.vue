@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { api } from '../api'
 
@@ -112,7 +112,7 @@ async function runClaimCheck() {
 }
 
 function aiVerdict(v) {
-  return v === 'match' ? '特征吻合' : v === 'mismatch' ? '特征不一致' : '需要人工核对'
+  return v === 'match' ? '较高可信度' : v === 'mismatch' ? '低可信度' : '一般可信度'
 }
 
 async function reportItem() {
@@ -363,13 +363,13 @@ function openOldHelp() {
         </div>
         <button type="button" class="ai-check-btn" :disabled="claimChecking" @click="runClaimCheck">{{ claimChecking ? 'AI 正在比对…' : (selected.type === 'lost' ? '✨ 帮我核对一下线索' : '✨ AI 核验吻合度') }}</button>
         <div v-if="claimCheck" class="claim-ai">
-          <div class="ca-head"><b>{{ aiVerdict(claimCheck.verdict) }}</b><span>{{ claimCheck.confidence }}% 吻合</span></div>
+          <div class="ca-head"><b>{{ aiVerdict(claimCheck.verdict) }}</b><span>参考可信度 {{ claimCheck.confidence }}%</span></div>
           <div class="ca-bar"><i :style="{ width: claimCheck.confidence + '%' }"></i></div>
           <p v-if="claimCheck.reason">{{ claimCheck.reason }}</p>
           <div v-if="claimCheck.points?.length" class="ca-points">
             <span v-for="p in claimCheck.points" :key="p">{{ p }}</span>
           </div>
-          <div class="ca-advice">
+          <div class="ca-disclaimer">参考可信度不是概率，只代表文字线索与失主描述的吻合程度。</div>\n          <div class="ca-advice">
             {{ selected.type === 'lost'
               ? (claimCheck.confidence >= 60
                 ? '线索里已经包含了一些关键特征，但最终仍要由失主当面核对。'
@@ -511,5 +511,12 @@ function openOldHelp() {
 .dm-right .claimbox { padding:12px; }
 .dm-right .claimbox textarea, .dm-right .claimbox input { font-size:13px !important; padding:12px !important; }
 @media (max-width:640px) { .sheet.item-detail-modal { width:94vw !important; padding:16px !important; } .dm-left .big-thumb { min-height:200px; } }
+</style>
+
+
+
+
+<style scoped>
+.ca-disclaimer { margin-top:5px; font-size:9px; line-height:1.55; color:#A99BB9; }
 </style>
 
