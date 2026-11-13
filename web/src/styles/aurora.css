@@ -835,3 +835,9 @@ body:has(.sheet.show) .bottom-nav{transform:translate(-50%,120%)!important;}
 .sa, .mmeta, .item .dd, .item .meta, .tip-small, .form-card .form-item label { font-size: 12px !important; }
 .form-card .form-item label, .st, .chip, .src-tag { font-size: 11px !important; }
 
+
+@media (min-width: 900px) {
+  .phone { width: 100%; max-width: 1180px; min-height: 100vh; margin: 0 auto; border-radius: 0; box-shadow: none; }
+  .bottom-nav { width: 100%; max-width: 1180px; }
+}
+
