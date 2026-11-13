@@ -182,9 +182,10 @@ function fmt(ts) {
       <div class="t">通知</div>
     </div>
     <div class="notice-tabs">
-      <button v-for="[id, label] in groups" :key="id" type="button" :class="{ on: tab === id }" @click="tab = id">
+      <button v-for="[id, label] in groups" :key="id" type="button" :class="{ on: tab === id }" :title="groupUnread(id) + ' 条未读'" @click="tab = id">
         {{ label }}<i v-if="groupUnread(id)">{{ groupUnread(id) }}</i>
       </button>
+      <span class="unread-sum">未读 {{ unread }}</span>
     </div>
     <div class="scroll">
       <div v-if="loading" class="empty">正在读取通知…</div>
@@ -346,5 +347,10 @@ function fmt(ts) {
 .nd-chat-input { display:flex; gap:6px; margin-top:8px; }
 .nd-chat-input input { flex:1; min-width:0; background:#FAF7FE; border:1px solid #EADFF5; border-radius:9px; padding:8px; font-family:inherit; font-size:10.5px; }
 .nd-chat-input button { border:0; background:#5B2A91; color:#fff; border-radius:9px; padding:0 10px; font-family:inherit; font-size:10px; }
+</style>
+
+
+<style scoped>
+.unread-sum { margin-left:auto; align-self:center; font-size:9px; color:#8E7FA3; white-space:nowrap; padding-right:4px; }
 </style>
 

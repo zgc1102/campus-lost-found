@@ -165,6 +165,9 @@ function chipText(x) {
 }
 function actionLabel(x) {
   if (x.isMine) return '你发布的'
+  if (x.status === 'closed') return '已结束'
+  if (x.status === 'claimed') return '进行中'
+  if (x.status !== 'approved') return '暂不可认领'
   if (x.myClaim === 'pending') return '已申请'
   if (x.myClaim === 'accepted' || x.myClaim === 'completed') return '已通过'
   if (x.myClaim === 'need_more') return '补充信息'
@@ -291,7 +294,7 @@ function openOldHelp() {
             </div>
             <div class="row">
               <span class="meta">📍 {{ it.place || '未填写地点' }} · {{ fmt(it.createdAt) }}</span>
-              <button class="btn" type="button" @click.stop="openDetail(it)">{{ actionLabel(it) }}</button>
+              <button class="btn" type="button" :disabled="!canClaim(it)" @click.stop="openDetail(it)">{{ actionLabel(it) }}</button>
             </div>
           </div>
         </article>
@@ -324,14 +327,19 @@ function openOldHelp() {
       </div>
       <div class="sa" style="margin-top:8px">📍 {{ selected.place || '未填写地点' }} · {{ fmt(selected.createdAt) }}</div>
       <div class="sa" style="margin-top:8px">联系方式：{{ (selected.contact && selected.contact.phone) || '认领时由发布者确认' }}</div>
-      <button v-if="!claimOpen" type="button" class="btn" style="width:100%;margin-top:14px" :disabled="!canClaim(selected)" @click="canClaim(selected) && (claimOpen = true)">{{ actionLabel(selected) }}</button>
-      <div v-if="claimOpen" class="claimbox">
+      <template v-if="selected.status === 'approved'">
+        <button v-if="!claimOpen" type="button" class="btn" style="width:100%;margin-top:14px" :disabled="!canClaim(selected)" @click="canClaim(selected) && (claimOpen = true)">{{ actionLabel(selected) }}</button>
+        <div v-if="claimOpen" class="claimbox">
         <div class="tip-small" style="margin:0 0 8px">写下只有失主知道的细节，对方核对后才会通过</div>
         <textarea v-model="claimMsg" maxlength="200" placeholder="例如：伞骨内侧缠过胶带，伞柄上有一张卡通贴纸" style="width:100%;box-sizing:border-box;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:11px;padding:10px;font-family:inherit;font-size:11px;min-height:70px"></textarea>
         <input v-model="claimPhone" maxlength="30" placeholder="你的联系方式（手机号 / 微信号）" style="width:100%;box-sizing:border-box;margin-top:7px;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:11px;padding:10px;font-family:inherit;font-size:11px">
         <div v-if="claimState" class="sa" style="margin-top:6px">{{ claimState }}</div>
         <button type="button" class="btn" style="width:100%;margin-top:10px" :disabled="claiming" @click="submitClaim">{{ claiming ? '发送中…' : '发送认领申请' }}</button>
         <div class="close" @click="claimOpen = false">取消</div>
+        </div>
+      </template>
+      <div v-else class="sa" style="margin-top:12px;color:#8E7FA3">
+        {{ selected.status === 'closed' ? '这条信息已经结束，不能再认领。' : '当前状态暂不可认领。' }}
       </div>
       <div v-if="reportState" class="sa" style="margin-top:6px">{{ reportState }}</div>
       <div class="close" @click="reportItem">🚩 举报这条信息</div>

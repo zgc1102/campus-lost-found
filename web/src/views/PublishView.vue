@@ -32,6 +32,8 @@ const result = ref(null)
 const error = ref('')
 const photo = ref('')
 const photoOpen = ref(false)
+const lastVision = ref(null)
+const draftRestored = ref(false)
 const visionState = ref('')
 const needPhoneConfirm = ref(false)
 const phoneConfirmed = ref(false)
@@ -55,12 +57,17 @@ if (props.editItem) {
 }
 
 const DRAFT_KEY = 'sg:draft:publish'
+function clearDraft() {
+  localStorage.removeItem(DRAFT_KEY)
+  draftRestored.value = false
+  for (const k of ['title', 'category', 'desc', 'place', 'eventTime', 'secret', 'phone']) form[k] = ''
+}
 onMounted(() => {
   if (props.editItem) return
   try {
     const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || '{}')
     for (const k of ['title', 'category', 'desc', 'place', 'eventTime', 'secret', 'phone']) {
-      if (d[k]) form[k] = d[k]
+      if (d[k]) { form[k] = d[k]; draftRestored.value = true }
     }
   } catch (_) {}
   try {
@@ -151,6 +158,24 @@ function resetPhoto() {
   if (fileInput.value) fileInput.value.value = ''
 }
 
+function visionCategory(c) {
+  const s = String(c || '')
+  if (/校园卡|证件|身份证|学生证/.test(s)) return '证件'
+  if (/耳机|电脑|手机|充电|键盘|电子/.test(s)) return '电子设备'
+  if (/衣|裤|鞋|帽|围巾/.test(s)) return '衣物'
+  if (/水杯|杯子|保温/.test(s)) return '水杯'
+  if (/书包|背包|包/.test(s)) return '书包'
+  return '其他'
+}
+
+function applyVision(v) {
+  if (!v) return
+  form.title = String(v.category || '未识别物品').slice(0, 30)
+  form.desc = [v.color, v.brand, v.features, v.desc].filter(Boolean).join('，').slice(0, 300)
+  form.category = visionCategory(v.category)
+  visionState.value = '已用智能识别结果覆盖标题、描述和分类'
+}
+
 async function analyzePhoto() {
   if (!photo.value) return
   visionState.value = '正在识别中，请稍后…'
@@ -160,6 +185,7 @@ async function analyzePhoto() {
       new Promise((_, reject) => setTimeout(() => reject(new Error('识别超时')), 20000))
     ])
     if (d && d.ok !== false) {
+      lastVision.value = d
       const bits = [d.category, d.color, d.features, d.desc].filter(Boolean)
       const hadTitle = !!form.title.trim()
       const hadDesc = !!form.desc.trim()
@@ -167,15 +193,7 @@ async function analyzePhoto() {
       if (!hadDesc) {
         form.desc = [d.color, d.brand, d.features, d.desc].filter(Boolean).join('，').slice(0, 300)
       }
-      if (!form.category) {
-        const c = String(d.category || '')
-        if (/校园卡|证件|身份证|学生证/.test(c)) form.category = '证件'
-        else if (/耳机|电脑|手机|充电|键盘|电子/.test(c)) form.category = '电子设备'
-        else if (/衣|裤|鞋|帽|围巾/.test(c)) form.category = '衣物'
-        else if (/水杯|杯子|保温/.test(c)) form.category = '水杯'
-        else if (/书包|背包|包/.test(c)) form.category = '书包'
-        else form.category = '其他'
-      }
+      if (!form.category) form.category = visionCategory(d.category)
       visionState.value = bits.length
         ? (hadTitle || hadDesc
           ? '智能识别完成，已保留你填写的内容；如需覆盖请点「重新拍照 / 上传」'
@@ -247,6 +265,10 @@ async function submit() {
         <div class="ph-t">{{ isHelp ? '发布一条爱心求助' : '发布一条启事' }}</div>
         <div class="ph-s">发布前先审文字和图片，违规内容发不出去</div>
         <div class="ph-steps"><span>1 填写</span><i></i><span>2 智能审核</span><i></i><span>3 上架</span></div>
+        <div v-if="draftRestored" class="draft-note">
+          <span>已恢复上次草稿，可继续填写或清空。</span>
+          <button type="button" @click="clearDraft">清空草稿</button>
+        </div>
       </div>
       <div class="warn-box">❗禁止发布现金、贵重物品、危险品、药品；虚假信息会被下架并限制发布权限。</div>
 
@@ -343,6 +365,7 @@ async function submit() {
                 <i v-else>!</i>
                 <span>{{ visionState }}</span>
               </div>
+              <button v-if="lastVision" type="button" class="vision-apply" @click="applyVision(lastVision)">用识别结果覆盖标题、描述和分类</button>
               <button type="button" class="photo-change" @click="resetPhoto">重新拍照 / 上传</button>
             </div>
             <div v-if="photoOpen" class="photo-viewer" @click="photoOpen = false">
@@ -475,4 +498,15 @@ async function submit() {
 .photo-viewer button { position:fixed; top:18px; right:18px; width:34px; height:34px; border-radius:50%; border:0; background:rgba(255,255,255,.16); color:#fff; font-size:17px; }
 </style>
 
+
+
+<style scoped>
+.vision-apply { width:100%; margin-top:6px; border:1px solid #D8C8EE; background:#F1E8FB; color:#5B2A91; border-radius:9px; padding:7px; font-family:inherit; font-size:10.5px; }
+</style>
+
+
+<style scoped>
+.draft-note { display:flex; align-items:center; justify-content:space-between; gap:8px; background:#F1E8FB; color:#5B2A91; border-radius:9px; padding:8px 10px; margin:0 0 10px; font-size:10.5px; }
+.draft-note button { border:0; background:transparent; color:#5B2A91; text-decoration:underline; font-family:inherit; font-size:10.5px; white-space:nowrap; }
+</style>
 

@@ -828,3 +828,10 @@ body:has(.sheet.show) .bottom-nav{transform:translate(-50%,120%)!important;}
 }
 .home-stats b { background: linear-gradient(135deg,#3B1D63,#8A52C7); -webkit-background-clip: text; background-clip: text; color: transparent; }
 
+
+@media (min-width: 900px) {
+  .form-card { max-width: 760px; margin-left: auto; margin-right: auto; }
+}
+.sa, .mmeta, .item .dd, .item .meta, .tip-small, .form-card .form-item label { font-size: 12px !important; }
+.form-card .form-item label, .st, .chip, .src-tag { font-size: 11px !important; }
+
