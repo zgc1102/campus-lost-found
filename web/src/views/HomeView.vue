@@ -135,7 +135,7 @@ function openMemo(s) {
       <button type="button" class="top-search" title="搜索" @click="$emit('nav', 'search')">
         <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></svg>
       </button>
-      <div class="t">清华校园拾光里</div>
+      <div class="t">清华校园拾光里<small class="build-badge">v3.2.2</small></div>
       <button type="button" class="help-btn" title="使用引导" @click="replayTour">?</button>
       <div class="bell" title="通知" @click="$emit('nav', 'notices')">🔔</div>
       <div class="login" title="我的发布" @click="$emit('nav', 'mine')">
@@ -259,4 +259,9 @@ function openMemo(s) {
 
 </style>
 
+
+
+<style scoped>
+.build-badge { margin-left:5px; font-size:8px; font-weight:400; color:#E8D9FF; background:rgba(255,255,255,.16); border-radius:4px; padding:1px 4px; vertical-align:middle; }
+</style>
 
