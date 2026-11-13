@@ -135,7 +135,7 @@ body{
 .type-tab div.active{background:var(--primary);color:#fff;}
 
 /* 弹层 */
-.sheet{background:#fff;border-radius:26px 26px 0 0;box-shadow:0 -14px 40px rgba(23,54,46,.18);max-width:420px;}
+.sheet{background:#fff;border-radius:26px 26px 0 0;box-shadow:0 -14px 40px rgba(23,54,46,.18);max-}
 .sheet .sh{color:var(--ink);font-size:20px;font-weight:600;}
 .sheet .sa{color:var(--sub);}
 .sheet .close{color:var(--primary);}
@@ -275,40 +275,10 @@ body:has(#helpSheet.show) .bottom-nav{transform:translate(-50%,120%);}
 .help-cats button div span{display:block;font-size:9px;color:var(--sub);margin-top:2px;}
 
 /* 桌面端：全屏，不再是一个小手机 */
-@media (min-width:760px){
-  body{display:flex;justify-content:center;align-items:flex-start;background:#E8E1F2;padding:24px 0;min-height:100vh;}
-  .phone{width:390px;max-width:390px;min-height:calc(100vh - 48px);margin:0 auto;border-radius:28px;box-shadow:0 0 0 1px #D9CDEA,0 26px 70px rgba(59,19,95,.22);overflow:hidden;}
-  .topbar{height:58px;padding:0 14px;}
-  .topbar .t{font-size:16px;}
-  .scroll{max-width:none;margin:0;padding:0 14px 92px;}
-  .home-stats{grid-template-columns:repeat(3,1fr);max-width:none;}
-  .cat-group .grid{grid-template-columns:1fr 1fr;}
-  .cat-group.g-a .grid{grid-template-columns:1fr 1fr;max-width:none;}
-  .help-cats{grid-template-columns:1fr 1fr;}
-  #lostWrap,#foundWrap,#helpList{display:block;}
-  .item{margin-bottom:9px;}
-  .bottom-nav{width:390px;left:50%;transform:translateX(-50%);justify-content:space-between;gap:0;}
-  .bottom-nav button{flex:1;}
-  .fab-pub{left:auto;right:calc(50% - 195px + 14px);bottom:88px;}
-  body::before{display:none;}
-  #helpSheet.show{width:390px;max-width:390px;left:50%;transform:translateX(-50%);}
-  .hp-top{padding-left:14px;}
-  .hp-body{max-width:none;margin:0;}
-  .hp-cats{grid-template-columns:1fr 1fr;}
-  .hp-submit{width:390px;left:50%;transform:translateX(-50%);}
-  .hp-submit .btn{max-width:none;display:block;margin:0;}
-}
+
 
 /* 桌面端手机框内部滚动，底部导航贴住手机底 */
-@media (min-width:760px){
-  .phone{height:calc(100vh - 48px);min-height:0;overflow:hidden;}
-  .screen{min-height:0;height:100%;}
-  .screen .scroll{flex:1;min-height:0;overflow-y:auto;}
-  .bottom-nav{bottom:24px;height:64px;border-radius:0 0 28px 28px;}
-  .fab-pub{bottom:100px;}
-  #helpSheet.show{top:24px;bottom:24px;height:auto;max-height:none;border-radius:0 0 28px 28px;}
-  .hp-submit{bottom:24px;}
-}
+
 
 /* 爱心求助发布：真正整屏 */
 #helpSheet.help-screen.show{
@@ -341,10 +311,7 @@ body:has(#helpSheet.show) .bottom-nav{transform:translate(-50%,120%);}
 .hp-sec textarea{min-height:92px;resize:vertical;line-height:1.65;}
 .hp-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
 .hp-photo{display:block;border:1px dashed #DCCBF2;border-radius:11px;padding:16px 10px;text-align:center;color:var(--sub);font-size:10px;cursor:pointer;background:#FAF7FE;}
-@media (min-width:760px){
-  #helpSheet.help-screen.show{top:24px;bottom:24px;left:50%;width:390px;max-width:390px;height:auto;max-height:none;transform:translateX(-50%);border-radius:0 0 28px 28px;}
-  .hp-submit{width:100%;left:0;transform:none;}
-}
+
 
 /* 六个入口：插画卡片 */
 .entry-section{margin:0 0 14px;}
@@ -597,10 +564,7 @@ html::-webkit-scrollbar,body::-webkit-scrollbar{display:none;width:0;height:0;}
 .dt-time{display:flex;gap:8px;font-size:9.5px;color:var(--sub);padding:5px 0;border-bottom:1px dashed var(--line);}
 .dt-time b{flex:0 0 76px;color:var(--ink);font-weight:500;}
 .dt-note{font-size:8.5px;line-height:1.6;color:#A99BB9;margin:12px 0 0;}
-@media (min-width:760px){
-  #radarSheet.agent-sheet.show{top:24px;bottom:24px;left:50%;width:390px;max-width:390px;height:auto;max-height:none;transform:translateX(-50%);border-radius:0 0 28px 28px;}
-  .ag-foot{width:100%;left:0;transform:none;}
-}
+
 
 body:has(#radarSheet.show) .bottom-nav{transform:translate(-50%,120%)!important;}
 
@@ -648,9 +612,7 @@ body:has(#radarSheet.show) .bottom-nav{transform:translate(-50%,120%)!important;
 .tag-result .tr-actions a,.tag-result .tr-actions button{flex:1;border:1px solid var(--line);border-radius:10px;padding:9px;font-size:10px;background:#F7F2FD;color:var(--primary);text-decoration:none;font-family:inherit;cursor:pointer;}
 .tag-result .tr-actions .primary{background:linear-gradient(135deg,#5B2A91,#7A3CB0);color:#fff;border:0;}
 body:has(#tagSheet.show) .bottom-nav{transform:translate(-50%,120%)!important;}
-@media (min-width:760px){
-  #tagSheet.tag-screen.show{top:24px;bottom:24px;left:50%;width:390px;max-width:390px;height:auto;max-height:none;transform:translateX(-50%);border-radius:0 0 28px 28px;}
-}
+
 
 /* 物品详情：可见的收起 + 不被底部导航挡住 */
 #itemSheet{max-height:88vh;overflow-y:auto;scrollbar-width:none;padding-top:20px;}
@@ -705,13 +667,7 @@ body:has(#itemSheet.show) .bottom-nav{transform:translate(-50%,120%)!important;}
 .hp-steps span{white-space:nowrap;}
 
 /* 400–759 视口：让整屏页和手机框同宽，避免半屏串位 */
-@media (min-width:431px) and (max-width:759px){
-  #helpSheet.help-screen.show,
-  #tagSheet.tag-screen.show,
-  #radarSheet.agent-sheet.show{
-    width:390px;max-width:390px;left:50%;transform:translateX(-50%);
-  }
-}
+
 
 /* 覆盖 sheetUp 动画残留的 translateX(-50%)，保证整屏页和手机框对齐 */
 @media (min-width:431px){
