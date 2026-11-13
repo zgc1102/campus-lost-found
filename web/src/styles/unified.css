@@ -114,3 +114,10 @@ body { overflow-y: scroll !important; }
 .screen.active, .item, .mini, .entry-card, .sheet, .rd-match, .dt-action { animation: none !important; }
 @media (hover: hover) { .item:hover { transform: none !important; } }
 
+
+/* 普通弹窗的暗色遮罩 */
+.sheet.show:not(.help-screen):not(.tag-screen):not(.agent-sheet) {
+  box-shadow: 0 0 0 100vmax rgba(12,6,22,.70), 0 26px 70px rgba(12,6,22,.38) !important;
+  clip-path: inset(0 -100vmax);
+}
+

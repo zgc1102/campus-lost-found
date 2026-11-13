@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { api } from '../api'
 
@@ -332,12 +332,16 @@ function openOldHelp() {
       </div>
     </div>
 
-    <div v-if="selected" class="sheet vue-sheet show">
+    <div v-if="selected" class="sheet vue-sheet show item-detail-modal">
       <button type="button" class="sheet-x" aria-label="关闭" @click="selected = null">✕</button>
+      <div class="detail-modal-grid">
+      <div class="dm-left">
       <div class="big-thumb" @click="selected.photoUrl && (photoOpen = true)">
         <img v-if="selected.photoUrl" :src="selected.photoUrl" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:16px">
         <span v-else>{{ thumbText(selected) }}</span>
       </div>
+      </div>
+      <div class="dm-right">
       <div class="sh">{{ selected.title || '未命名物品' }}</div>
       <div v-if="selected.isMine" class="sa" style="margin-top:6px;color:var(--purple)">这是你自己发布的内容，不能认领自己的发布。</div>
       <div class="sa">{{ selected.desc || '暂无描述' }}</div>
@@ -374,6 +378,8 @@ function openOldHelp() {
       </div>
       <div v-if="reportState" class="sa" style="margin-top:6px">{{ reportState }}</div>
       <div class="close" @click="reportItem">🚩 举报这条信息</div>
+      </div>
+      </div>
 
     </div>
     <div v-if="photoOpen && selected && selected.photoUrl" class="img-viewer" style="display:flex" @click="photoOpen = false">
@@ -456,4 +462,14 @@ function openOldHelp() {
 .me-copy i { font-style:normal;font-size:9px;color:#8E7FA3;line-height:1.5; }
 </style>
 
+
+
+<style scoped>
+.item-detail-modal { width:min(820px,94vw) !important; max-width:94vw !important; max-height:88vh; overflow-y:auto; }
+.detail-modal-grid { display:grid; grid-template-columns:0.9fr 1.1fr; gap:14px; align-items:start; }
+.dm-left .big-thumb { height:100%; min-height:260px; margin:0; }
+.dm-right { min-width:0; }
+.dm-right .sh { margin-top:0; }
+@media (max-width:640px) { .detail-modal-grid { grid-template-columns:1fr; } .dm-left .big-thumb { min-height:180px; height:180px; } }
+</style>
 
