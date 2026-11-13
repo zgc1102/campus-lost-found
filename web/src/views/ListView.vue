@@ -25,6 +25,7 @@ const recommend = ref([])
 const compareTarget = ref(null)
 const compareScore = ref(0)
 const myItems = ref([])
+const myLoading = ref(true)
 const ownTarget = ref(null)
 const ownScore = ref(0)
 const ownReasons = ref([])
@@ -112,10 +113,11 @@ function useOwnTarget() {
   openDetail(target)
 }
 async function loadMine() {
+  myLoading.value = true
   try {
     const list = await api.mine()
     if (Array.isArray(list)) myItems.value = list
-  } catch (_) { myItems.value = [] }
+  } catch (_) { myItems.value = [] } finally { myLoading.value = false }
 }
 const ownCandidates = computed(() => {
   if (!selected.value) return []
@@ -462,7 +464,8 @@ function openOldHelp() {
       </div>
       <div class="own-box">
         <div class="own-title">与我发布的进行 AI 对比</div>
-        <div v-if="ownCandidates.length" class="own-list">
+        <div v-if="myLoading" class="own-empty">正在读取我的发布…</div>
+        <div v-else-if="ownCandidates.length" class="own-list">
           <button v-for="o in ownCandidates" :key="o.id" type="button" class="own-row" @click.stop="openOwnCompare(o)">
             <span>{{ o.title }}</span><i>{{ o.place || '未填写地点' }}</i><b>对比 →</b>
           </button>
@@ -762,3 +765,4 @@ function openOldHelp() {
 .own-reasons span { font-size:8.5px; color:#5B2A91; background:#F1E8FB; border-radius:4px; padding:2px 5px; }
 @media (max-width:600px) { .own-cols { grid-template-columns:1fr; } .own-modal-head h2 { font-size:15px; } }
 </style>
+
