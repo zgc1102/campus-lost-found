@@ -851,3 +851,34 @@ body:has(.sheet.show) .bottom-nav{transform:translate(-50%,120%)!important;}
   border-radius: 18px !important; animation: none !important;
 }
 
+
+/* 统一页面壳：桌面端所有整页都使用同一宽度，手机端统一 100vw */
+@media (min-width: 900px) {
+  .phone { height: auto !important; min-height: 100vh !important; overflow: visible !important; }
+  .screen { height: auto !important; min-height: 100vh !important; }
+  .screen .scroll { height: auto !important; overflow: visible !important; }
+  #helpSheet.help-screen.show,
+  #tagSheet.tag-screen.show,
+  #radarSheet.agent-sheet.show {
+    top: 0 !important; bottom: 0 !important; left: 50% !important;
+    width: 100% !important; max-width: 1180px !important; height: 100dvh !important; max-height: none !important;
+    transform: translateX(-50%) !important; border-radius: 0 !important;
+  }
+}
+@media (max-width: 899px) {
+  #helpSheet.help-screen.show,
+  #tagSheet.tag-screen.show,
+  #radarSheet.agent-sheet.show {
+    left: 0 !important; width: 100vw !important; max-width: 100vw !important;
+    transform: none !important; border-radius: 0 !important;
+  }
+}
+
+
+@media (max-width: 899px) {
+  .phone { width: 100vw !important; max-width: 100vw !important; margin: 0 !important; }
+  .bottom-nav { left: 0 !important; width: 100vw !important; max-width: 100vw !important; transform: none !important; }
+  .screen { height: auto !important; min-height: 100dvh !important; }
+  .screen .scroll { height: auto !important; overflow: visible !important; }
+}
+
