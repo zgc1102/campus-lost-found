@@ -368,7 +368,7 @@ function statusClass(s) {
           <div class="brand-mark">拾</div>
           <div>
             <h1>管理后台 · 清华校园拾光里</h1>
-            <p>仅管理员可见 · 审核发布内容 · 管理公告与用户 · 管理端 2026-11-08</p>
+            <p>仅管理员可见 · 审核发布内容 · 管理公告与用户 · 管理端</p>
           </div>
         </div>
         <div class="header-actions" v-if="token">
@@ -401,7 +401,7 @@ function statusClass(s) {
 
           <div class="overview-strip">
             <div class="ov-item"><b>{{ stats?.items ?? '—' }}</b><span>全部内容</span></div>
-            <div class="ov-item"><b>{{ stats?.byStatus?.pending ?? '—' }}</b><span>待审核</span></div>
+            <div class="ov-item"><b>{{ stats ? (stats.byStatus?.pending ?? 0) : '—' }}</b><span>待审核</span></div>
             <div class="ov-item"><b>{{ stats?.byStatus?.approved ?? '—' }}</b><span>已上架</span></div>
             <div class="ov-item"><b>{{ stats?.accounts ?? '—' }}</b><span>注册用户</span></div>
             <div class="ov-item"><b>{{ stats?.claims ?? '—' }}</b><span>认领申请</span></div>
@@ -725,6 +725,7 @@ textarea.field { min-height: 78px; resize: vertical; }
 .deploy-status { width:min(1120px,calc(100% - 48px)); margin:12px auto 0; background:#FFF8E8; border:1px solid #F2DFC0; color:#8A5A16; border-radius:10px; padding:9px 12px; font-size:11px; display:flex; align-items:center; justify-content:space-between; }
 .deploy-status b { color:#5B2A91; font-size:13px; }
 </style>
+
 
 
 

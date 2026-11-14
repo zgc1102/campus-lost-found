@@ -32,9 +32,12 @@ function pairScore(a, b) {
   return Math.min(99, pct)
 }
 const matchSystemScore = computed(() => {
+  if (Number.isFinite(Number(selected.value?.matchScore))) return Number(selected.value.matchScore)
   const m = String(selected.value?.text || '').match(/(\d+)\s*%/)
   return m ? Number(m[1]) : 0
 })
+const matchSource = computed(() => selected.value?.matchSourceItem || selected.value?.item || null)
+const matchTarget = computed(() => selected.value?.matchTargetItem || matchItem.value)
 const matchItem = computed(() => {
   if (!selected.value?.item) return null
   const want = selected.value.item.type === 'lost' ? 'found' : 'lost'
@@ -353,17 +356,17 @@ function fmt(ts) {
         <h2>{{ selected.item.title || '对应物品' }}</h2>
         <div class="compare-grid">
           <div class="compare-col">
-            <div class="cc-tag">{{ selected.type === 'match' ? '系统推荐物品' : '发布物品' }}</div>
-            <div class="cc-title">{{ selected.item.title || '未命名' }}</div>
-            <div class="cc-meta">{{ selected.item.place || '未填写地点' }} · {{ fmt(selected.item.createdAt) }}</div>
-            <p>{{ selected.item.desc || '暂无描述' }}</p>
+            <div class="cc-tag">{{ selected.type === 'match' ? '系统匹配' : '发布物品' }}</div>
+            <div class="cc-title">{{ (selected.type === 'match' ? matchSource : selected.item)?.title || '未命名' }}</div>
+            <div class="cc-meta">{{ (selected.type === 'match' ? matchSource : selected.item)?.place || '未填写地点' }} · {{ fmt((selected.type === 'match' ? matchSource : selected.item)?.createdAt) }}</div>
+            <p>{{ (selected.type === 'match' ? matchSource : selected.item)?.desc || '暂无描述' }}</p>
           </div>
           <div class="compare-col">
             <template v-if="selected.type === 'match'">
-              <div class="cc-tag other">我的发布</div>
-              <div class="cc-title">{{ matchItem ? matchItem.title : '没有找到你的对应发布' }}</div>
-              <div class="cc-meta">{{ matchItem ? (matchItem.place || '未填写地点') + ' · ' + fmt(matchItem.createdAt) : '这只是一条系统相似提醒' }}</div>
-              <p>{{ matchItem ? matchItem.desc : '系统发现相似物品，但没有找到你对应的寻物/招领。' }}</p>
+              <div class="cc-tag other">另一条匹配</div>
+              <div class="cc-title">{{ matchTarget ? matchTarget.title : '没有找到对应条目' }}</div>
+              <div class="cc-meta">{{ matchTarget ? (matchTarget.place || '未填写地点') + ' · ' + fmt(matchTarget.createdAt) : '这是一条旧的系统提醒' }}</div>
+              <p>{{ matchTarget ? matchTarget.desc : '这条旧通知没有保存完整的匹配对，无法还原另一条物品。' }}</p>
             </template>
             <template v-else>
               <div class="cc-tag other">{{ selected.itemType === 'help' ? '帮忙申请' : (selected.item.type === 'lost' ? '提供线索' : '认领留言') }}</div>
@@ -375,18 +378,17 @@ function fmt(ts) {
         </div>
         <div class="compare-scores">
           <template v-if="selected.type === 'match'">
-            <div><b>{{ matchSystemScore }}%</b><span>系统推荐相似度</span></div>
-            <div><b>{{ matchLocalScore }}%</b><span>当前本地重算相似度</span></div>
+            <div><b>{{ matchSystemScore }}%</b><span>系统匹配相似度</span></div>
           </template>
           <template v-else>
-            <div><b>{{ selected.claimAi ? selected.claimAi.confidence + '%' : '—' }}</b><span>申请时 AI 参考可信度</span></div>
+            <div><b>{{ selected.claimAi ? selected.claimAi.confidence + '%' : '—' }}</b><span>AI 参考可信度</span></div>
             <div><b>{{ currentSimilarity() }}%</b><span>当前文本相似度</span></div>
           </template>
         </div>
         <div class="compare-note">
           {{ selected.type === 'match'
-            ? '上面是系统发布时给出的推荐分，下面是现在按两条文本重新计算的分；两者口径不同，所以数值可能不一样，不是同一个指标。'
-            : '两个分数都不是证据，只用于帮助失主判断；最终请当面核对物品特征。' }}
+            ? '这是发布时系统给出的匹配分，只用于推荐，不代表归属；最终请自行认真核对。'
+            : '两个分数都不是证据，只用于帮助失主判断；最终请自行认真核对物品特征。' }}
         </div>
         <div class="compare-actions">
           <button type="button" class="btn" @click="compareOpen = false">关闭报告</button>

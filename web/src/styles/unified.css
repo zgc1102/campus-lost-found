@@ -128,3 +128,13 @@ body { overflow-y: scroll !important; }
 .screen.active { animation: softPageIn .18s ease both !important; }
 .sheet.show:not(.help-screen):not(.tag-screen):not(.agent-sheet) { animation: softModalIn .16s ease both !important; }
 
+
+/* 关闭按钮触控热区不小于 44px */
+.sheet-x, .rec-close, .compare-x {
+  min-width: 44px !important;
+  min-height: 44px !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  padding: 0 !important;
+}

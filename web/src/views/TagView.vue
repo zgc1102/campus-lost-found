@@ -11,6 +11,8 @@ const result = ref(null)
 const loading = ref(false)
 const error = ref('')
 const lookup = ref('')
+const tagLoading = ref(true)
+const tagError = ref('')
 
 async function generate() {
   error.value = ''
@@ -58,7 +60,9 @@ function openLookup() {
   location.href = '/?tag=' + encodeURIComponent(code)
 }
 
-onMounted(async () => {
+async function loadMyTag() {
+  tagLoading.value = true
+  tagError.value = ''
   try {
     const list = await api.myTags()
     if (Array.isArray(list) && list.length) {
@@ -67,8 +71,9 @@ onMounted(async () => {
       phone.value = list[0].phone || ''
       mode.value = list[0].mode || 'notify'
     }
-  } catch (_) {}
-})
+  } catch (e) { tagError.value = e.message || '拾光码加载失败' } finally { tagLoading.value = false }
+}
+onMounted(loadMyTag)
 
 const qrSrc = computed(() => {
   if (!result.value) return ''
@@ -93,6 +98,8 @@ function qrError() {
       <div class="tag-intro">
         一个拾光码可以贴在任何物品上：电脑、键盘、校园卡、充电器都行。捡到的人扫码后，可以只给你发通知，也可以直接看到你的电话。
       </div>
+      <div v-if="tagLoading" class="tag-status">正在读取我的拾光码…</div>
+      <div v-else-if="tagError" class="tag-status" @click="loadMyTag">拾光码加载失败，点此重试</div>
       <div class="tag-lookup">
         <input v-model="lookup" maxlength="60" placeholder="扫不出来？输入拾光码，如 SGBEA45A">
         <button type="button" @click="openLookup">查询</button>
@@ -183,3 +190,7 @@ function qrError() {
 .tag-lookup button { border:1px solid #E4D4F7; background:#F1E8FB; color:#5B2A91; border-radius:9px; padding:0 10px; font-family:inherit; font-size:10.5px; }
 </style>
 
+
+<style scoped>
+.tag-status { margin:7px 0; padding:7px 9px; border-radius:8px; background:#F7F2FD; color:#7A5AA8; font-size:10px; }
+</style>

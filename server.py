@@ -353,8 +353,16 @@ def run_matching(threshold=0.42):
             pct = int(score * 100)
             add_notice(notices, l.get("ownerToken"), "match",
                        "发现一条相似度 %d%% 的招领：%s" % (pct, f.get("title") or ""), f["id"])
+            if notices:
+                notices[-1]["matchSourceId"] = l["id"]
+                notices[-1]["matchTargetId"] = f["id"]
+                notices[-1]["matchScore"] = pct
             add_notice(notices, f.get("ownerToken"), "match",
                        "发现一条相似度 %d%% 的寻物：%s" % (pct, l.get("title") or ""), l["id"])
+            if notices:
+                notices[-1]["matchSourceId"] = f["id"]
+                notices[-1]["matchTargetId"] = l["id"]
+                notices[-1]["matchScore"] = pct
             created += 1
     with LOCK:
         save_items(items)
@@ -2641,6 +2649,12 @@ class Handler(BaseHTTPRequestHandler):
                     row["claimContact"] = (cl.get("contact") if cl.get("status") in ("accepted", "completed")
                                            else mask_contact(cl.get("contact")))
                     row["claimAi"] = cl.get("aiCheck") or None
+                if n.get("type") == "match":
+                    src = item_map.get(n.get("matchSourceId"))
+                    tgt = item_map.get(n.get("matchTargetId"))
+                    row["matchSourceItem"] = public_item(src, owner) if src else None
+                    row["matchTargetItem"] = public_item(tgt, owner) if tgt else None
+                    row["matchScore"] = n.get("matchScore")
                 mine.append(row)
             mine.sort(key=lambda x: x.get("at") or 0, reverse=True)
             unread = sum(1 for n in mine if not n.get("read"))

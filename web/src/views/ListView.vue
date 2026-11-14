@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { api } from '../api'
 import CountUp from '../components/CountUp.vue'
@@ -584,7 +584,7 @@ function openOldHelp() {
         <div class="rec-kicker">AI 对比 · 只和我的发布比</div>
         <div class="own-modal-head">
           <div>
-            <h2>{{ selected.type === 'lost' ? '与你丢失物品的参考相似度' : '与你捡到物品的参考相似度' }}</h2>
+            <h2>{{ selected.type === 'lost' ? '与你丢失物品的 AI 参考可信度' : '与你捡到物品的 AI 参考可信度' }}</h2>
             <div class="own-sub">不是概率，是文字、颜色、类别、地点的综合参考</div>
             <div class="own-ai-summary"><b>AI 参考总结</b><span v-if="ownCached" class="own-cached">已保留上次分析</span><span v-if="ownAiLoading" class="own-loading"><i class="own-spin"></i> AI 正在对比中，请稍后…</span><template v-else>{{ ownAiSummary }}</template></div>
           </div>
@@ -860,3 +860,4 @@ function openOldHelp() {
 <style scoped>
 .own-cached { margin-left:5px; font-size:8px; color:#2F7D46; background:#EAF7EE; border-radius:4px; padding:1px 4px; }
 </style>
+
