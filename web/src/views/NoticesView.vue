@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { computed, onMounted, ref } from 'vue'
 import { api } from '../api'
 
@@ -13,12 +13,40 @@ const actionMsg = ref('')
 const chat = ref([])
 const chatText = ref('')
 const compareOpen = ref(false)
+const myItems = ref([])
 
 function grams(s) {
   const x = String(s || '').replace(/\s+/g, '')
   const set = new Set()
   for (let i = 0; i < Math.max(0, x.length - 1); i++) set.add(x.slice(i, i + 2))
   return set
+}
+function pairScore(a, b) {
+  if (!a || !b) return 0
+  const ga = grams((a.title || '') + (a.desc || ''))
+  const gb = grams((b.title || '') + (b.desc || ''))
+  const union = new Set([...ga, ...gb])
+  let pct = union.size ? Math.round(([...ga].filter((x) => gb.has(x)).length / union.size) * 100) : 0
+  if (a.cat && a.cat === b.cat) pct += 10
+  if (a.place && b.place && (String(a.place).includes(String(b.place)) || String(b.place).includes(String(a.place)))) pct += 10
+  return Math.min(99, pct)
+}
+const matchSystemScore = computed(() => {
+  const m = String(selected.value?.text || '').match(/(\d+)\s*%/)
+  return m ? Number(m[1]) : 0
+})
+const matchItem = computed(() => {
+  if (!selected.value?.item) return null
+  const want = selected.value.item.type === 'lost' ? 'found' : 'lost'
+  const candidates = myItems.value.filter((x) => x.type === want)
+  return candidates.sort((a, b) => pairScore(selected.value.item, b) - pairScore(selected.value.item, a))[0] || null
+})
+const matchLocalScore = computed(() => pairScore(selected.value?.item, matchItem.value))
+async function loadMyItems() {
+  try {
+    const list = await api.mine()
+    if (Array.isArray(list)) myItems.value = list
+  } catch (_) { myItems.value = [] }
 }
 function currentSimilarity() {
   const it = selected.value?.item
@@ -91,6 +119,7 @@ function openNotice(n) {
   chatText.value = ''
   compareOpen.value = false
   if (n.reportId) loadChat(n.reportId)
+  if (n.type === 'match') loadMyItems()
   if (!n.read) {
     n.read = true
     unread.value = Math.max(0, unread.value - 1)
@@ -324,23 +353,41 @@ function fmt(ts) {
         <h2>{{ selected.item.title || '对应物品' }}</h2>
         <div class="compare-grid">
           <div class="compare-col">
-            <div class="cc-tag">发布物品</div>
+            <div class="cc-tag">{{ selected.type === 'match' ? '系统推荐物品' : '发布物品' }}</div>
             <div class="cc-title">{{ selected.item.title || '未命名' }}</div>
             <div class="cc-meta">{{ selected.item.place || '未填写地点' }} · {{ fmt(selected.item.createdAt) }}</div>
             <p>{{ selected.item.desc || '暂无描述' }}</p>
           </div>
           <div class="compare-col">
-            <div class="cc-tag other">{{ selected.itemType === 'help' ? '帮忙申请' : (selected.item.type === 'lost' ? '提供线索' : '认领留言') }}</div>
-            <div class="cc-title">{{ selected.claimMessage || selected.report?.message || selected.text }}</div>
-            <div class="cc-meta">{{ selected.claimAi ? '申请时已做 AI 核验' : '未做 AI 核验' }}</div>
-            <p>{{ selected.claimAi?.reason || '可以打开原物品详情，对照描述后自行判断。' }}</p>
+            <template v-if="selected.type === 'match'">
+              <div class="cc-tag other">我的发布</div>
+              <div class="cc-title">{{ matchItem ? matchItem.title : '没有找到你的对应发布' }}</div>
+              <div class="cc-meta">{{ matchItem ? (matchItem.place || '未填写地点') + ' · ' + fmt(matchItem.createdAt) : '这只是一条系统相似提醒' }}</div>
+              <p>{{ matchItem ? matchItem.desc : '系统发现相似物品，但没有找到你对应的寻物/招领。' }}</p>
+            </template>
+            <template v-else>
+              <div class="cc-tag other">{{ selected.itemType === 'help' ? '帮忙申请' : (selected.item.type === 'lost' ? '提供线索' : '认领留言') }}</div>
+              <div class="cc-title">{{ selected.claimMessage || selected.report?.message || selected.text }}</div>
+              <div class="cc-meta">{{ selected.claimAi ? '申请时已做 AI 核验' : '未做 AI 核验' }}</div>
+              <p>{{ selected.claimAi?.reason || '可以打开原物品详情，对照描述后自行判断。' }}</p>
+            </template>
           </div>
         </div>
         <div class="compare-scores">
-          <div><b>{{ selected.claimAi ? selected.claimAi.confidence + '%' : '—' }}</b><span>申请时 AI 参考可信度</span></div>
-          <div><b>{{ currentSimilarity() }}%</b><span>当前文本相似度</span></div>
+          <template v-if="selected.type === 'match'">
+            <div><b>{{ matchSystemScore }}%</b><span>系统推荐相似度</span></div>
+            <div><b>{{ matchLocalScore }}%</b><span>当前本地重算相似度</span></div>
+          </template>
+          <template v-else>
+            <div><b>{{ selected.claimAi ? selected.claimAi.confidence + '%' : '—' }}</b><span>申请时 AI 参考可信度</span></div>
+            <div><b>{{ currentSimilarity() }}%</b><span>当前文本相似度</span></div>
+          </template>
         </div>
-        <div class="compare-note">两个分数都不是证据，只用于帮助失主判断；最终请当面核对物品特征。</div>
+        <div class="compare-note">
+          {{ selected.type === 'match'
+            ? '上面是系统发布时给出的推荐分，下面是现在按两条文本重新计算的分；两者口径不同，所以数值可能不一样，不是同一个指标。'
+            : '两个分数都不是证据，只用于帮助失主判断；最终请当面核对物品特征。' }}
+        </div>
         <div class="compare-actions">
           <button type="button" class="btn" @click="compareOpen = false">关闭报告</button>
           <button type="button" class="btn ghost" :disabled="!selected.item || ['removed','hidden'].includes(selected.item.status)" @click="compareOpen = false; goItem()">
