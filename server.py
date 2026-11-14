@@ -1663,6 +1663,7 @@ def _place_group(place):
 
 def _hotspot_stats(items, limit=6):
     groups = {}
+    now_ms = int(time.time() * 1000)
     for it in items:
         if it.get("status") not in ("approved", "claimed", "closed"):
             continue
@@ -1671,13 +1672,19 @@ def _hotspot_stats(items, limit=6):
         g = _place_group(it.get("place"))
         if g == "未填写地点":
             continue
-        row = groups.setdefault(g, {"place": g, "count": 0, "lost": 0, "found": 0})
+        row = groups.setdefault(g, {"place": g, "count": 0, "lost": 0, "found": 0, "recent7": 0, "prev7": 0})
         row["count"] += 1
         row["lost" if it.get("type") == "lost" else "found"] += 1
-    out = sorted(groups.values(), key=lambda x: (-x["count"], x["place"]))
+        age = now_ms - (it.get("createdAt") or 0)
+        if 0 <= age <= 7 * 86400000:
+            row["recent7"] += 1
+        elif 7 * 86400000 < age <= 14 * 86400000:
+            row["prev7"] += 1
+    out = sorted(groups.values(), key=lambda x: (-x["recent7"], -x["count"], x["place"]))
     total = sum(x["count"] for x in out) or 1
     for x in out:
         x["share"] = int(round(x["count"] * 100.0 / total))
+        x["trend"] = "up" if x["recent7"] > x["prev7"] else ("down" if x["recent7"] < x["prev7"] else "flat")
     return out[:limit]
 
 

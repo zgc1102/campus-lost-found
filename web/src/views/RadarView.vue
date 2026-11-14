@@ -1,5 +1,5 @@
-<script setup>
-import { ref } from 'vue'
+﻿<script setup>
+import { onMounted, ref } from 'vue'
 import { api } from '../api'
 
 const emit = defineEmits(['nav'])
@@ -75,6 +75,20 @@ function openFullMatch() {
   sessionStorage.setItem('sg:focusItem', selectedMatch.value.item.id)
   emit('nav', selectedMatch.value.item.type === 'lost' ? 'found' : 'lost')
 }
+
+onMounted(async () => {
+  let seed = null
+  try { seed = JSON.parse(sessionStorage.getItem('sg:radarSeed') || 'null') } catch (_) {}
+  if (!seed) return
+  sessionStorage.removeItem('sg:radarSeed')
+  title.value = seed.title || ''
+  place.value = seed.place || ''
+  cat.value = seed.cat || 'other'
+  lastSeen.value = seed.lastSeen || ''
+  if (!title.value.trim()) return
+  await scan()
+  await runDetective()
+})
 </script>
 
 <template>
@@ -133,12 +147,12 @@ function openFullMatch() {
       </template>
       <div v-else-if="scanned && !loading" class="rd-summary" style="padding:18px 0;text-align:center">暂时没有高置信度匹配，先看下面的高频区域。</div>
 
-      <div v-if="hotspots.length" class="rd-section">校园失物高频区域</div>
+      <div v-if="hotspots.length" class="rd-section">校园失物高频区域 · 按近7天新增排序</div>
       <div v-if="hotspots.length" class="rd-hot">
         <div v-for="h in hotspots.slice(0, 5)" :key="h.place" class="rd-hot-row">
           <span class="rd-hot-name">{{ h.place }}</span>
           <span class="rd-bar"><i :style="{ width: Math.max(6, h.share || 0) + '%' }" /></span>
-          <span class="rd-hot-n">{{ h.count }} 条</span>
+          <span class="rd-hot-n">{{ h.recent7 ? '近7天 ' + h.recent7 + ' 条' : '累计 ' + h.count + ' 条' }}</span>
         </div>
       </div>
 
@@ -166,12 +180,12 @@ function openFullMatch() {
           <span class="dt-act-main"><b>{{ a.title }}</b><span>{{ a.detail }}</span></span>
         </div>
         <template v-if="detective.hotspots && detective.hotspots.length">
-          <div class="dt-title">高频区域</div>
+          <div class="dt-title">高频区域 · 近7天与累计</div>
           <div class="rd-hot">
             <div v-for="h in detective.hotspots" :key="h.place" class="rd-hot-row">
               <span class="rd-hot-name">{{ h.place }}</span>
               <span class="rd-bar"><i :style="{ width: Math.max(6, h.share || 0) + '%' }" /></span>
-              <span class="rd-hot-n">{{ h.count }} 条</span>
+              <span class="rd-hot-n">{{ h.recent7 ? '近7天 ' + h.recent7 + ' 条' : '累计 ' + h.count + ' 条' }}</span>
             </div>
           </div>
         </template>
@@ -299,4 +313,5 @@ function openFullMatch() {
 .rd-detail-actions { display:flex; gap:8px; margin-top:14px; }
 .rd-detail-actions .btn { flex:1; }
 </style>
+
 

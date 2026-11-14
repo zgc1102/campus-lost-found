@@ -251,6 +251,18 @@ async function submit() {
     submitting.value = false
   }
 }
+function askDetective() {
+  if (!result.value) return
+  try {
+    sessionStorage.setItem('sg:radarSeed', JSON.stringify({
+      title: result.value.title || '',
+      place: result.value.place || '',
+      cat: result.value.cat || 'other',
+      lastSeen: result.value.lastSeen || ''
+    }))
+  } catch (_) {}
+  emit('nav', 'radar')
+}
 </script>
 
 <template>
@@ -286,6 +298,7 @@ async function submit() {
         <h2>{{ result.status === 'approved' ? '已发布成功' : result.status === 'rejected' ? '内容被拦截' : '已提交，等待审核' }}</h2>
         <p>{{ result.rejectReason || '智能审核会先看文字和图片，通过后其他同学才能看到。' }}</p>
         <button type="button" class="btn" style="width:100%" @click="$emit('nav', isHelp ? 'help' : kind)">返回列表</button>
+        <button v-if="!isHelp && kind === 'lost' && result.status === 'approved'" type="button" class="btn ghost" style="width:100%;margin-top:8px" @click="askDetective">让 AI 侦探帮我找下一步</button>
       </div>
 
       <template v-else>
