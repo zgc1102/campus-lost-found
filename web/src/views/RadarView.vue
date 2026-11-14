@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { onMounted, ref } from 'vue'
 import { api } from '../api'
 
@@ -196,9 +196,9 @@ function organizePublish() {
       <template v-if="detective">
         <div class="dt-summary" style="margin-top:12px">{{ detective.summary }}</div>
         <div class="dt-tech"><span>智能体路线推理</span><span>校园地点知识库</span><span>工具调用</span></div>
-        <div v-for="(s, i) in detectiveSteps" :key="'ds'+i" class="dt-step"><b>{{ stepName(s.tool) }}</b><span>{{ s.finding }}</span></div>
+        <div v-for="(s, i) in detectiveSteps" :key="'ds'+i" class="dt-step"><b>{{ toolLabel(s.tool) }}</b><span>{{ s.finding }}</span></div>
         <div class="dt-title">建议按这个顺序找</div>
-        <div v-for="(a, i) in detective.actions" :key="i" class="dt-action" :style="{ animationDelay: (i * 0.12) + 's' }">
+        <div v-for="(a, i) in (detective.actions || [])" :key="i" class="dt-action" :style="{ animationDelay: (i * 0.12) + 's' }">
           <span class="dt-num">{{ i + 1 }}</span>
           <span class="dt-act-main"><b>{{ a.title }}</b><span>{{ a.detail }}</span></span>
         </div>
@@ -214,7 +214,7 @@ function organizePublish() {
         </template>
         <template v-if="detective.timeline && detective.timeline.length">
           <div class="dt-title">时间线</div>
-          <div v-for="(t, i) in detective.timeline" :key="i" class="dt-time"><b>{{ t.time }}</b><span>{{ t.label }}</span></div>
+          <div v-for="(t, i) in (detective.timeline || [])" :key="i" class="dt-time"><b>{{ t.time }}</b><span>{{ t.label }}</span></div>
         </template>
         <div class="dt-note">{{ detective.disclaimer }}</div>
         <div v-if="!fromPublished" class="dt-publish">
@@ -350,3 +350,4 @@ function organizePublish() {
 .dt-publish b { font-size:12px; color:#4B2B72; }
 .dt-publish span { font-size:9.5px; line-height:1.6; color:#8B7A9E; }
 </style>
+

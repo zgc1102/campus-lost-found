@@ -9,6 +9,18 @@ const item = computed(() => {
   try { return JSON.parse(sessionStorage.getItem('sg:lastResult') || '{}') } catch (e) { return {} }
 })
 const approved = computed(() => item.value.status === 'approved')
+function askDetective() {
+  try {
+    sessionStorage.setItem('sg:radarSeed', JSON.stringify({
+      title: item.value.title || '',
+      place: item.value.place || '',
+      cat: item.value.cat || 'other',
+      lastSeen: item.value.eventTime || '',
+      published: true
+    }))
+  } catch (_) {}
+  emit('nav', 'radar')
+}
 </script>
 
 <template>
@@ -25,7 +37,8 @@ const approved = computed(() => item.value.status === 'approved')
         <p>{{ approved ? '其他同学已经可以在列表里看到这条信息。' : '审核通过后，其他同学才能在「失物招领 / 寻物启事」里看到这条信息。' }}</p>
         <p>你可以在「我的发布」里随时查看审核进度，也可以撤回删除。</p>
         <div class="okacts">
-          <button class="btn" type="button" @click="$emit('nav', 'mine')">查看我的发布</button>
+          <button v-if="type === 'lost' && approved" class="btn" type="button" @click="askDetective">让 AI 侦探帮我找下一步</button>
+          <button class="btn ghost" type="button" @click="$emit('nav', 'mine')">查看我的发布</button>
           <button class="btn ghost" type="button" @click="$emit('nav', 'publish', type)">继续发布一条</button>
         </div>
       </div>

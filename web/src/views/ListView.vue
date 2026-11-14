@@ -147,7 +147,7 @@ function openOwnCompare(target) {
   if (!selected.value || !target) return
   const r = ownCompare(selected.value, target)
   ownTarget.value = target
-  ownScore.value = r.total
+  ownScore.value = null
   ownReasons.value = r.reasons
   ownAiSummary.value = ownSummary.value
   ownAiModel.value = '本地规则'
@@ -626,10 +626,11 @@ function openOldHelp() {
             <div class="own-sub">A = 当前查看的物品 · B = 我发布的物品</div>
             <div class="own-ai-summary"><b>AI 参考总结</b><span v-if="ownCached" class="own-cached">已保留上次分析</span><span v-if="ownAiLoading" class="own-loading"><i class="own-spin"></i> AI 正在对比中，请稍后…</span><template v-else>{{ ownAiSummary }}</template></div>
           </div>
-          <div class="own-ring" :class="ownScore >= 70 ? 'high' : ownScore >= 40 ? 'mid' : 'low'">
+          <div v-if="!ownAiLoading && ownScore !== null" class="own-ring" :class="ownScore >= 70 ? 'high' : ownScore >= 40 ? 'mid' : 'low'">
             <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="44" class="own-track" /><circle cx="60" cy="60" r="44" class="own-fill" :style="{ '--off': (276.5 * (1 - ownScore / 100)).toFixed(1) + 'px' }" /></svg>
             <CountUp :value="ownScore" suffix="%" />
           </div>
+          <div v-else class="own-ring own-ring-loading"><i class="own-spin"></i><span>分析中</span></div>
         </div>
         <div class="own-cols">
           <div class="own-card left">
@@ -941,4 +942,8 @@ function openOldHelp() {
 .own-ab { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; flex:0 0 28px; border-radius:50%; background:#5B2A91; color:#fff; font-size:13px; font-weight:700; margin:0; }
 .own-card.right .own-ab { background:#A66B21; }
 .own-card .own-ab { vertical-align:1px; }
+</style>
+
+<style scoped>
+.own-ring-loading { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; border:1px solid #EADFF5; border-radius:50%; background:#FBF8FF; color:#8E7FA3; font-size:9px; }
 </style>

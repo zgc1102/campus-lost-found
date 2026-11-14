@@ -368,9 +368,10 @@ function askDetective() {
               <button type="button" class="btn ghost" @click="aiPanel = false">不用了</button>
             </div>
           </div>
-          <div v-if="false" class="form-item">
-            <label>独有特征</label>
-            <textarea v-model="form.secret" maxlength="100"></textarea>
+          <div v-if="!isHelp" class="form-item">
+            <label>只有你知道的细节（不会公开，用于认领核验）</label>
+            <textarea v-model="form.secret" maxlength="100" placeholder="例如：伞套内侧写了字母 Z，伞柄有一张红色贴纸"></textarea>
+            <div class="hintline">公开描述里不要写这条；认领者答对这条才算通过。</div>
           </div>
         </div>
 
