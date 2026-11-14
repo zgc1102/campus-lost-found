@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { api } from '../api'
 
@@ -13,6 +13,7 @@ const tab = ref('all')
 const search = ref('')
 
 const stats = ref(null)
+const statsAt = ref('')
 const items = ref([])
 const accounts = ref([])
 const announcements = ref([])
@@ -76,6 +77,7 @@ async function loadAll(silent = false) {
       api.adminDeployLog(token.value)
     ])
     stats.value = s
+    statsAt.value = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
     items.value = Array.isArray(list) ? list : []
     accounts.value = Array.isArray(accs) ? accs : []
     announcements.value = Array.isArray(anns) ? anns : []
@@ -403,10 +405,13 @@ function statusClass(s) {
             <div class="ov-item"><b>{{ stats?.items ?? '—' }}</b><span>全部内容</span></div>
             <div class="ov-item"><b>{{ stats ? (stats.byStatus?.pending ?? 0) : '—' }}</b><span>待审核</span></div>
             <div class="ov-item"><b>{{ stats?.byStatus?.approved ?? '—' }}</b><span>已上架</span></div>
+            <div class="ov-item"><b>{{ stats?.byStatus?.rejected ?? 0 }}</b><span>已驳回</span></div>
+            <div class="ov-item"><b>{{ (stats?.byStatus?.removed ?? 0) + (stats?.byStatus?.closed ?? 0) }}</b><span>已下架/结束</span></div>
             <div class="ov-item"><b>{{ stats?.accounts ?? '—' }}</b><span>注册用户</span></div>
             <div class="ov-item"><b>{{ stats?.claims ?? '—' }}</b><span>认领申请</span></div>
             <div class="ov-item"><b>{{ stats?.announcements ?? '—' }}</b><span>已发布公告</span></div>
           </div>
+          <div v-if="statsAt" class="ov-time">统计更新于 {{ statsAt }}</div>
           <div class="ai-status">
             <span :class="['dot', config?.enabled ? 'on' : 'off']"></span>
             <template v-if="config?.enabled">
@@ -604,7 +609,7 @@ function statusClass(s) {
 .danger { background: #fff; border: 1px solid #F3CFCF; color: #C0392B; border-radius: 9px; padding: 8px 12px; font-family: inherit; font-size: 11px; cursor: pointer; }
 .error { color: #C0392B; font-size: 11px; margin-top: 10px; }
 .top-error { background: #FDEAEA; border: 1px solid #F3CFCF; border-radius: 9px; padding: 9px 12px; margin-bottom: 12px; }
-.overview-strip { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-bottom: 14px; }
+.overview-strip { display: grid; grid-template-columns: repeat(8, 1fr); gap: 10px; margin-bottom: 14px; }
 .ov-item { background: #fff; border: 1px solid #E9DFF5; border-radius: 13px; padding: 12px 14px; }
 .ov-item b { display: block; font-size: 22px; color: #5B2A91; line-height: 1.1; }
 .ov-item span { display: block; font-size: 10px; color: #8E7FA3; margin-top: 4px; }
@@ -731,3 +736,8 @@ textarea.field { min-height: 78px; resize: vertical; }
 
 
 
+
+
+<style scoped>
+.ov-time { font-size: 9px; color: #A99BB9; margin: -8px 0 12px; }
+</style>

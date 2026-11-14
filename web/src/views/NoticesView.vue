@@ -44,7 +44,10 @@ const matchItem = computed(() => {
   const candidates = myItems.value.filter((x) => x.type === want)
   return candidates.sort((a, b) => pairScore(selected.value.item, b) - pairScore(selected.value.item, a))[0] || null
 })
-const matchLocalScore = computed(() => pairScore(selected.value?.item, matchItem.value))
+const matchLocalScore = computed(() => {
+  if (!matchSource.value || !matchTarget.value) return null
+  return pairScore(matchSource.value, matchTarget.value)
+})
 async function loadMyItems() {
   try {
     const list = await api.mine()
@@ -219,6 +222,22 @@ async function completeHelp() {
   } catch (e) { actionMsg.value = e.message || '确认失败' }
 }
 
+async function copyCompare() {
+  const s = selected.value
+  if (!s) return
+  const main = s.type === 'match' ? matchSource.value : s.item
+  const other = s.type === 'match' ? matchTarget.value : null
+  const lines = s.type === 'match'
+    ? ['匹配报告', '系统匹配：' + (main?.title || '—'), '系统匹配分：' + matchSystemScore.value + '%', '另一条匹配：' + (other?.title || '—'), '当前重算分：' + (matchLocalScore.value === null ? '—' : matchLocalScore.value + '%'), '口径：系统分为发布时评分，当前重算分为两条文本重算，仅供推荐，不代表归属。']
+    : ['匹配对比报告', '发布物品：' + (main?.title || '—'), 'AI 参考可信度：' + (s.claimAi?.confidence ?? '—') + '%', '当前文本相似度：' + currentSimilarity() + '%', '说明：仅供参考，最终请自行认真核对。']
+  try {
+    await navigator.clipboard.writeText(lines.join('\n'))
+    actionMsg.value = '已复制结论，不包含手机号等隐私'
+  } catch (_) {
+    actionMsg.value = '复制失败，请手动选择文字'
+  }
+}
+
 function ignoreNotice() {
   selected.value = null
 }
@@ -360,6 +379,7 @@ function fmt(ts) {
             <div class="cc-title">{{ (selected.type === 'match' ? matchSource : selected.item)?.title || '未命名' }}</div>
             <div class="cc-meta">{{ (selected.type === 'match' ? matchSource : selected.item)?.place || '未填写地点' }} · {{ fmt((selected.type === 'match' ? matchSource : selected.item)?.createdAt) }}</div>
             <p>{{ (selected.type === 'match' ? matchSource : selected.item)?.desc || '暂无描述' }}</p>
+            <div v-if="selected.type === 'match'" class="cc-score">本次匹配 {{ matchSystemScore }}%</div>
           </div>
           <div class="compare-col">
             <template v-if="selected.type === 'match'">
@@ -367,6 +387,7 @@ function fmt(ts) {
               <div class="cc-title">{{ matchTarget ? matchTarget.title : '没有找到对应条目' }}</div>
               <div class="cc-meta">{{ matchTarget ? (matchTarget.place || '未填写地点') + ' · ' + fmt(matchTarget.createdAt) : '这是一条旧的系统提醒' }}</div>
               <p>{{ matchTarget ? matchTarget.desc : '这条旧通知没有保存完整的匹配对，无法还原另一条物品。' }}</p>
+              <div class="cc-score other-score">当前重算 {{ matchLocalScore === null ? '—' : matchLocalScore + '%' }}</div>
             </template>
             <template v-else>
               <div class="cc-tag other">{{ selected.itemType === 'help' ? '帮忙申请' : (selected.item.type === 'lost' ? '提供线索' : '认领留言') }}</div>
@@ -378,7 +399,8 @@ function fmt(ts) {
         </div>
         <div class="compare-scores">
           <template v-if="selected.type === 'match'">
-            <div><b>{{ matchSystemScore }}%</b><span>系统匹配相似度</span></div>
+            <div><b>{{ matchSystemScore }}%</b><span>系统匹配分（发布时）</span></div>
+            <div><b>{{ matchLocalScore === null ? '—' : matchLocalScore + '%' }}</b><span>当前重算分</span></div>
           </template>
           <template v-else>
             <div><b>{{ selected.claimAi ? selected.claimAi.confidence + '%' : '—' }}</b><span>AI 参考可信度</span></div>
@@ -387,10 +409,11 @@ function fmt(ts) {
         </div>
         <div class="compare-note">
           {{ selected.type === 'match'
-            ? '这是发布时系统给出的匹配分，只用于推荐，不代表归属；最终请自行认真核对。'
+            ? '两个分数口径不同：系统分是发布时算法给出的，当前重算分是按两条文本重新计算的；缺少数据时显示 —，不当作 0。只用于推荐，不代表归属。'
             : '两个分数都不是证据，只用于帮助失主判断；最终请自行认真核对物品特征。' }}
         </div>
         <div class="compare-actions">
+          <button type="button" class="btn ghost" @click="copyCompare">复制结论</button>
           <button type="button" class="btn" @click="compareOpen = false">关闭报告</button>
           <button type="button" class="btn ghost" :disabled="!selected.item || ['removed','hidden'].includes(selected.item.status)" @click="compareOpen = false; goItem()">
             {{ !selected.item || ['removed','hidden'].includes(selected.item.status) ? '此物品已下架' : '打开完整物品详情' }}
@@ -502,3 +525,8 @@ function fmt(ts) {
 
 
 
+
+<style scoped>
+.cc-score { margin-top:6px; display:inline-block; font-size:9px; color:#5B2A91; background:#F1E8FB; border-radius:5px; padding:2px 6px; }
+.cc-score.other-score { color:#2F5FA8; background:#EEF4FF; }
+</style>

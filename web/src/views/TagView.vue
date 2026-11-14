@@ -100,6 +100,7 @@ function qrError() {
       </div>
       <div v-if="tagLoading" class="tag-status">正在读取我的拾光码…</div>
       <div v-else-if="tagError" class="tag-status" @click="loadMyTag">拾光码加载失败，点此重试</div>
+      <div v-else-if="!result" class="tag-status">当前没有有效拾光码，填完下面信息即可生成。</div>
       <div class="tag-lookup">
         <input v-model="lookup" maxlength="60" placeholder="扫不出来？输入拾光码，如 SGBEA45A">
         <button type="button" @click="openLookup">查询</button>

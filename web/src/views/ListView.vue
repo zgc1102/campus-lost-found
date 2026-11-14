@@ -35,6 +35,7 @@ const ownAiModel = ref('')
 const ownAiImage = ref('')
 const ownAiLoading = ref(false)
 const ownCached = ref(false)
+const ownShowReasons = ref(false)
 const ownSummary = computed(() => {
   if (!ownTarget.value || !selected.value) return ''
   const r = ownCompare(selected.value, ownTarget.value)
@@ -147,6 +148,7 @@ function openOwnCompare(target) {
   ownAiModel.value = '本地规则'
   ownAiImage.value = ''
   ownCached.value = false
+  ownShowReasons.value = false
   ownAiLoading.value = true
   ownOpen.value = true
   const key = compareCacheKey(selected.value.id, target.id)
@@ -608,7 +610,10 @@ function openOldHelp() {
             <i>{{ ownTarget.place || '未填写地点' }} · {{ fmt(ownTarget.createdAt) }}</i>
           </div>
         </div>
-        <div class="own-reasons"><span v-for="r in ownReasons" :key="r">{{ r }}</span></div>
+        <button v-if="ownReasons.length" type="button" class="own-conflict-toggle" @click="ownShowReasons = !ownShowReasons">
+          {{ ownReasons.length }} 处特征差异，{{ ownShowReasons ? '收起' : '点开查看' }}
+        </button>
+        <div v-if="ownShowReasons" class="own-reasons"><span v-for="r in ownReasons" :key="r">{{ r }}</span></div>
         <div class="own-model">
           <b>分析方式</b>
           <span>文字：{{ ownAiModel || '本地规则' }} + 本地颜色/类别/地点规则</span>
@@ -862,3 +867,7 @@ function openOldHelp() {
 .own-cached { margin-left:5px; font-size:8px; color:#2F7D46; background:#EAF7EE; border-radius:4px; padding:1px 4px; }
 </style>
 
+
+<style scoped>
+.own-conflict-toggle { margin-top:7px; border:1px solid #EADFF5; background:#FBF8FF; color:#5B2A91; border-radius:6px; padding:5px 7px; font-family:inherit; font-size:9px; }
+</style>

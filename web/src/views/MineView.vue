@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { onMounted, ref } from 'vue'
 import { api } from '../api'
 
@@ -128,6 +128,13 @@ async function submitCode() {
 function claimStatus(s) {
   return ({ pending: '待确认', accepted: '已通过', completed: '已完成', rejected: '已拒绝', need_more: '待补充', closed: '已结束' })[s] || s
 }
+function claimVerdict(c) {
+  const v = c?.verdict
+  const n = Number(c?.confidence || 0)
+  if (v === 'mismatch' || n < 60) return '明显不一致'
+  if (v === 'match' || n >= 80) return '特征吻合'
+  return '建议核对'
+}
 function status(x) {
   return ({ pending: '审核中', approved: '进行中', rejected: '未通过', closed: '已结束', claimed: '进行中', removed: '已下架' })[x.status] || x.status
 }
@@ -182,7 +189,7 @@ function fmt(ts) {
         <div v-for="c in claims" :key="c.id" class="mini">
           <div class="mh">{{ c.itemTitle }}<span class="st">{{ claimStatus(c.status) }}</span></div>
           <div class="mmeta">{{ c.message }}</div>
-          <div v-if="c.aiCheck" class="claim-ai-line">AI 参考可信度 {{ c.aiCheck.confidence }}% · {{ ({match:'特征吻合',mismatch:'不一致',unclear:'请自行核对'})[c.aiCheck.verdict] || '请自行核对' }}</div>
+          <div v-if="c.aiCheck" class="claim-ai-line">AI 参考可信度 {{ c.aiCheck.confidence }}% · {{ claimVerdict(c.aiCheck) }}</div>
           <div v-if="c.status === 'accepted'" class="mact">
             <button type="button" class="btn" @click="completeClaim(c)">{{ c.itemType === 'help' ? '完成帮助' : '确认归还' }}</button>
           </div>
@@ -202,7 +209,7 @@ function fmt(ts) {
         <div v-for="c in sentClaims" :key="'s'+c.id" class="mini">
           <div class="mh">{{ c.itemTitle }}<span class="st">{{ claimStatus(c.status) }}</span></div>
           <div class="mmeta">{{ c.message }}</div>
-          <div v-if="c.aiCheck" class="claim-ai-line">AI 参考可信度 {{ c.aiCheck.confidence }}% · {{ ({match:'特征吻合',mismatch:'不一致',unclear:'请自行核对'})[c.aiCheck.verdict] || '请自行核对' }}</div>
+          <div v-if="c.aiCheck" class="claim-ai-line">AI 参考可信度 {{ c.aiCheck.confidence }}% · {{ claimVerdict(c.aiCheck) }}</div>
           <div v-if="c.status === 'accepted' && c.itemType !== 'help'" class="mmeta">取件码：{{ c.returnCode || '向对方索取' }}</div>
           <div v-if="c.status === 'accepted' && c.itemType !== 'help'" class="mact">
             <button type="button" class="btn" @click="completeClaim(c)">确认归还</button>
@@ -217,6 +224,8 @@ function fmt(ts) {
       </div>
 
       <div class="hintline">{{ items.length ? '共 ' + items.length + ' 条发布，只有「进行中」的才会出现在公共列表里。' : '你还没有发布过内容。提交后会先进入审核，通过后才上架。' }}</div>
+
+      <div v-if="claims.length" class="tip-small" style="margin:4px 0 8px">参考可信度档位：≥80 特征吻合 · 60–79 建议核对 · &lt;60 明显不一致。分数只作参考，不作为认领依据。</div>
 
       <div v-if="loading" class="empty">正在读取…</div>
       <div v-else-if="!items.length" class="empty">
@@ -289,6 +298,7 @@ function fmt(ts) {
 <style scoped>
 .claim-ai-line { margin-top:3px; font-size:9.5px; color:#5B2A91; background:#F7F0FF; border-radius:5px; padding:3px 5px; display:inline-block; }
 </style>
+
 
 
 
