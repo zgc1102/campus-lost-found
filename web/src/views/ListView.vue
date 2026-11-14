@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { api } from '../api'
 import CountUp from '../components/CountUp.vue'
@@ -553,7 +553,8 @@ function openOldHelp() {
           <div v-if="claimCheck.points?.length" class="ca-points">
             <span v-for="p in claimCheck.points" :key="p">{{ p }}</span>
           </div>
-          <div class="ca-disclaimer">参考可信度不是概率，只代表文字线索与失主描述的吻合程度。</div>\n          <div class="ca-advice">
+          <div class="ca-disclaimer">参考可信度不是概率，只代表文字线索与失主描述的吻合程度。</div>
+          <div class="ca-advice">
             {{ selected.type === 'lost'
               ? (claimCheck.confidence >= 60
                 ? '线索里已经包含了一些关键特征，但最终仍要由失主当面核对。'
