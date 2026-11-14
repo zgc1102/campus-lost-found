@@ -36,6 +36,7 @@ const ownAiImage = ref('')
 const ownAiLoading = ref(false)
 const ownCached = ref(false)
 const ownShowReasons = ref(false)
+const compareReturn = ref(null)
 const ownSummary = computed(() => {
   if (!ownTarget.value || !selected.value) return ''
   const r = ownCompare(selected.value, ownTarget.value)
@@ -180,8 +181,37 @@ function openOwnCompare(target) {
 function useOwnTarget() {
   if (!ownTarget.value) return
   const target = ownTarget.value
+  compareReturn.value = {
+    source: selected.value,
+    target,
+    score: ownScore.value,
+    summary: ownAiSummary.value,
+    reasons: [...ownReasons.value],
+    model: ownAiModel.value,
+    image: ownAiImage.value,
+    cached: ownCached.value,
+    showReasons: ownShowReasons.value
+  }
   ownOpen.value = false
   openDetail(target)
+}
+function closeDetail() {
+  if (compareReturn.value) {
+    const s = compareReturn.value
+    selected.value = s.source
+    ownTarget.value = s.target
+    ownScore.value = s.score
+    ownAiSummary.value = s.summary
+    ownReasons.value = s.reasons
+    ownAiModel.value = s.model
+    ownAiImage.value = s.image
+    ownCached.value = s.cached
+    ownShowReasons.value = s.showReasons
+    ownOpen.value = true
+    compareReturn.value = null
+    return
+  }
+  selected.value = null
 }
 async function loadMine() {
   myLoading.value = true
@@ -197,7 +227,8 @@ const ownCandidates = computed(() => {
   if (fromList.length) return fromList
   return myItems.value.filter((x) => x.type === want && x.id !== selected.value.id)
 })
-function openDetail(it) {
+function openDetail(it, keepReturn = false) {
+  if (!keepReturn) compareReturn.value = null
   selected.value = it
   claimMsg.value = ''
   claimPhone.value = ''
@@ -500,9 +531,9 @@ function openOldHelp() {
       </div>
     </div>
 
-    <div v-if="selected" class="modal-backdrop" @click="selected = null"></div>
+    <div v-if="selected" class="modal-backdrop" @click="closeDetail"></div>
     <div v-if="selected" class="sheet vue-sheet show item-detail-modal">
-      <button type="button" class="sheet-x" aria-label="关闭" @click="selected = null">✕</button>
+      <button type="button" class="sheet-x" aria-label="关闭" @click="closeDetail">✕</button>
       <div class="detail-modal-grid">
       <div class="dm-left">
       <div class="big-thumb" @click="selected.photoUrl && (photoOpen = true)">
@@ -583,12 +614,12 @@ function openOldHelp() {
     </div>
     <div v-if="ownOpen && ownTarget" class="rec-overlay own-overlay" @click.self="ownOpen = false">
       <div class="own-modal">
-        <button type="button" class="rec-close" @click="ownOpen = false">✕</button>
+        <button type="button" class="rec-close" aria-label="关闭对比" @click.stop="ownOpen = false" @mousedown.stop>✕</button>
         <div class="rec-kicker">AI 对比 · 只和我的发布比</div>
         <div class="own-modal-head">
           <div>
             <h2>{{ selected.type === 'lost' ? '与你丢失物品的 AI 参考可信度' : '与你捡到物品的 AI 参考可信度' }}</h2>
-            <div class="own-sub">不是概率，是文字、颜色、类别、地点的综合参考</div>
+            <div class="own-sub">A = 当前查看的物品 · B = 我发布的物品</div>
             <div class="own-ai-summary"><b>AI 参考总结</b><span v-if="ownCached" class="own-cached">已保留上次分析</span><span v-if="ownAiLoading" class="own-loading"><i class="own-spin"></i> AI 正在对比中，请稍后…</span><template v-else>{{ ownAiSummary }}</template></div>
           </div>
           <div class="own-ring" :class="ownScore >= 70 ? 'high' : ownScore >= 40 ? 'mid' : 'low'">
@@ -598,13 +629,13 @@ function openOldHelp() {
         </div>
         <div class="own-cols">
           <div class="own-card left">
-            <span>当前查看</span>
+            <span><b class="own-ab">A</b> 当前查看</span>
             <b>{{ selected.title }}</b>
             <p>{{ selected.desc }}</p>
             <i>{{ selected.place || '未填写地点' }} · {{ fmt(selected.createdAt) }}</i>
           </div>
           <div class="own-card right">
-            <span>我的发布</span>
+            <span><b class="own-ab">B</b> 我的发布</span>
             <b>{{ ownTarget.title }}</b>
             <p>{{ ownTarget.desc }}</p>
             <i>{{ ownTarget.place || '未填写地点' }} · {{ fmt(ownTarget.createdAt) }}</i>
@@ -627,7 +658,7 @@ function openOldHelp() {
     </div>
     <div v-if="compareTarget" class="rec-overlay" @click.self="compareTarget = null">
       <div class="rec-modal">
-        <button type="button" class="rec-close" @click="compareTarget = null">✕</button>
+        <button type="button" class="rec-close" aria-label="关闭匹配" @click.stop="compareTarget = null" @mousedown.stop>✕</button>
         <div class="rec-kicker">系统匹配报告</div>
         <h2>{{ compareScore }}% 相似</h2>
         <div class="rec-cols">
@@ -870,3 +901,11 @@ function openOldHelp() {
 .own-conflict-toggle { margin-top:7px; border:1px solid #EADFF5; background:#FBF8FF; color:#5B2A91; border-radius:6px; padding:5px 7px; font-family:inherit; font-size:9px; }
 </style>
 
+
+
+
+<style scoped>
+.rec-close { width:48px !important; height:48px !important; right:6px !important; top:6px !important; z-index:30 !important; cursor:pointer; }
+.own-ab { display:inline-flex; align-items:center; justify-content:center; width:17px; height:17px; border-radius:50%; background:#5B2A91; color:#fff; font-size:10px; margin-right:4px; }
+.own-card .own-ab { vertical-align:1px; }
+</style>
