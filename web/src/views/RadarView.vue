@@ -159,7 +159,7 @@ function openFullMatch() {
       <template v-if="detective">
         <div class="dt-summary" style="margin-top:12px">{{ detective.summary }}</div>
         <div class="dt-tech"><span>智能体路线推理</span><span>校园地点知识库</span><span>工具调用</span></div>
-        <div v-for="(s, i) in detectiveSteps" :key="'ds'+i" class="dt-step"><b>{{ s.tool }}</b><span>{{ s.finding }}</span></div>
+        <div v-for="(s, i) in detectiveSteps" :key="'ds'+i" class="dt-step"><b>{{ stepName(s.tool) }}</b><span>{{ s.finding }}</span></div>
         <div class="dt-title">建议按这个顺序找</div>
         <div v-for="(a, i) in detective.actions" :key="i" class="dt-action" :style="{ animationDelay: (i * 0.12) + 's' }">
           <span class="dt-num">{{ i + 1 }}</span>

@@ -37,6 +37,10 @@ const ownAiLoading = ref(false)
 const ownCached = ref(false)
 const ownShowReasons = ref(false)
 const compareReturn = ref(null)
+const ownPhoto = ref('')
+function viewPhoto(url) {
+  if (url) ownPhoto.value = url
+}
 const ownSummary = computed(() => {
   if (!ownTarget.value || !selected.value) return ''
   const r = ownCompare(selected.value, ownTarget.value)
@@ -629,16 +633,32 @@ function openOldHelp() {
         </div>
         <div class="own-cols">
           <div class="own-card left">
-            <span><b class="own-ab">A</b> 当前查看</span>
-            <b>{{ selected.title }}</b>
-            <p>{{ selected.desc }}</p>
-            <i>{{ selected.place || '未填写地点' }} · {{ fmt(selected.createdAt) }}</i>
+            <div class="own-card-head"><b class="own-ab">A</b><span>当前查看</span><em>发布时间</em></div>
+            <div class="own-card-body">
+              <button type="button" class="own-photo" aria-label="查看 A 的图片" @click="selected.photoUrl ? viewPhoto(selected.photoUrl) : null">
+                <img v-if="selected.photoUrl" :src="selected.photoUrl" alt="A 的物品图片">
+                <template v-else><b>暂无</b><span>图片</span></template>
+              </button>
+              <div class="own-card-copy">
+                <b>{{ selected.title }}</b>
+                <p>{{ selected.desc }}</p>
+                <i>{{ selected.place || '未填写地点' }} · {{ fmt(selected.createdAt) }}</i>
+              </div>
+            </div>
           </div>
           <div class="own-card right">
-            <span><b class="own-ab">B</b> 我的发布</span>
-            <b>{{ ownTarget.title }}</b>
-            <p>{{ ownTarget.desc }}</p>
-            <i>{{ ownTarget.place || '未填写地点' }} · {{ fmt(ownTarget.createdAt) }}</i>
+            <div class="own-card-head"><b class="own-ab">B</b><span>我的发布</span><em>发布时间</em></div>
+            <div class="own-card-body">
+              <button type="button" class="own-photo" aria-label="查看 B 的图片" @click="ownTarget.photoUrl ? viewPhoto(ownTarget.photoUrl) : null">
+                <img v-if="ownTarget.photoUrl" :src="ownTarget.photoUrl" alt="B 的物品图片">
+                <template v-else><b>暂无</b><span>图片</span></template>
+              </button>
+              <div class="own-card-copy">
+                <b>{{ ownTarget.title }}</b>
+                <p>{{ ownTarget.desc }}</p>
+                <i>{{ ownTarget.place || '未填写地点' }} · {{ fmt(ownTarget.createdAt) }}</i>
+              </div>
+            </div>
           </div>
         </div>
         <button v-if="ownReasons.length" type="button" class="own-conflict-toggle" @click="ownShowReasons = !ownShowReasons">
@@ -683,6 +703,10 @@ function openOldHelp() {
     </div>
     <div v-if="photoOpen && selected && selected.photoUrl" class="img-viewer" style="display:flex" @click="photoOpen = false">
       <img :src="selected.photoUrl" alt="">
+      <div class="img-viewer-close">✕</div>
+    </div>
+    <div v-if="ownPhoto" class="img-viewer" style="display:flex" @click="ownPhoto = ''">
+      <img :src="ownPhoto" alt="对比图片大图">
       <div class="img-viewer-close">✕</div>
     </div>
   </section>
@@ -856,15 +880,23 @@ function openOldHelp() {
 @keyframes ownRing { to { stroke-dashoffset: var(--off); } }
 .own-ring .count-up { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:26px; font-weight:700; color:#3B1D63; line-height:1; letter-spacing:-1px; font-variant-numeric:tabular-nums; }
 .own-cols { display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-top:10px; }
-.own-card { border:1px solid #EADFF5; border-radius:11px; padding:9px; background:#FCFAFF; animation:ownCard .55s cubic-bezier(.2,.7,.3,1) both; }
+.own-card { border:1px solid #EADFF5; border-radius:11px; padding:10px; background:#FCFAFF; animation:ownCard .55s cubic-bezier(.2,.7,.3,1) both; }
 .own-card.left { animation: ownLeft .55s cubic-bezier(.2,.7,.3,1) both; }
 .own-card.right { animation: ownRight .55s cubic-bezier(.2,.7,.3,1) both; }
 @keyframes ownLeft { from { opacity:0; transform:translateX(18px); } to { opacity:1; transform:none; } }
 @keyframes ownRight { from { opacity:0; transform:translateX(-18px); } to { opacity:1; transform:none; } }
-.own-card span { font-size:8px; color:#5B2A91; background:#F1E8FB; border-radius:4px; padding:1px 4px; }
-.own-card b { display:block; margin-top:5px; font-size:12px; color:#3B1D63; }
-.own-card p { margin:3px 0; font-size:9.5px; line-height:1.55; color:#6E607F; }
-.own-card i { font-style:normal; font-size:8px; color:#8E7FA3; }
+.own-card-head { display:flex; align-items:center; gap:6px; min-height:30px; }
+.own-card-head span { font-size:11px; color:#4B2B72; background:none; padding:0; font-weight:600; }
+.own-card-head em { margin-left:auto; font-style:normal; font-size:8px; color:#A18CB6; }
+.own-card-body { display:flex; align-items:flex-start; gap:9px; margin-top:7px; }
+.own-photo { flex:0 0 78px; width:78px; height:78px; padding:0; overflow:hidden; border:1px solid #E7DCF2; border-radius:9px; background:#F6F1FB; color:#9C89B3; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; font-family:inherit; cursor:pointer; }
+.own-photo img { width:100%; height:100%; object-fit:cover; display:block; }
+.own-photo b { font-size:11px; font-weight:500; color:#9C89B3; }
+.own-photo span { font-size:8px; color:#B4A4C5; }
+.own-card-copy { min-width:0; flex:1; }
+.own-card-copy b { display:block; margin:1px 0 0; font-size:12px; line-height:1.45; color:#3B1D63; }
+.own-card-copy p { margin:2px 0 3px; font-size:9px; line-height:1.55; color:#6E607F; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+.own-card-copy i { font-style:normal; font-size:8px; color:#8E7FA3; }
 .own-reasons { display:flex; flex-wrap:wrap; gap:4px; margin-top:8px; }
 .own-reasons span { font-size:8.5px; color:#5B2A91; background:#F1E8FB; border-radius:4px; padding:2px 5px; }
 @media (max-width:600px) { .own-cols { grid-template-columns:1fr; } .own-modal-head h2 { font-size:15px; } }
@@ -906,6 +938,7 @@ function openOldHelp() {
 
 <style scoped>
 .rec-close { width:48px !important; height:48px !important; right:6px !important; top:6px !important; z-index:30 !important; cursor:pointer; }
-.own-ab { display:inline-flex; align-items:center; justify-content:center; width:17px; height:17px; border-radius:50%; background:#5B2A91; color:#fff; font-size:10px; margin-right:4px; }
+.own-ab { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; flex:0 0 28px; border-radius:50%; background:#5B2A91; color:#fff; font-size:13px; font-weight:700; margin:0; }
+.own-card.right .own-ab { background:#A66B21; }
 .own-card .own-ab { vertical-align:1px; }
 </style>
