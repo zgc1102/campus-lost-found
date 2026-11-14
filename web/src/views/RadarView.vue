@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { onMounted, ref } from 'vue'
 import { api } from '../api'
 
@@ -19,6 +19,7 @@ const scanned = ref(0)
 const steps = ref([])
 const detectiveSteps = ref([])
 const selectedMatch = ref(null)
+const fromPublished = ref(false)
 
 async function scan() {
   error.value = ''
@@ -81,6 +82,7 @@ onMounted(async () => {
   try { seed = JSON.parse(sessionStorage.getItem('sg:radarSeed') || 'null') } catch (_) {}
   if (!seed) return
   sessionStorage.removeItem('sg:radarSeed')
+  fromPublished.value = !!seed.published
   title.value = seed.title || ''
   place.value = seed.place || ''
   cat.value = seed.cat || 'other'
@@ -89,6 +91,27 @@ onMounted(async () => {
   await scan()
   await runDetective()
 })
+
+function organizePublish() {
+  const name = title.value.trim() || '丢失的物品'
+  const where = place.value.trim()
+  const seen = lastSeen.value.trim()
+  const routeText = route.value.trim()
+  let desc = name
+  if (where) desc += '，在' + where + '附近丢失'
+  if (seen) desc += '，最后见到：' + seen
+  if (routeText) desc += '。当天路线：' + routeText
+  desc += '。如果你捡到或看到，请提供线索，谢谢。'
+  try {
+    sessionStorage.setItem('sg:publishSeed', JSON.stringify({
+      title: name + (where && !name.includes(where) ? '（' + where + '）' : ''),
+      desc: desc.slice(0, 300),
+      place: where,
+      lastSeen: seen
+    }))
+  } catch (_) {}
+  emit('nav', 'publish')
+}
 </script>
 
 <template>
@@ -194,6 +217,12 @@ onMounted(async () => {
           <div v-for="(t, i) in detective.timeline" :key="i" class="dt-time"><b>{{ t.time }}</b><span>{{ t.label }}</span></div>
         </template>
         <div class="dt-note">{{ detective.disclaimer }}</div>
+        <div v-if="!fromPublished" class="dt-publish">
+          <b>要不要帮你整理成寻物启事？</b>
+          <span>已经根据上面的描述整理好标题、地点和时间，你确认后再发布。</span>
+          <button type="button" class="dt-ask" style="margin-top:8px" @click="organizePublish">帮我整理并发布寻物启事</button>
+        </div>
+        <div v-else class="dt-note">这条寻物已经发布，可以直接回列表查看，也可以把侦探建议发给同学。</div>
         <button type="button" class="dt-ask" @click="askCampus">还拿不准？问校园 AI</button>
       </template>
     </div>
@@ -315,3 +344,9 @@ onMounted(async () => {
 </style>
 
 
+
+<style scoped>
+.dt-publish { margin-top:10px; padding:11px 12px; background:#FBF7FF; border:1px solid #E7D9F4; border-radius:10px; display:flex; flex-direction:column; gap:4px; }
+.dt-publish b { font-size:12px; color:#4B2B72; }
+.dt-publish span { font-size:9.5px; line-height:1.6; color:#8B7A9E; }
+</style>

@@ -85,6 +85,18 @@ onMounted(() => {
       sessionStorage.removeItem('sg:aiPhoto')
     }
   } catch (_) {}
+  try {
+    const seed = JSON.parse(sessionStorage.getItem('sg:publishSeed') || 'null')
+    if (seed) {
+      kind.value = 'lost'
+      if (seed.title) form.title = String(seed.title).slice(0, 40)
+      if (seed.desc) form.desc = String(seed.desc).slice(0, 300)
+      if (seed.place) form.place = String(seed.place).slice(0, 30)
+      if (seed.lastSeen) form.eventTime = String(seed.lastSeen).slice(0, 60)
+      draftRestored.value = false
+      sessionStorage.removeItem('sg:publishSeed')
+    }
+  } catch (_) {}
 })
 watch(form, () => {
   if (props.editItem) return
@@ -258,7 +270,8 @@ function askDetective() {
       title: result.value.title || '',
       place: result.value.place || '',
       cat: result.value.cat || 'other',
-      lastSeen: result.value.lastSeen || ''
+      lastSeen: result.value.lastSeen || '',
+      published: true
     }))
   } catch (_) {}
   emit('nav', 'radar')
