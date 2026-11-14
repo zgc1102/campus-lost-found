@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { api } from '../api'
+import CountUp from '../components/CountUp.vue'
 
 const emit = defineEmits(['nav'])
 const items = ref([])
@@ -32,7 +33,8 @@ function pairScore(a, b) {
   return Math.min(99, pct)
 }
 const matchSystemScore = computed(() => {
-  if (Number.isFinite(Number(selected.value?.matchScore))) return Number(selected.value.matchScore)
+  const raw = selected.value?.matchScore
+  if (raw !== null && raw !== undefined && raw !== '' && Number.isFinite(Number(raw))) return Number(raw)
   const m = String(selected.value?.text || '').match(/(\d+)\s*%/)
   return m ? Number(m[1]) : 0
 })
@@ -379,7 +381,7 @@ function fmt(ts) {
             <div class="cc-title">{{ (selected.type === 'match' ? matchSource : selected.item)?.title || '未命名' }}</div>
             <div class="cc-meta">{{ (selected.type === 'match' ? matchSource : selected.item)?.place || '未填写地点' }} · {{ fmt((selected.type === 'match' ? matchSource : selected.item)?.createdAt) }}</div>
             <p>{{ (selected.type === 'match' ? matchSource : selected.item)?.desc || '暂无描述' }}</p>
-            <div v-if="selected.type === 'match'" class="cc-score">本次匹配 {{ matchSystemScore }}%</div>
+            <div v-if="selected.type === 'match'" class="cc-score">本次匹配 <CountUp :value="matchSystemScore" suffix="%" /></div>
           </div>
           <div class="compare-col">
             <template v-if="selected.type === 'match'">
@@ -387,7 +389,7 @@ function fmt(ts) {
               <div class="cc-title">{{ matchTarget ? matchTarget.title : '没有找到对应条目' }}</div>
               <div class="cc-meta">{{ matchTarget ? (matchTarget.place || '未填写地点') + ' · ' + fmt(matchTarget.createdAt) : '这是一条旧的系统提醒' }}</div>
               <p>{{ matchTarget ? matchTarget.desc : '这条旧通知没有保存完整的匹配对，无法还原另一条物品。' }}</p>
-              <div class="cc-score other-score">当前重算 {{ matchLocalScore === null ? '—' : matchLocalScore + '%' }}</div>
+              <div class="cc-score other-score">当前重算 <CountUp v-if="matchLocalScore !== null" :value="matchLocalScore" suffix="%" /><template v-else>—</template></div>
             </template>
             <template v-else>
               <div class="cc-tag other">{{ selected.itemType === 'help' ? '帮忙申请' : (selected.item.type === 'lost' ? '提供线索' : '认领留言') }}</div>
@@ -399,8 +401,8 @@ function fmt(ts) {
         </div>
         <div class="compare-scores">
           <template v-if="selected.type === 'match'">
-            <div><b>{{ matchSystemScore }}%</b><span>系统匹配分（发布时）</span></div>
-            <div><b>{{ matchLocalScore === null ? '—' : matchLocalScore + '%' }}</b><span>当前重算分</span></div>
+            <div><b><CountUp :value="matchSystemScore" suffix="%" /></b><span>系统匹配分（发布时）</span></div>
+            <div><b><CountUp v-if="matchLocalScore !== null" :value="matchLocalScore" suffix="%" /><template v-else>—</template></b><span>当前重算分</span></div>
           </template>
           <template v-else>
             <div><b>{{ selected.claimAi ? selected.claimAi.confidence + '%' : '—' }}</b><span>AI 参考可信度</span></div>
@@ -414,9 +416,8 @@ function fmt(ts) {
         </div>
         <div class="compare-actions">
           <button type="button" class="btn ghost" @click="copyCompare">复制结论</button>
-          <button type="button" class="btn" @click="compareOpen = false">关闭报告</button>
           <button type="button" class="btn ghost" :disabled="!selected.item || ['removed','hidden'].includes(selected.item.status)" @click="compareOpen = false; goItem()">
-            {{ !selected.item || ['removed','hidden'].includes(selected.item.status) ? '此物品已下架' : '打开完整物品详情' }}
+            {{ !selected.item || ['removed','hidden'].includes(selected.item.status) ? '此物品已下架' : '查看对方发布的内容' }}
           </button>
         </div>
       </div>

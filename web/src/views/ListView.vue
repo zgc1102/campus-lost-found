@@ -621,7 +621,6 @@ function openOldHelp() {
         </div>
         <div class="rec-note">相似度不是证据；颜色冲突会明显降分，最终请自行认真核对。</div>
         <div class="rec-actions">
-          <button type="button" class="btn" @click="ownOpen = false">关闭</button>
           <button type="button" class="btn ghost" @click="useOwnTarget">查看我的这条</button>
         </div>
       </div>
@@ -647,7 +646,6 @@ function openOldHelp() {
         </div>
         <div class="rec-note">系统根据标题、描述、类别和地点计算，仅供参考，最终请自行认真核对。</div>
         <div class="rec-actions">
-          <button type="button" class="btn" @click="compareTarget = null">关闭</button>
           <button type="button" class="btn ghost" @click="useRec">{{ compareTarget.type === 'lost' ? '查看这条寻物' : '查看这条招领' }}</button>
         </div>
       </div>
@@ -871,3 +869,4 @@ function openOldHelp() {
 <style scoped>
 .own-conflict-toggle { margin-top:7px; border:1px solid #EADFF5; background:#FBF8FF; color:#5B2A91; border-radius:6px; padding:5px 7px; font-family:inherit; font-size:9px; }
 </style>
+

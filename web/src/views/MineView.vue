@@ -15,6 +15,7 @@ const codeFor = ref(null)
 const codeInput = ref('')
 const codeError = ref('')
 const codeBusy = ref(false)
+const successMsg = ref('')
 const account = ref(localStorage.getItem('sg:account:v1') || '')
 const accountPhone = ref(localStorage.getItem('sg:account:phone') || '')
 const origin = location.origin
@@ -91,9 +92,11 @@ async function actClaim(c, status) {
 }
 
 async function completeClaim(c) {
+  successMsg.value = ''
   if (c.itemType === 'help') {
     try {
       await api.claimComplete(c.id, { code: '' })
+      successMsg.value = '已完成帮助'
       await load(true)
     } catch (e) {
       authMsg.value = e.message || '确认失败'
@@ -114,9 +117,17 @@ async function submitCode() {
   codeBusy.value = true
   codeError.value = ''
   try {
-    await api.claimComplete(codeFor.value.id, { code: codeInput.value.trim() })
+    const done = codeFor.value
+    await api.claimComplete(done.id, { code: codeInput.value.trim() })
+    done.status = 'completed'
+    if (done.itemId) {
+      const item = items.value.find((x) => x.id === done.itemId)
+      if (item) item.status = 'closed'
+    }
+    successMsg.value = '已确认归还，该招领已结束'
     codeFor.value = null
     codeInput.value = ''
+    codeError.value = ''
     await load(true)
   } catch (e) {
     codeError.value = e.message || '取件码不正确'
@@ -129,11 +140,11 @@ function claimStatus(s) {
   return ({ pending: '待确认', accepted: '已通过', completed: '已完成', rejected: '已拒绝', need_more: '待补充', closed: '已结束' })[s] || s
 }
 function claimVerdict(c) {
-  const v = c?.verdict
-  const n = Number(c?.confidence || 0)
-  if (v === 'mismatch' || n < 60) return '明显不一致'
-  if (v === 'match' || n >= 80) return '特征吻合'
-  return '建议核对'
+  const n = Number(c?.confidence)
+  if (!Number.isFinite(n) || n <= 0) return '暂无参考'
+  if (n >= 80) return '特征吻合'
+  if (n >= 60) return '建议核对'
+  return '明显不一致'
 }
 function status(x) {
   return ({ pending: '审核中', approved: '进行中', rejected: '未通过', closed: '已结束', claimed: '进行中', removed: '已下架' })[x.status] || x.status
@@ -184,6 +195,8 @@ function fmt(ts) {
         </template>
       </div>
 
+      <div v-if="successMsg" class="success-line">{{ successMsg }}</div>
+
       <div v-if="claims.length" style="margin:12px 0">
         <div class="sectitle">认领申请</div>
         <div v-for="c in claims" :key="c.id" class="mini">
@@ -191,7 +204,7 @@ function fmt(ts) {
           <div class="mmeta">{{ c.message }}</div>
           <div v-if="c.aiCheck" class="claim-ai-line">AI 参考可信度 {{ c.aiCheck.confidence }}% · {{ claimVerdict(c.aiCheck) }}</div>
           <div v-if="c.status === 'accepted'" class="mact">
-            <button type="button" class="btn" @click="completeClaim(c)">{{ c.itemType === 'help' ? '完成帮助' : '确认归还' }}</button>
+            <button type="button" class="btn" @click="completeClaim(c)">{{ c.itemType === 'help' ? '完成帮助' : '归还' }}</button>
           </div>
           <div v-else-if="c.status === 'pending'" class="mact">
             <button type="button" class="btn" @click="actClaim(c, 'accepted')">{{ c.itemType === 'help' ? '接受帮忙' : '通过' }}</button>
@@ -211,15 +224,6 @@ function fmt(ts) {
           <div class="mmeta">{{ c.message }}</div>
           <div v-if="c.aiCheck" class="claim-ai-line">AI 参考可信度 {{ c.aiCheck.confidence }}% · {{ claimVerdict(c.aiCheck) }}</div>
           <div v-if="c.status === 'accepted' && c.itemType !== 'help'" class="mmeta">取件码：{{ c.returnCode || '向对方索取' }}</div>
-          <div v-if="c.status === 'accepted' && c.itemType !== 'help'" class="mact">
-            <button type="button" class="btn" @click="completeClaim(c)">确认归还</button>
-          </div>
-          <div v-if="codeFor && codeFor.id === c.id" class="code-box">
-            <input v-model="codeInput" inputmode="numeric" maxlength="6" placeholder="输入对方提供的 4~6 位取件码">
-            <button type="button" class="btn" :disabled="codeBusy" @click="submitCode">{{ codeBusy ? '确认中…' : '确认归还' }}</button>
-            <button type="button" class="btn ghost" @click="codeFor = null">取消</button>
-            <div v-if="codeError" class="tip-small" style="color:#c0392b">{{ codeError }}</div>
-          </div>
         </div>
       </div>
 
@@ -302,3 +306,7 @@ function fmt(ts) {
 
 
 
+
+<style scoped>
+.success-line { margin:10px 0; padding:8px 10px; background:#EAF7EE; border:1px solid #CFE8D6; color:#2F7D46; border-radius:8px; font-size:11px; }
+</style>
