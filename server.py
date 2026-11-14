@@ -645,18 +645,15 @@ def claim_ai_check(item, claim):
                   "points 给 3 到 5 条，每条 12 字以内，例如“黑色一致”“地点相近”“时间对不上”。"
                   % (item.get("title") or "", item.get("desc") or "", said))
     else:
-        prompt = ("你是校园失物招领的核验助手。发布者描述：\n标题：%s\n描述：%s\n"
-                  "独有特征（申请人看不到，用于防冒领）：%s\n"
+        prompt = ("你是校园失物招领的信息比对助手。发布者描述：\n标题：%s\n描述：%s\n"
                   "申请人先后说：\n%s\n"
-                  "判断申请人说的与物品是否一致，是否有前后矛盾或明显编造。"
-                  "重要规则：公开描述里已经写出的内容，即使申请人复述得完全一样，也不能当作高可信依据；"
-                  "只有命中独有特征，才可以把 confidence 给到 80 以上。"
-                  "如果申请人只复述公开描述，confidence 最高 45，verdict 必须是 unclear。"
-                  "如果独有特征为空，confidence 最高 55，verdict 必须是 unclear，并提示需要发布者自行核对。"
+                  "只陈述公开信息的重合情况，不做身份判定，不建议通过或拒绝。"
+                  "公开描述里已有的内容即使完全复述，也不能算作独立证据；"
+                  "如果申请人只是复述公开描述，confidence 最高 45，verdict 只能是 unclear。"
                   '只输出 JSON：{"verdict":"match|unclear|mismatch","confidence":0-100,'
                   '"reason":"30字以内","points":["逐条比对1","逐条比对2"]}；'
-                  "points 给 3 到 5 条逐条比对结果，每条 12 字以内，例如“颜色描述一致”“地点吻合”“第2次和第1次矛盾”。"
-                  % (item.get("title") or "", item.get("desc") or "", item.get("secret") or "", said))
+                  "points 给 3 到 5 条逐条比对结果，每条 12 字以内，例如“颜色描述一致”“地点吻合”“时间对不上”。"
+                  % (item.get("title") or "", item.get("desc") or "", said))
     try:
         data = _post_chat(cfg.get("base_url").rstrip("/") + "/chat/completions",
                           {"model": cfg.get("model") or "deepseek-chat", "temperature": 0,
@@ -682,10 +679,10 @@ def claim_ai_check(item, claim):
 
 def ai_llm(it, cfg, timeout=25):
     """调用 OpenAI 兼容接口做语义审核"""
-    user_text = "标题：%s\n类型：%s\n地点：%s\n描述：%s\n核验特征：%s" % (
+    user_text = "标题：%s\n类型：%s\n地点：%s\n描述：%s" % (
         it.get("title") or "",
         "爱心求助" if it.get("type") == "help" else ("寻物" if it.get("type") == "lost" else "招领"),
-        it.get("place") or "", it.get("desc") or "", it.get("secret") or "",
+        it.get("place") or "", it.get("desc") or "",
     )
     if it.get("visionDesc"):
         user_text += "\n图片识别：%s" % it.get("visionDesc")
@@ -4386,7 +4383,7 @@ class Handler(BaseHTTPRequestHandler):
                     if it.get("id") == item_id:
                         if not owner or it.get("ownerToken") != owner:
                             return self._json({"error": "forbidden"}, 403)
-                        for k in ("title", "desc", "place", "eventTime", "secret", "photo"):
+                        for k in ("title", "desc", "place", "eventTime", "photo"):
                             if k in patch:
                                 it[k] = patch[k]
                         if "cat" in patch:
@@ -4509,7 +4506,6 @@ class Handler(BaseHTTPRequestHandler):
             "desc": str(body.get("desc") or "").strip()[:300],
             "place": str(body.get("place") or "").strip()[:40],
             "eventTime": str(body.get("eventTime") or "")[:40],
-            "secret": str(body.get("secret") or "").strip()[:100],
             "photo": body.get("photo") if isinstance(body.get("photo"), str) else None,
             "fields": {k: str((body.get("fields") or {}).get(k) or "")[:30]
                        for k in ("color", "brand", "condition", "feature", "contents")}

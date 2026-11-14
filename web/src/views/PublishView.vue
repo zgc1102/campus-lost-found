@@ -24,7 +24,6 @@ const form = reactive({
   desc: '',
   place: '',
   eventTime: '',
-  secret: '',
   phone: ''
 })
 const submitting = ref(false)
@@ -49,7 +48,6 @@ if (props.editItem) {
   form.desc = e.desc || ''
   form.place = e.place || ''
   form.eventTime = e.eventTime || ''
-  form.secret = e.secret || ''
   form.phone = (e.contact && e.contact.phone) || ''
   photo.value = e.photoUrl || e.photo || ''
   const reverse = { card: '证件', electronics: '电子设备', cloth: '衣物', bottle: '水杯', bag: '书包', other: '其他' }
@@ -60,13 +58,13 @@ const DRAFT_KEY = 'sg:draft:publish'
 function clearDraft() {
   localStorage.removeItem(DRAFT_KEY)
   draftRestored.value = false
-  for (const k of ['title', 'category', 'desc', 'place', 'eventTime', 'secret', 'phone']) form[k] = ''
+  for (const k of ['title', 'category', 'desc', 'place', 'eventTime', 'phone']) form[k] = ''
 }
 onMounted(() => {
   if (props.editItem) return
   try {
     const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || '{}')
-    for (const k of ['title', 'category', 'desc', 'place', 'eventTime', 'secret', 'phone']) {
+    for (const k of ['title', 'category', 'desc', 'place', 'eventTime', 'phone']) {
       if (d[k]) { form[k] = d[k]; draftRestored.value = true }
     }
   } catch (_) {}
@@ -101,7 +99,7 @@ onMounted(() => {
 watch(form, () => {
   if (props.editItem) return
   const d = {}
-  for (const k of ['title', 'category', 'desc', 'place', 'eventTime', 'secret', 'phone']) {
+  for (const k of ['title', 'category', 'desc', 'place', 'eventTime', 'phone']) {
     d[k] = form[k]
   }
   localStorage.setItem(DRAFT_KEY, JSON.stringify(d))
@@ -139,7 +137,6 @@ function fillDemo() {
   form.desc = '白色有线耳机，带一个透明耳机盒，左耳外壳有一道浅划痕。'
   form.place = '六教 3 区'
   form.phone = '13800138000'
-  form.secret = '耳机盒内侧写了名字缩写'
 }
 
 function onPhoto(e) {
@@ -368,11 +365,6 @@ function askDetective() {
               <button type="button" class="btn ghost" @click="aiPanel = false">不用了</button>
             </div>
           </div>
-          <div v-if="!isHelp" class="form-item">
-            <label>只有你知道的细节（不会公开，用于认领核验）</label>
-            <textarea v-model="form.secret" maxlength="100" placeholder="例如：伞套内侧写了字母 Z，伞柄有一张红色贴纸"></textarea>
-            <div class="hintline">公开描述里不要写这条；认领者答对这条才算通过。</div>
-          </div>
         </div>
 
         <div class="form-card">
@@ -536,4 +528,5 @@ function askDetective() {
 .draft-note { display:flex; align-items:center; justify-content:space-between; gap:8px; background:#F1E8FB; color:#5B2A91; border-radius:9px; padding:8px 10px; margin:0 0 10px; font-size:10.5px; }
 .draft-note button { border:0; background:transparent; color:#5B2A91; text-decoration:underline; font-family:inherit; font-size:10.5px; white-space:nowrap; }
 </style>
+
 

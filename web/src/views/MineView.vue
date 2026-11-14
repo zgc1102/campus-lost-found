@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed, onMounted, ref } from 'vue'
 import { api } from '../api'
 
@@ -144,9 +144,9 @@ function claimStatus(s) {
 function claimVerdict(c) {
   const n = Number(c?.confidence)
   if (!Number.isFinite(n) || n <= 0) return '暂无参考'
-  if (n >= 80) return '特征吻合'
-  if (n >= 60) return '建议核对'
-  return '明显不一致'
+  if (n >= 80) return '相似度较高'
+  if (n >= 60) return '有一些相似'
+  return '相似度较低'
 }
 function status(x) {
   return ({ pending: '审核中', approved: '进行中', rejected: '未通过', closed: '已结束', claimed: '进行中', removed: '已下架' })[x.status] || x.status
@@ -204,7 +204,7 @@ function fmt(ts) {
         <div v-for="c in lostClaims" :key="c.id" class="mini">
           <div class="mh">{{ c.itemTitle }}<span class="st">{{ claimStatus(c.status) }}</span></div>
           <div class="mmeta">{{ c.message }}</div>
-          <div v-if="c.aiCheck" class="claim-ai-line">AI 参考可信度 {{ c.aiCheck.confidence }}% · {{ claimVerdict(c.aiCheck) }}</div>
+          <div v-if="c.aiCheck" class="claim-ai-line">信息对比度 {{ c.aiCheck.confidence }}% · {{ claimVerdict(c.aiCheck) }}</div>
           <div v-if="c.status === 'accepted'" class="mact">
             <button type="button" class="btn" @click="completeClaim(c)">归还</button>
           </div>
@@ -243,14 +243,14 @@ function fmt(ts) {
         <div v-for="c in sentClaims" :key="'s'+c.id" class="mini">
           <div class="mh">{{ c.itemTitle }}<span class="st">{{ claimStatus(c.status) }}</span></div>
           <div class="mmeta">{{ c.message }}</div>
-          <div v-if="c.aiCheck && c.itemType !== 'help'" class="claim-ai-line">AI 参考可信度 {{ c.aiCheck.confidence }}% · {{ claimVerdict(c.aiCheck) }}</div>
+          <div v-if="c.aiCheck && c.itemType !== 'help'" class="claim-ai-line">信息对比度 {{ c.aiCheck.confidence }}% · {{ claimVerdict(c.aiCheck) }}</div>
           <div v-if="c.status === 'accepted' && c.itemType !== 'help'" class="mmeta">取件码：{{ c.returnCode || '向对方索取' }}</div>
         </div>
       </div>
 
       <div class="hintline">{{ items.length ? '共 ' + items.length + ' 条发布，只有「进行中」的才会出现在公共列表里。' : '你还没有发布过内容。发布后 AI 会自动审核，通过后自动上架。' }}</div>
 
-      <div v-if="claims.length" class="tip-small" style="margin:4px 0 8px">参考可信度档位：≥80 特征吻合 · 60–79 建议核对 · &lt;60 明显不一致。分数只作参考，不作为认领依据。</div>
+      <div v-if="claims.length" class="tip-small" style="margin:4px 0 8px">信息对比度只作提示，不自动通过、不自动拒绝、不改变排序。最终由发布者决定。</div>
 
       <div v-if="loading" class="empty">正在读取…</div>
       <div v-else-if="!items.length" class="empty">
@@ -331,3 +331,4 @@ function fmt(ts) {
 <style scoped>
 .success-line { margin:10px 0; padding:8px 10px; background:#EAF7EE; border:1px solid #CFE8D6; color:#2F7D46; border-radius:8px; font-size:11px; }
 </style>
+

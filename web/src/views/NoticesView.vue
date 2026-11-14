@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed, onMounted, ref } from 'vue'
 import { api } from '../api'
 import CountUp from '../components/CountUp.vue'
@@ -231,7 +231,7 @@ async function copyCompare() {
   const other = s.type === 'match' ? matchTarget.value : null
   const lines = s.type === 'match'
     ? ['匹配报告', '系统匹配：' + (main?.title || '—'), '系统匹配分：' + matchSystemScore.value + '%', '另一条匹配：' + (other?.title || '—'), '当前重算分：' + (matchLocalScore.value === null ? '—' : matchLocalScore.value + '%'), '口径：系统分为发布时评分，当前重算分为两条文本重算，仅供推荐，不代表归属。']
-    : ['匹配对比报告', '发布物品：' + (main?.title || '—'), 'AI 参考可信度：' + (s.claimAi?.confidence ?? '—') + '%', '当前文本相似度：' + currentSimilarity() + '%', '说明：仅供参考，最终请自行认真核对。']
+    : ['匹配对比报告', '发布物品：' + (main?.title || '—'), '信息对比度：' + (s.claimAi?.confidence ?? '—') + '%', '当前文本相似度：' + currentSimilarity() + '%', '说明：仅供参考，最终请自行认真核对。']
   try {
     await navigator.clipboard.writeText(lines.join('\n'))
     actionMsg.value = '已复制结论，不包含手机号等隐私'
@@ -332,8 +332,8 @@ function fmt(ts) {
         <div class="nd-message">{{ selected.claimMessage || selected.report?.message || selected.text }}</div>
         <div v-if="selected.claimContact" class="nd-contact">对方联系方式：{{ selected.claimContact }}</div>
         <div v-if="selected.claimAi" class="nd-ai-check">
-          <b>AI 参考可信度：{{ selected.claimAi.confidence }}%</b>
-          <span>{{ ({match:'特征吻合', mismatch:'特征不一致', unclear:'请自行核对'})[selected.claimAi.verdict] || '请自行核对' }}</span>
+          <b>信息对比度：{{ selected.claimAi.confidence }}%</b>
+          <span>{{ '仅供发布者参考' }}</span>
           <p v-if="selected.claimAi.reason">{{ selected.claimAi.reason }}</p>
           <div v-if="selected.claimAi.points?.length" class="nd-ai-points">
             <i v-for="p in selected.claimAi.points" :key="p">{{ p }}</i>
@@ -405,7 +405,7 @@ function fmt(ts) {
             <div><b><CountUp v-if="matchLocalScore !== null" :value="matchLocalScore" suffix="%" /><template v-else>—</template></b><span>当前重算分</span></div>
           </template>
           <template v-else>
-            <div><b>{{ selected.claimAi ? selected.claimAi.confidence + '%' : '—' }}</b><span>AI 参考可信度</span></div>
+            <div><b>{{ selected.claimAi ? selected.claimAi.confidence + '%' : '—' }}</b><span>信息对比度</span></div>
             <div><b>{{ currentSimilarity() }}%</b><span>当前文本相似度</span></div>
           </template>
         </div>
@@ -531,3 +531,4 @@ function fmt(ts) {
 .cc-score { margin-top:6px; display:inline-block; font-size:9px; color:#5B2A91; background:#F1E8FB; border-radius:5px; padding:2px 6px; }
 .cc-score.other-score { color:#2F5FA8; background:#EEF4FF; }
 </style>
+

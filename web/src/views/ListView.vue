@@ -282,7 +282,6 @@ function onAiPhoto(e) {
 }
 async function submitClaim() {
   if (!selected.value) return
-  if (claimMsg.value.trim().length < 2) { claimState.value = selected.value.type === 'lost' ? '写一下你是在哪里捡到的' : '写一下只有失主知道的细节'; return }
   claiming.value = true
   claimState.value = ''
   try {
@@ -577,30 +576,8 @@ function openOldHelp() {
       <template v-if="selected.status === 'approved'">
         <button v-if="!claimOpen" type="button" class="btn" style="width:100%;margin-top:14px" :disabled="!canClaim(selected)" @click="canClaim(selected) && (claimOpen = true)">{{ actionLabel(selected) }}</button>
         <div v-if="claimOpen" class="claimbox">
-        <div class="tip-small" style="margin:0 0 8px">{{ selected.type === 'lost' ? '写下你是在哪里、什么时候捡到的，方便失主核对' : '写下只有失主知道的细节，对方核对后才会通过' }}</div>
-        <div class="ai-check-help">
-          <b>AI 核验线索是干什么的？</b>
-          <span>把你写的线索和失主描述做一次对比，看看地点、时间和物品特征是否对得上。它只是给你和失主一个参考，不会自动拒绝，也不影响你正常提交。</span>
-        </div>
-        <button type="button" class="ai-check-btn" :disabled="claimChecking" @click="runClaimCheck">{{ claimChecking ? 'AI 正在比对…' : (selected.type === 'lost' ? '✨ 帮我核对一下线索' : '✨ AI 核验吻合度') }}</button>
-        <div v-if="claimCheck" class="claim-ai">
-          <div class="ca-head"><b>{{ aiVerdict(claimCheck.verdict) }}</b><span>参考可信度 <CountUp :value="claimCheck.confidence" suffix="%" /></span></div>
-          <div class="ca-bar"><i :style="{ width: claimCheck.confidence + '%' }"></i></div>
-          <p v-if="claimCheck.reason">{{ claimCheck.reason }}</p>
-          <div v-if="claimCheck.points?.length" class="ca-points">
-            <span v-for="p in claimCheck.points" :key="p">{{ p }}</span>
-          </div>
-          <div class="ca-disclaimer">参考可信度不是概率，只代表文字线索与失主描述的吻合程度。</div>
-          <div class="ca-advice">
-            {{ selected.type === 'lost'
-              ? (claimCheck.confidence >= 60
-                ? '线索里已经包含了一些关键特征，但最终仍要由失主当面核对。'
-                : '目前线索可能只覆盖了地点或时间。建议再补充：颜色、外观、划痕、包装等特征，失主更容易判断。')
-              : 'AI 只做辅助比对，最终是否通过仍由失主决定。' }}
-          </div>
-        </div>
-        <div v-if="claimCheckError" class="tip-small" style="color:#A97A00">{{ claimCheckError }}</div>
-        <textarea v-model="claimMsg" maxlength="200" :placeholder="selected.type === 'lost' ? '请写你捡到的时间、地点和外观特征；公开描述里已有的内容不算加分' : '写一条公开描述里没有的细节，比如内部名字、贴纸、划痕位置'" style="width:100%;box-sizing:border-box;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:11px;padding:10px;font-family:inherit;font-size:11px;min-height:70px"></textarea>
+        <div class="tip-small" style="margin:0 0 8px">补充一句你知道的信息（选填），不填也可以提交。</div>
+        <textarea v-model="claimMsg" maxlength="200" :placeholder="selected.type === 'lost' ? '例如：我昨天在图书馆一层捡到，伞柄有白色划痕。' : '例如：我昨天在图书馆一层丢了，伞柄有白色划痕。'" style="width:100%;box-sizing:border-box;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:11px;padding:10px;font-family:inherit;font-size:11px;min-height:70px"></textarea>
         <input v-model="claimPhone" maxlength="30" :placeholder="selected.type === 'lost' ? '你的联系方式（方便失主联系你）' : '你的联系方式（手机号 / 微信号）'" style="width:100%;box-sizing:border-box;margin-top:7px;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:11px;padding:10px;font-family:inherit;font-size:11px">
         <div v-if="claimState" class="sa" style="margin-top:6px">{{ claimState }}</div>
         <button type="button" class="btn" style="width:100%;margin-top:10px" :disabled="claiming" @click="submitClaim">{{ claiming ? '发送中…' : (selected.type === 'lost' ? '发送线索' : '发送认领申请') }}</button>
@@ -622,7 +599,7 @@ function openOldHelp() {
         <div class="rec-kicker">AI 对比 · 只和我的发布比</div>
         <div class="own-modal-head">
           <div>
-            <h2>{{ selected.type === 'lost' ? '与你丢失物品的 AI 参考可信度' : '与你捡到物品的 AI 参考可信度' }}</h2>
+            <h2>{{ selected.type === 'lost' ? '与你丢失物品的 AI 信息对比度' : '与你捡到物品的 AI 信息对比度' }}</h2>
             <div class="own-sub">A = 当前查看的物品 · B = 我发布的物品</div>
             <div class="own-ai-summary"><b>AI 参考总结</b><span v-if="ownCached" class="own-cached">已保留上次分析</span><span v-if="ownAiLoading" class="own-loading"><i class="own-spin"></i> AI 正在对比中，请稍后…</span><template v-else>{{ ownAiSummary }}</template></div>
           </div>
@@ -947,4 +924,5 @@ function openOldHelp() {
 <style scoped>
 .own-ring-loading { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; border:1px solid #EADFF5; border-radius:50%; background:#FBF8FF; color:#8E7FA3; font-size:9px; }
 </style>
+
 
