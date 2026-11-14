@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 
 const props = defineProps({
   type: { type: String, default: 'lost' }
@@ -9,6 +9,27 @@ const item = computed(() => {
   try { return JSON.parse(sessionStorage.getItem('sg:lastResult') || '{}') } catch (e) { return {} }
 })
 const approved = computed(() => item.value.status === 'approved')
+const rejected = computed(() => item.value.status === 'rejected')
+const pending = computed(() => !approved.value && !rejected.value)
+const step = ref(0)
+const stepDone = ref(false)
+const stepText = computed(() => {
+  if (step.value < 2) return 'AI 正在审核文字和图片…'
+  if (rejected.value) return 'AI 审核未通过'
+  if (pending.value) return 'AI 建议已生成，等待人工复核'
+  return 'AI 审核通过，已上架'
+})
+onMounted(() => {
+  const timers = []
+  timers.push(setTimeout(() => { step.value = 1 }, 350))
+  timers.push(setTimeout(() => { step.value = 2 }, 900))
+  if (approved.value) {
+    timers.push(setTimeout(() => { step.value = 3; stepDone.value = true }, 1500))
+  } else {
+    timers.push(setTimeout(() => { stepDone.value = true }, 1300))
+  }
+  return () => timers.forEach(clearTimeout)
+})
 function askDetective() {
   try {
     sessionStorage.setItem('sg:radarSeed', JSON.stringify({
@@ -30,6 +51,21 @@ function askDetective() {
       <div class="t">提交成功</div>
     </div>
     <div class="scroll">
+      <div class="review-panel" :class="{ done: stepDone, bad: rejected }">
+        <div class="review-ring" :class="{ done: stepDone, bad: rejected }"><span>{{ rejected && stepDone ? '!' : (stepDone ? '✓' : 'AI') }}</span></div>
+        <div class="review-main">
+          <b>{{ stepText }}</b>
+          <div class="review-steps">
+            <span :class="{ on: step >= 1 }">文字检查</span>
+            <span :class="{ on: step >= 2 }">图片 / 特征检查</span>
+            <span :class="{ on: step >= 3 }">{{ rejected ? '未通过' : '上架' }}</span>
+          </div>
+          <div v-if="item.ai" class="review-ai">
+            AI 建议：{{ item.ai.decision === 'reject' ? '不建议上架' : item.ai.decision === 'review' ? '建议人工复核' : '可以上架' }}
+            <template v-if="item.ai.score !== undefined"> · 风险 {{ item.ai.score }}/100</template>
+          </div>
+        </div>
+      </div>
       <div class="okpanel">
         <div class="big">✅</div>
         <h2>{{ approved ? '已发布成功' : '已提交，等待审核' }}</h2>
@@ -46,3 +82,19 @@ function askDetective() {
     </div>
   </section>
 </template>
+
+<style scoped>
+.review-panel { display:flex; gap:12px; align-items:center; background:#FBF8FF; border:1px solid #EADFF5; border-radius:14px; padding:13px 14px; margin:10px 0 4px; }
+.review-ring { width:42px; height:42px; flex:0 0 42px; border-radius:50%; border:3px solid #E8D8F5; border-top-color:#5B2A91; display:flex; align-items:center; justify-content:center; color:#5B2A91; font-size:11px; font-weight:700; animation:reviewSpin 1s linear infinite; }
+.review-ring.done { animation:none; background:#EAF7EE; border-color:#BFE3CB; color:#2F7D46; font-size:19px; }
+.review-ring.bad { background:#FDECEA; border-color:#F2C1BA; color:#C0392B; }
+@keyframes reviewSpin { to { transform:rotate(360deg); } }
+.review-main { min-width:0; }
+.review-main > b { display:block; font-size:12px; color:#4B2B72; }
+.review-steps { display:flex; gap:10px; margin-top:5px; flex-wrap:wrap; }
+.review-steps span { font-size:9px; color:#B3A4C5; position:relative; padding-left:8px; }
+.review-steps span::before { content:""; width:4px; height:4px; border-radius:50%; background:#D9CCE8; position:absolute; left:0; top:5px; }
+.review-steps span.on { color:#5B2A91; }
+.review-steps span.on::before { background:#5B2A91; }
+.review-ai { margin-top:4px; font-size:9px; color:#8E7FA3; }
+</style>
