@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { api } from '../api'
 import CountUp from '../components/CountUp.vue'
@@ -173,8 +173,8 @@ function openOwnCompare(target) {
     if (Number.isFinite(Number(res.score))) ownScore.value = Number(res.score)
     ownAiSummary.value = res.summary || ownAiSummary.value
     ownCached.value = !!res.cached
-    ownAiModel.value = res.textModel || 'DeepSeek'
-    ownAiImage.value = res.imageUsed ? (res.imageModel || '智谱视觉') : ''
+    ownAiModel.value = '文本语义比对'
+    ownAiImage.value = res.imageUsed ? '图片特征描述' : ''
     if (Array.isArray(res.points) && res.points.length) ownReasons.value = res.points
     writeCompareCache(key, {
       score: ownScore.value, summary: ownAiSummary.value, points: ownReasons.value,
@@ -947,3 +947,4 @@ function openOldHelp() {
 <style scoped>
 .own-ring-loading { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; border:1px solid #EADFF5; border-radius:50%; background:#FBF8FF; color:#8E7FA3; font-size:9px; }
 </style>
+

@@ -16,7 +16,7 @@ const stepDone = ref(false)
 const stepText = computed(() => {
   if (step.value < 2) return 'AI 正在审核文字和图片…'
   if (rejected.value) return 'AI 审核未通过'
-  if (pending.value) return 'AI 建议已生成，等待人工复核'
+  if (pending.value) return 'AI 正在自动审核，稍后自动上架'
   return 'AI 审核通过，已上架'
 })
 onMounted(() => {
@@ -61,8 +61,9 @@ function askDetective() {
             <span :class="{ on: step >= 3 }">{{ rejected ? '未通过' : '上架' }}</span>
           </div>
           <div v-if="item.ai" class="review-ai">
-            AI 建议：{{ item.ai.decision === 'reject' ? '不建议上架' : item.ai.decision === 'review' ? '建议人工复核' : '可以上架' }}
+            AI 建议：{{ item.ai.decision === 'reject' ? '不建议上架' : item.ai.decision === 'review' ? '建议先上架，请自行核对' : '可以上架' }}
             <template v-if="item.ai.score !== undefined"> · 风险 {{ item.ai.score }}/100</template>
+            <template v-if="item.ai.reviewNote"> · {{ item.ai.reviewNote }}</template>
           </div>
         </div>
       </div>
@@ -70,7 +71,7 @@ function askDetective() {
         <div class="big">✅</div>
         <h2>{{ approved ? '已发布成功' : '已提交，等待审核' }}</h2>
         <div class="okmeta">{{ item.title || '' }}</div>
-        <p>{{ approved ? '其他同学已经可以在列表里看到这条信息。' : '审核通过后，其他同学才能在「失物招领 / 寻物启事」里看到这条信息。' }}</p>
+        <p>{{ approved ? 'AI 审核已通过，其他同学已经可以在列表里看到这条信息。' : 'AI 正在自动审核，完成后会自动上架。' }}</p>
         <p>你可以在「我的发布」里随时查看审核进度，也可以撤回删除。</p>
         <div class="okacts">
           <button v-if="type === 'lost' && approved" class="btn" type="button" @click="askDetective">让 AI 侦探帮我找下一步</button>

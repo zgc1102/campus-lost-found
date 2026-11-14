@@ -98,7 +98,8 @@ async function sendChat() {
           <div class="scan-kicker">清华校园拾光里</div>
           <h2>{{ tag.itemName || '这位同学丢了东西' }}</h2>
           <p v-if="tag.note">{{ tag.note }}</p>
-          <p class="scan-phone">失主联系方式：{{ tag.mode === 'phone' && tag.phoneFull ? tag.phoneFull : (tag.phoneMasked || '已隐藏') }}</p>
+          <p v-if="tag.mode === 'phone'" class="scan-phone">失主联系方式：{{ tag.phoneFull || tag.phoneMasked || '已隐藏' }}</p>
+        <p v-else class="scan-phone">联系方式不公开，留言后由失主决定是否回复</p>
           <p class="scan-hint">你不需要注册，也不用曝光自己。留一句话，失主会收到通知。</p>
           <div class="scan-policy">此码长期有效 · 不随网站版本更新失效</div>
           <div class="scan-verified">✓ 官方校验通过 · 码有效</div>

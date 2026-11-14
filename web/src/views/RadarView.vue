@@ -164,7 +164,7 @@ function organizePublish() {
             <div class="rd-title">{{ m.item.title }}</div>
             <div class="rd-meta">{{ m.item.place || '未填写地点' }}<span class="rd-conf">{{ m.confidence }}置信</span></div>
             <div class="rd-reasons"><span v-for="r in m.reasons" :key="r">{{ r }}</span></div>
-            <div class="rd-tech"><span>多模态特征</span><span>智能体检索</span><span>大模型重排</span></div>
+            <div class="rd-tech"><span>多模态特征</span><span>智能体检索</span><span>语义重排</span></div>
           </div>
         </article>
       </template>
@@ -350,4 +350,5 @@ function organizePublish() {
 .dt-publish b { font-size:12px; color:#4B2B72; }
 .dt-publish span { font-size:9.5px; line-height:1.6; color:#8B7A9E; }
 </style>
+
 

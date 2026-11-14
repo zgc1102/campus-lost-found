@@ -192,7 +192,8 @@ def _tag_public(tag, base_url="", with_qr=False):
         "itemName": tag.get("itemName"),
         "note": tag.get("note") or "",
         "mode": mode,
-        "phoneMasked": re.sub(r"(\d{3})\d{4}(\d{4})", r"\1****\2", phone) if phone else "",
+        "phoneMasked": re.sub(r"(\d{3})\d{4}(\d{4})", r"\1****\2", phone) if phone and mode == "phone" else "",
+        "phoneVisible": bool(phone and mode == "phone"),
         "createdAt": tag.get("createdAt"),
         "notifyCount": tag.get("notifyCount") or 0,
         "deactivated": not tag.get("active", True),
@@ -651,7 +652,7 @@ def claim_ai_check(item, claim):
                   "重要规则：公开描述里已经写出的内容，即使申请人复述得完全一样，也不能当作高可信依据；"
                   "只有命中独有特征，才可以把 confidence 给到 80 以上。"
                   "如果申请人只复述公开描述，confidence 最高 45，verdict 必须是 unclear。"
-                  "如果独有特征为空，confidence 最高 55，verdict 必须是 unclear，并提示需要发布者人工核对。"
+                  "如果独有特征为空，confidence 最高 55，verdict 必须是 unclear，并提示需要发布者自行核对。"
                   '只输出 JSON：{"verdict":"match|unclear|mismatch","confidence":0-100,'
                   '"reason":"30字以内","points":["逐条比对1","逐条比对2"]}；'
                   "points 给 3 到 5 条逐条比对结果，每条 12 字以内，例如“颜色描述一致”“地点吻合”“第2次和第1次矛盾”。"
@@ -1128,6 +1129,14 @@ def apply_ai_decision(item, ai, cfg):
             item["autoApproved"] = True
             item["reviewedBy"] = "AI-rule"
             item["reviewedAt"] = now_ms()
+    else:
+        # 没有人工审核：AI 给出“复核”时也自动上架，但保留提示
+        if item.get("status") != "rejected":
+            item["status"] = "approved"
+            item["autoApproved"] = True
+            item["reviewedBy"] = "AI"
+            item["reviewedAt"] = now_ms()
+            item["ai"]["reviewNote"] = "AI 建议先上架，请发布者自行核对内容"
     return item
 
 
@@ -4774,5 +4783,6 @@ if __name__ == "__main__":
     except Exception:
         pass
     main()
+
 
 

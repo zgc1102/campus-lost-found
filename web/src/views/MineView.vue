@@ -1,11 +1,13 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { api } from '../api'
 
 const emit = defineEmits(['nav', 'publish', 'edit'])
 const items = ref([])
 const claims = ref([])
 const sentClaims = ref([])
+const lostClaims = computed(() => claims.value.filter((c) => c.itemType !== 'help'))
+const helpClaims = computed(() => claims.value.filter((c) => c.itemType === 'help'))
 const tab = ref('mine')
 const loading = ref(true)
 const phone = ref('')
@@ -164,7 +166,7 @@ function fmt(ts) {
       <button type="button" class="btn" @click="$emit('publish', 'lost')">发布</button>
     </div>
     <div class="scroll">
-      <div class="netbadge on">🌐 已连接服务器：{{ origin }}（其他同学也能看到）</div>
+      <div v-if="!account" class="tip-small">登录后可以查看自己的发布和申请。</div>
 
       <div v-if="myTag" class="tag-mine">
         <div class="tm-head"><b>我的拾光码</b><span class="tm-dot">长期有效</span></div>
@@ -197,19 +199,19 @@ function fmt(ts) {
 
       <div v-if="successMsg" class="success-line">{{ successMsg }}</div>
 
-      <div v-if="claims.length" style="margin:12px 0">
+      <div v-if="lostClaims.length" style="margin:12px 0">
         <div class="sectitle">认领申请</div>
-        <div v-for="c in claims" :key="c.id" class="mini">
+        <div v-for="c in lostClaims" :key="c.id" class="mini">
           <div class="mh">{{ c.itemTitle }}<span class="st">{{ claimStatus(c.status) }}</span></div>
           <div class="mmeta">{{ c.message }}</div>
           <div v-if="c.aiCheck" class="claim-ai-line">AI 参考可信度 {{ c.aiCheck.confidence }}% · {{ claimVerdict(c.aiCheck) }}</div>
           <div v-if="c.status === 'accepted'" class="mact">
-            <button type="button" class="btn" @click="completeClaim(c)">{{ c.itemType === 'help' ? '完成帮助' : '归还' }}</button>
+            <button type="button" class="btn" @click="completeClaim(c)">归还</button>
           </div>
           <div v-else-if="c.status === 'pending'" class="mact">
-            <button type="button" class="btn" @click="actClaim(c, 'accepted')">{{ c.itemType === 'help' ? '接受帮忙' : '通过' }}</button>
-            <button type="button" class="btn ghost" @click="actClaim(c, 'need_more')">{{ c.itemType === 'help' ? '请补充' : '补充' }}</button>
-            <button type="button" class="btn ghost" @click="actClaim(c, 'rejected')">{{ c.itemType === 'help' ? '婉拒' : '拒绝' }}</button>
+            <button type="button" class="btn" @click="actClaim(c, 'accepted')">通过</button>
+            <button type="button" class="btn ghost" @click="actClaim(c, 'need_more')">补充</button>
+            <button type="button" class="btn ghost" @click="actClaim(c, 'rejected')">拒绝</button>
           </div>
           <div v-if="codeFor && codeFor.id === c.id" class="code-box">
             <input v-model="codeInput" inputmode="numeric" maxlength="6" placeholder="输入对方提供的 4~6 位取件码">
@@ -218,16 +220,35 @@ function fmt(ts) {
             <div v-if="codeError" class="tip-small" style="color:#c0392b">{{ codeError }}</div>
           </div>
         </div>
-        <div v-if="sentClaims.length" class="sectitle" style="margin-top:10px">我发出的认领</div>
+      </div>
+
+      <div v-if="helpClaims.length" style="margin:12px 0">
+        <div class="sectitle">帮忙申请</div>
+        <div v-for="c in helpClaims" :key="c.id" class="mini">
+          <div class="mh">{{ c.itemTitle }}<span class="st">{{ claimStatus(c.status) }}</span></div>
+          <div class="mmeta">{{ c.message }}</div>
+          <div v-if="c.status === 'accepted'" class="mact">
+            <button type="button" class="btn" @click="completeClaim(c)">完成帮助</button>
+          </div>
+          <div v-else-if="c.status === 'pending'" class="mact">
+            <button type="button" class="btn" @click="actClaim(c, 'accepted')">接受帮忙</button>
+            <button type="button" class="btn ghost" @click="actClaim(c, 'need_more')">请补充</button>
+            <button type="button" class="btn ghost" @click="actClaim(c, 'rejected')">婉拒</button>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="sentClaims.length" style="margin:12px 0">
+        <div class="sectitle">我发出的认领 / 帮忙</div>
         <div v-for="c in sentClaims" :key="'s'+c.id" class="mini">
           <div class="mh">{{ c.itemTitle }}<span class="st">{{ claimStatus(c.status) }}</span></div>
           <div class="mmeta">{{ c.message }}</div>
-          <div v-if="c.aiCheck" class="claim-ai-line">AI 参考可信度 {{ c.aiCheck.confidence }}% · {{ claimVerdict(c.aiCheck) }}</div>
+          <div v-if="c.aiCheck && c.itemType !== 'help'" class="claim-ai-line">AI 参考可信度 {{ c.aiCheck.confidence }}% · {{ claimVerdict(c.aiCheck) }}</div>
           <div v-if="c.status === 'accepted' && c.itemType !== 'help'" class="mmeta">取件码：{{ c.returnCode || '向对方索取' }}</div>
         </div>
       </div>
 
-      <div class="hintline">{{ items.length ? '共 ' + items.length + ' 条发布，只有「进行中」的才会出现在公共列表里。' : '你还没有发布过内容。提交后会先进入审核，通过后才上架。' }}</div>
+      <div class="hintline">{{ items.length ? '共 ' + items.length + ' 条发布，只有「进行中」的才会出现在公共列表里。' : '你还没有发布过内容。发布后 AI 会自动审核，通过后自动上架。' }}</div>
 
       <div v-if="claims.length" class="tip-small" style="margin:4px 0 8px">参考可信度档位：≥80 特征吻合 · 60–79 建议核对 · &lt;60 明显不一致。分数只作参考，不作为认领依据。</div>
 

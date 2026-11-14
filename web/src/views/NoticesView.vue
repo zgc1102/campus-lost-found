@@ -260,7 +260,7 @@ function fmt(ts) {
       <button v-for="[id, label] in groups" :key="id" type="button" :class="{ on: tab === id }" :title="groupUnread(id) + ' 条未读'" @click="tab = id">
         {{ label }}<i v-if="groupUnread(id)">{{ groupUnread(id) }}</i>
       </button>
-      <span class="unread-sum">未读 {{ unread }}</span>
+      <span class="unread-sum">共 {{ items.length }} 条 · 未读 {{ unread }}</span>
     </div>
     <div class="scroll">
       <div v-if="loading" class="empty">正在读取通知…</div>
