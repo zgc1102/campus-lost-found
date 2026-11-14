@@ -65,6 +65,11 @@ function simpleScore(a, b) {
   return Math.min(99, pct)
 }
 function buildRecommend(it) {
+  // 系统推荐只出现在“我发布的”内容里；别人的内容不在这里打扰
+  if (!it.isMine) {
+    recommend.value = []
+    return
+  }
   const opposite = it.type === 'lost' ? 'found' : 'lost'
   recommend.value = items.value
     .filter((x) => x.type === opposite && ['approved', 'claimed'].includes(x.status) && x.id !== it.id)
