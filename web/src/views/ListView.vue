@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { api } from '../api'
 import CountUp from '../components/CountUp.vue'
@@ -200,6 +200,15 @@ function useOwnTarget() {
   openDetail(target)
 }
 function closeDetail() {
+  if (sessionStorage.getItem('sg:radarReturn')) {
+    sessionStorage.removeItem('sg:radarReturn')
+    const state = sessionStorage.getItem('sg:radarState')
+    if (state) sessionStorage.setItem('sg:radarRestore', state)
+    sessionStorage.removeItem('sg:radarState')
+    selected.value = null
+    emit('nav', 'radar')
+    return
+  }
   if (compareReturn.value) {
     const s = compareReturn.value
     selected.value = s.source

@@ -11,6 +11,9 @@ const item = computed(() => {
 const approved = computed(() => item.value.status === 'approved')
 const rejected = computed(() => item.value.status === 'rejected')
 const pending = computed(() => !approved.value && !rejected.value)
+const hasRadarPrevious = (() => {
+  try { return !!sessionStorage.getItem('sg:radarPrevious') } catch (_) { return false }
+})()
 const step = ref(0)
 const stepDone = ref(false)
 const stepText = computed(() => {
@@ -42,6 +45,14 @@ function askDetective() {
   } catch (_) {}
   emit('nav', 'radar')
 }
+function backToDetective() {
+  try {
+    const prev = sessionStorage.getItem('sg:radarPrevious')
+    if (prev) sessionStorage.setItem('sg:radarRestore', prev)
+    sessionStorage.removeItem('sg:radarPrevious')
+  } catch (_) {}
+  emit('nav', 'radar')
+}
 </script>
 
 <template>
@@ -67,19 +78,23 @@ function askDetective() {
           </div>
         </div>
       </div>
-      <div class="okpanel">
+      <div v-if="stepDone" class="okpanel">
         <div class="big">✅</div>
-        <h2>{{ approved ? '已发布成功' : '已提交，等待审核' }}</h2>
+        <h2>{{ approved ? '已发布成功' : '已提交，等待 AI 审核' }}</h2>
         <div class="okmeta">{{ item.title || '' }}</div>
         <p>{{ approved ? 'AI 审核已通过，其他同学已经可以在列表里看到这条信息。' : 'AI 正在自动审核，完成后会自动上架。' }}</p>
+        <div v-if="item.typeSuggestion" class="type-suggest">
+          AI 提示：这条内容更像「{{ item.typeSuggestion === 'found' ? '招领' : '寻物' }}」。如果类型写错了，可以返回修改，避免同学误解。
+        </div>
         <p>你可以在「我的发布」里随时查看审核进度，也可以撤回删除。</p>
         <div class="okacts">
-          <button v-if="type === 'lost' && approved" class="btn" type="button" @click="askDetective">让 AI 侦探帮我找下一步</button>
+          <button v-if="hasRadarPrevious" class="btn" type="button" @click="backToDetective">返回刚才的侦探结果</button>
+          <button v-else-if="type === 'lost' && approved" class="btn" type="button" @click="askDetective">让 AI 侦探帮我找下一步</button>
           <button class="btn ghost" type="button" @click="$emit('nav', 'mine')">查看我的发布</button>
           <button class="btn ghost" type="button" @click="$emit('nav', 'publish', type)">继续发布一条</button>
         </div>
       </div>
-      <div class="faq-note" style="margin-top:16px">💡 {{ approved ? '如需修改，可在「我的发布」里撤回后重新提交。' : '系统会自动审核；需要补充时会在「我的发布」里显示原因。' }}</div>
+      <div v-if="stepDone" class="faq-note" style="margin-top:16px">💡 {{ approved ? '如需修改，可在「我的发布」里撤回后重新提交。' : '系统会自动审核；需要补充时会在「我的发布」里显示原因。' }}</div>
     </div>
   </section>
 </template>
@@ -98,4 +113,8 @@ function askDetective() {
 .review-steps span.on { color:#5B2A91; }
 .review-steps span.on::before { background:#5B2A91; }
 .review-ai { margin-top:4px; font-size:9px; color:#8E7FA3; }
+</style>
+
+<style scoped>
+.type-suggest { margin:8px 0; padding:8px 9px; border-radius:8px; background:#FFF8E8; border:1px solid #F0D6A8; color:#8A5A16; font-size:10px; line-height:1.6; }
 </style>

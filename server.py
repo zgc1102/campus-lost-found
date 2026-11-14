@@ -1685,6 +1685,8 @@ def _hotspot_stats(items, limit=6):
         g = _place_group(it.get("place"))
         if g == "未填写地点":
             continue
+        if "扫码上报" in g or g in ("我的物品", "校园卡", "黑色长柄雨伞", "一个键盘"):
+            continue
         row = groups.setdefault(g, {"place": g, "count": 0, "lost": 0, "found": 0, "recent7": 0, "prev7": 0})
         row["count"] += 1
         row["lost" if it.get("type") == "lost" else "found"] += 1

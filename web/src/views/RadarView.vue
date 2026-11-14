@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { onMounted, ref } from 'vue'
 import { api } from '../api'
 
@@ -20,6 +20,31 @@ const steps = ref([])
 const detectiveSteps = ref([])
 const selectedMatch = ref(null)
 const fromPublished = ref(false)
+function radarSnapshot() {
+  return {
+    title: title.value, place: place.value, cat: cat.value,
+    route: route.value, carry: carry.value, lastSeen: lastSeen.value,
+    matches: matches.value, hotspots: hotspots.value, radarSummary: radarSummary.value,
+    detective: detective.value, detectiveSteps: detectiveSteps.value,
+    scanned: scanned.value, steps: steps.value
+  }
+}
+function restoreRadar(s) {
+  if (!s) return
+  title.value = s.title || ''
+  place.value = s.place || ''
+  cat.value = s.cat || 'other'
+  route.value = s.route || ''
+  carry.value = s.carry || ''
+  lastSeen.value = s.lastSeen || ''
+  matches.value = s.matches || []
+  hotspots.value = s.hotspots || []
+  radarSummary.value = s.radarSummary || ''
+  detective.value = s.detective || null
+  detectiveSteps.value = s.detectiveSteps || []
+  scanned.value = s.scanned || 0
+  steps.value = s.steps || []
+}
 
 async function scan() {
   error.value = ''
@@ -73,11 +98,22 @@ function openMatch(m) {
 }
 function openFullMatch() {
   if (!selectedMatch.value) return
+  try {
+    sessionStorage.setItem('sg:radarState', JSON.stringify(radarSnapshot()))
+    sessionStorage.setItem('sg:radarReturn', '1')
+  } catch (_) {}
   sessionStorage.setItem('sg:focusItem', selectedMatch.value.item.id)
   emit('nav', selectedMatch.value.item.type === 'lost' ? 'found' : 'lost')
 }
 
 onMounted(async () => {
+  let restore = null
+  try { restore = JSON.parse(sessionStorage.getItem('sg:radarRestore') || 'null') } catch (_) {}
+  if (restore) {
+    sessionStorage.removeItem('sg:radarRestore')
+    restoreRadar(restore)
+    return
+  }
   let seed = null
   try { seed = JSON.parse(sessionStorage.getItem('sg:radarSeed') || 'null') } catch (_) {}
   if (!seed) return
@@ -103,6 +139,7 @@ function organizePublish() {
   if (routeText) desc += '。当天路线：' + routeText
   desc += '。如果你捡到或看到，请提供线索，谢谢。'
   try {
+    sessionStorage.setItem('sg:radarPrevious', JSON.stringify(radarSnapshot()))
     sessionStorage.setItem('sg:publishSeed', JSON.stringify({
       title: name + (where && !name.includes(where) ? '（' + where + '）' : ''),
       desc: desc.slice(0, 300),
@@ -168,16 +205,7 @@ function organizePublish() {
           </div>
         </article>
       </template>
-      <div v-else-if="scanned && !loading" class="rd-summary" style="padding:18px 0;text-align:center">暂时没有高置信度匹配，先看下面的高频区域。</div>
-
-      <div v-if="hotspots.length" class="rd-section">校园失物高频区域 · 按近7天新增排序</div>
-      <div v-if="hotspots.length" class="rd-hot">
-        <div v-for="h in hotspots.slice(0, 5)" :key="h.place" class="rd-hot-row">
-          <span class="rd-hot-name">{{ h.place }}</span>
-          <span class="rd-bar"><i :style="{ width: Math.max(6, h.share || 0) + '%' }" /></span>
-          <span class="rd-hot-n">{{ h.recent7 ? '近7天 ' + h.recent7 + ' 条' : '累计 ' + h.count + ' 条' }}</span>
-        </div>
-      </div>
+      <div v-else-if="scanned && !loading" class="rd-summary" style="padding:18px 0;text-align:center">暂时没有高置信度匹配，可以继续用下面的寻物侦探推理。</div>
 
       <div v-if="matches.length || scanned" class="detective-form">
         <div class="rf-kicker">寻物侦探</div>
