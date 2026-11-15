@@ -24,6 +24,7 @@ const form = reactive({
   desc: '',
   place: '',
   eventTime: '',
+  secret: '',
   phone: ''
 })
 const submitting = ref(false)
@@ -48,6 +49,7 @@ if (props.editItem) {
   form.desc = e.desc || ''
   form.place = e.place || ''
   form.eventTime = e.eventTime || ''
+  form.secret = e.secret || ''
   form.phone = (e.contact && e.contact.phone) || ''
   photo.value = e.photoUrl || e.photo || ''
   const reverse = { card: '证件', electronics: '电子设备', cloth: '衣物', bottle: '水杯', bag: '书包', other: '其他' }
@@ -58,13 +60,13 @@ const DRAFT_KEY = 'sg:draft:publish'
 function clearDraft() {
   localStorage.removeItem(DRAFT_KEY)
   draftRestored.value = false
-  for (const k of ['title', 'category', 'desc', 'place', 'eventTime', 'phone']) form[k] = ''
+  for (const k of ['title', 'category', 'desc', 'place', 'eventTime', 'secret', 'phone']) form[k] = ''
 }
 onMounted(() => {
   if (props.editItem) return
   try {
     const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || '{}')
-    for (const k of ['title', 'category', 'desc', 'place', 'eventTime', 'phone']) {
+    for (const k of ['title', 'category', 'desc', 'place', 'eventTime', 'secret', 'phone']) {
       if (d[k]) { form[k] = d[k]; draftRestored.value = true }
     }
   } catch (_) {}
@@ -99,7 +101,7 @@ onMounted(() => {
 watch(form, () => {
   if (props.editItem) return
   const d = {}
-  for (const k of ['title', 'category', 'desc', 'place', 'eventTime', 'phone']) {
+  for (const k of ['title', 'category', 'desc', 'place', 'eventTime', 'secret', 'phone']) {
     d[k] = form[k]
   }
   localStorage.setItem(DRAFT_KEY, JSON.stringify(d))
@@ -228,6 +230,10 @@ async function submit() {
   error.value = ''
   if (form.title.trim().length < 2) { error.value = '标题至少写两个字'; return }
   if (form.desc.trim().length < 5) { error.value = '说明再具体一点，至少 5 个字'; return }
+  if (kind.value === 'found' && form.secret.trim().length < 4) {
+    error.value = '写一条只有你知道的细节，用于防止冒领'
+    return
+  }
   submitting.value = true
   try {
     const item = {
@@ -238,6 +244,7 @@ async function submit() {
       desc: form.desc.trim(),
       place: form.place.trim() || '未填写地点',
       eventTime: form.eventTime || '',
+      secret: isHelp.value ? '' : form.secret.trim(),
       contact: { phone: form.phone.trim() },
       photo: photo.value || null,
       phoneConfirmed: phoneConfirmed.value
@@ -364,6 +371,11 @@ function askDetective() {
               <button type="button" class="btn ghost" @click="aiFormat">重新生成</button>
               <button type="button" class="btn ghost" @click="aiPanel = false">不用了</button>
             </div>
+          </div>
+          <div v-if="kind === 'found'" class="form-item">
+            <label>只有你知道的细节 <span class="req">*</span></label>
+            <textarea v-model="form.secret" maxlength="100" placeholder="例如：伞套内侧写了字母 Z，伞柄有一张红色贴纸"></textarea>
+            <div class="tip-small">不会公开，只用于认领核验；请写一条公开描述里没有的细节。</div>
           </div>
         </div>
 
@@ -528,5 +540,6 @@ function askDetective() {
 .draft-note { display:flex; align-items:center; justify-content:space-between; gap:8px; background:#F1E8FB; color:#5B2A91; border-radius:9px; padding:8px 10px; margin:0 0 10px; font-size:10.5px; }
 .draft-note button { border:0; background:transparent; color:#5B2A91; text-decoration:underline; font-family:inherit; font-size:10.5px; white-space:nowrap; }
 </style>
+
 
 

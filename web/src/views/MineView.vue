@@ -142,10 +142,13 @@ function claimStatus(s) {
   return ({ pending: '待确认', accepted: '已通过', completed: '已完成', rejected: '已拒绝', need_more: '待补充', closed: '已结束' })[s] || s
 }
 function claimVerdict(c) {
-  const n = Number(c?.confidence)
+  if (!c) return '暂无参考'
+  if (c.verdict === 'mismatch') return '明显不一致'
+  if (c.verdict === 'unclear') return '建议核对'
+  const n = Number(c.confidence)
   if (!Number.isFinite(n) || n <= 0) return '暂无参考'
   if (n >= 80) return '相似度较高'
-  if (n >= 60) return '有一些相似'
+  if (n >= 60) return '建议核对'
   return '相似度较低'
 }
 function status(x) {

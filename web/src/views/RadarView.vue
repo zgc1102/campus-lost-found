@@ -237,7 +237,7 @@ function organizePublish() {
             <div v-for="h in detective.hotspots" :key="h.place" class="rd-hot-row">
               <span class="rd-hot-name">{{ h.place }}</span>
               <span class="rd-bar"><i :style="{ width: Math.max(6, h.share || 0) + '%' }" /></span>
-              <span class="rd-hot-n">{{ h.recent7 ? '近7天 ' + h.recent7 + ' 条' : '累计 ' + h.count + ' 条' }}</span>
+              <span class="rd-hot-n"><b>近7天 {{ h.recent7 || 0 }}</b><i>累计 {{ h.count || 0 }}</i></span>
             </div>
           </div>
         </template>
@@ -381,3 +381,9 @@ function organizePublish() {
 </style>
 
 
+
+<style scoped>
+.rd-hot-n { min-width:92px; text-align:right; display:flex; flex-direction:column; gap:1px; font-size:9px; line-height:1.35; }
+.rd-hot-n b { color:#5B2A91; font-weight:600; }
+.rd-hot-n i { color:#8E7FA3; font-style:normal; }
+</style>

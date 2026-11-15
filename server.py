@@ -646,14 +646,17 @@ def claim_ai_check(item, claim):
                   % (item.get("title") or "", item.get("desc") or "", said))
     else:
         prompt = ("你是校园失物招领的信息比对助手。发布者描述：\n标题：%s\n描述：%s\n"
+                  "独有特征（申请人看不到，用于防冒领）：%s\n"
                   "申请人先后说：\n%s\n"
                   "只陈述公开信息的重合情况，不做身份判定，不建议通过或拒绝。"
                   "公开描述里已有的内容即使完全复述，也不能算作独立证据；"
-                  "如果申请人只是复述公开描述，confidence 最高 45，verdict 只能是 unclear。"
+                  "只有命中独有特征，才可以把 confidence 给到 80 以上。"
+                  "如果申请人只复述公开描述，confidence 最高 45，verdict 只能是 unclear。"
+                  "如果独有特征为空，confidence 最高 55，verdict 只能是 unclear。"
                   '只输出 JSON：{"verdict":"match|unclear|mismatch","confidence":0-100,'
                   '"reason":"30字以内","points":["逐条比对1","逐条比对2"]}；'
                   "points 给 3 到 5 条逐条比对结果，每条 12 字以内，例如“颜色描述一致”“地点吻合”“时间对不上”。"
-                  % (item.get("title") or "", item.get("desc") or "", said))
+                  % (item.get("title") or "", item.get("desc") or "", item.get("secret") or "", said))
     try:
         data = _post_chat(cfg.get("base_url").rstrip("/") + "/chat/completions",
                           {"model": cfg.get("model") or "deepseek-chat", "temperature": 0,
@@ -671,8 +674,19 @@ def claim_ai_check(item, claim):
         if not isinstance(_pts, list):
             _pts = []
         _pts = [str(x).strip()[:24] for x in _pts if str(x).strip()][:5]
+        reason = str(obj.get("reason") or "")[:60]
+        negative = re.search(r"无关|不一致|不符|对不上|没有.{0,6}证据|不属于", reason)
+        if verdict == "mismatch":
+            conf = min(conf, 20)
+        elif verdict == "unclear":
+            conf = min(conf, 55)
+        if negative and verdict != "match":
+            conf = min(conf, 30)
+        if negative and re.search(r"无关|不一致|不符|对不上|不属于", reason):
+            verdict = "mismatch"
+            conf = min(conf, 20)
         return {"verdict": verdict, "confidence": conf,
-                "reason": str(obj.get("reason") or "")[:60], "points": _pts, "at": now_ms()}
+                "reason": reason, "points": _pts, "at": now_ms()}
     except Exception:
         return None
 
@@ -789,6 +803,7 @@ AI_BINARY_PROMPT = (
     "只回答 JSON：{\"publish\": true 或 false, \"reason\": \"不超过 30 字\"}。"
     "规则：真实的丢东西/捡到东西 = true；"
     "交友、找对象、招嫖、招聘、二手交易、广告、诈骗、违法 = false；"
+    "只判断能否公开，不要判断或提及“寻物/招领”类型；"
     "拿不准时宁可 false。"
 )
 
@@ -1836,6 +1851,7 @@ def agent_detective(item, items):
     if hotspots:
         timeline.append({"time": "统计", "label": "高频区域：%s" % "、".join(h["place"] for h in hotspots[:3])})
 
+    final_actions = [a for a in actions if str(a.get("title") or "").strip()][:6]
     top_score = matches[0]["score"] if matches else 0
     return {
         "ok": True,
@@ -1843,12 +1859,12 @@ def agent_detective(item, items):
         "matches": matches,
         "hotspots": hotspots,
         "timeline": timeline,
-        "actions": actions[:6],
+        "actions": final_actions,
         "steps": [
             {"tool": "read_item", "finding": item.get("place") or "未填写地点"},
             {"tool": "match", "finding": "比对 %d 条反向信息，命中 %d 条" % (len(items), len(matches))},
             {"tool": "hotspot", "finding": "计算校园高频区域"},
-            {"tool": "plan", "finding": "生成 %d 条行动建议" % len(actions[:6])},
+            {"tool": "plan", "finding": "生成 %d 条行动建议" % len(final_actions)},
         ],
         "confidence": "高" if top_score >= 68 else ("中" if top_score >= 45 else "低"),
         "summary": "按你给的地点和时间，先看匹配到的招领，再按下面的顺序找。",
@@ -3524,8 +3540,8 @@ class Handler(BaseHTTPRequestHandler):
             item_id = path[len("/api/items/"):-len("/claim-check")]
             body = self._read_body()
             message = str(body.get("message") or "").strip()[:200]
-            if len(message) < 2:
-                return self._json({"error": "请先写下你的认领说明"}, 400)
+            if len(message) < 6:
+                return self._json({"error": "请先写下至少 6 字的认领说明"}, 400)
             with LOCK:
                 items = load_items()
                 target = next((x for x in items if x.get("id") == item_id), None)
@@ -3567,8 +3583,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"error": "电话号码不正确：" + _chk["reason"]}, 400)
             if _chk.get("normalized"):
                 contact = _chk["normalized"]
-            if len(message) < 2:
-                return self._json({"error": "请说明一下你的申请理由"}, 400)
+            if _target0.get("type") != "help" and len(message) < 6:
+                return self._json({"error": "请补充一条至少 6 字的核验细节"}, 400)
             with LOCK:
                 items = load_items()
                 target = next((x for x in items if x.get("id") == item_id), None)
@@ -4421,7 +4437,7 @@ class Handler(BaseHTTPRequestHandler):
                     if it.get("id") == item_id:
                         if not owner or it.get("ownerToken") != owner:
                             return self._json({"error": "forbidden"}, 403)
-                        for k in ("title", "desc", "place", "eventTime", "photo"):
+                        for k in ("title", "desc", "place", "eventTime", "secret", "photo"):
                             if k in patch:
                                 it[k] = patch[k]
                         if "cat" in patch:
@@ -4544,6 +4560,7 @@ class Handler(BaseHTTPRequestHandler):
             "desc": str(body.get("desc") or "").strip()[:300],
             "place": str(body.get("place") or "").strip()[:40],
             "eventTime": str(body.get("eventTime") or "")[:40],
+            "secret": str(body.get("secret") or "").strip()[:100],
             "photo": body.get("photo") if isinstance(body.get("photo"), str) else None,
             "fields": {k: str((body.get("fields") or {}).get(k) or "")[:30]
                        for k in ("color", "brand", "condition", "feature", "contents")}

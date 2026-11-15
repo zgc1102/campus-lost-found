@@ -82,6 +82,9 @@ const visibleItems = computed(() => tab.value === 'all' ? items.value : items.va
 function groupUnread(id) {
   return items.value.filter((n) => !n.read && (id === 'all' || groupOf(n) === id)).length
 }
+function groupCount(id) {
+  return items.value.filter((n) => id === 'all' || groupOf(n) === id).length
+}
 
 onMounted(load)
 async function load() {
@@ -258,7 +261,7 @@ function fmt(ts) {
     </div>
     <div class="notice-tabs">
       <button v-for="[id, label] in groups" :key="id" type="button" :class="{ on: tab === id }" :title="groupUnread(id) + ' 条未读'" @click="tab = id">
-        {{ label }}<i v-if="groupUnread(id)">{{ groupUnread(id) }}</i>
+        {{ label }}<i v-if="groupCount(id)">{{ groupCount(id) }}</i>
       </button>
       <span class="unread-sum">共 {{ loading ? '—' : items.length }} 条 · 未读 {{ loading ? '—' : unread }}</span>
     </div>

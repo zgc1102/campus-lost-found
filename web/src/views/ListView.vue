@@ -291,6 +291,13 @@ function onAiPhoto(e) {
 }
 async function submitClaim() {
   if (!selected.value) return
+  const msg = claimMsg.value.trim()
+  if (msg.length < 6) {
+    claimState.value = selected.value.type === 'lost'
+      ? '写一下你是在哪里、什么时候捡到的（至少 6 字）'
+      : '写一条公开描述里没有的细节（至少 6 字）'
+    return
+  }
   claiming.value = true
   claimState.value = ''
   try {
@@ -555,6 +562,9 @@ function openOldHelp() {
       </div>
       <div class="dm-right">
       <div class="sh">{{ selected.title || '未命名物品' }}</div>
+      <div v-if="selected.typeSuggestion" class="type-suggest">
+        AI 认为这条更像「{{ selected.typeSuggestion === 'found' ? '招领' : '寻物' }}」；如类型不对，请发布者修改后再发。
+      </div>
       <div v-if="selected.isMine" class="sa" style="margin-top:6px;color:var(--purple)">这是你自己发布的内容，不能认领自己的发布。</div>
       <div class="sa">{{ selected.desc || '暂无描述' }}</div>
       <div v-if="selected.ai" class="pub-ai" :class="'pub-ai-' + (selected.ai.decision || 'review')">
@@ -585,7 +595,7 @@ function openOldHelp() {
       <template v-if="selected.status === 'approved'">
         <button v-if="!claimOpen" type="button" class="btn" style="width:100%;margin-top:14px" :disabled="!canClaim(selected)" @click="canClaim(selected) && (claimOpen = true)">{{ actionLabel(selected) }}</button>
         <div v-if="claimOpen" class="claimbox">
-        <div class="tip-small" style="margin:0 0 8px">补充一句你知道的信息（选填），不填也可以提交。</div>
+        <div class="tip-small" style="margin:0 0 8px">写一条公开描述里没有的细节（至少 6 字），对方核对后才会通过。</div>
         <textarea v-model="claimMsg" maxlength="200" :placeholder="selected.type === 'lost' ? '例如：我昨天在图书馆一层捡到，伞柄有白色划痕。' : '例如：我昨天在图书馆一层丢了，伞柄有白色划痕。'" style="width:100%;box-sizing:border-box;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:11px;padding:10px;font-family:inherit;font-size:11px;min-height:70px"></textarea>
         <input v-model="claimPhone" maxlength="30" :placeholder="selected.type === 'lost' ? '你的联系方式（方便失主联系你）' : '你的联系方式（手机号 / 微信号）'" style="width:100%;box-sizing:border-box;margin-top:7px;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:11px;padding:10px;font-family:inherit;font-size:11px">
         <div v-if="claimState" class="sa" style="margin-top:6px">{{ claimState }}</div>
@@ -939,4 +949,8 @@ function openOldHelp() {
 <style scoped>
 .big-thumb.no-photo { min-height:120px !important; height:120px !important; font-size:34px; }
 @media (max-width:640px) { .big-thumb.no-photo { min-height:110px !important; height:110px !important; } }
+</style>
+
+<style scoped>
+.type-suggest { margin-top:6px; padding:7px 8px; border-radius:7px; background:#FFF8E8; border:1px solid #F0D6A8; color:#8A5A16; font-size:10px; line-height:1.6; }
 </style>
