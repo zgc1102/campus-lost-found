@@ -1,8 +1,7 @@
-<script setup>
+﻿<script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { api } from '../api'
 import CountUp from '../components/CountUp.vue'
-import LoadProgress from '../components/LoadProgress.vue'
 
 const props = defineProps({
   type: { type: String, default: 'lost' }
@@ -522,7 +521,7 @@ function openOldHelp() {
         </button>
       </div>
 
-      <LoadProgress v-if="loading" :loading="loading" text="正在读取校园数据…" />
+      <div v-if="loading" class="empty">正在读取校园数据…</div>
       <div v-else-if="loadError" class="load-error">
         <b>校园数据没有加载成功</b>
         <span>{{ loadError }}</span>
@@ -967,3 +966,4 @@ function openOldHelp() {
 .load-error span { color:#9A6B62; font-size:10px; line-height:1.6; }
 .load-error button { margin-top:4px; border:0; border-radius:7px; background:#5B2A91; color:#fff; padding:7px 12px; font-family:inherit; font-size:10px; }
 </style>
+

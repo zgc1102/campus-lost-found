@@ -2,7 +2,6 @@
 import { computed, onMounted, ref } from 'vue'
 import { api } from '../api'
 import CountUp from '../components/CountUp.vue'
-import LoadProgress from '../components/LoadProgress.vue'
 
 const emit = defineEmits(['nav'])
 const items = ref([])
@@ -267,7 +266,7 @@ function fmt(ts) {
       <span class="unread-sum">共 {{ loading ? '—' : items.length }} 条 · 未读 {{ loading ? '—' : unread }}</span>
     </div>
     <div class="scroll">
-      <LoadProgress v-if="loading" :loading="loading" text="正在读取通知…" />
+      <div v-if="loading" class="empty">正在读取通知…</div>
       <div v-else-if="!visibleItems.length" class="empty">这个分类还没有通知</div>
       <template v-else>
         <div
@@ -544,6 +543,8 @@ function fmt(ts) {
 .nd-legacy { display:block; flex:0 0 100%; width:100%; margin:10px 0 12px; font-size:12px; line-height:1.6; color:#A97A00; }
 .nd-actions { display:flex; flex:0 0 100%; width:100%; gap:8px; justify-content:flex-end; flex-wrap:wrap; }
 </style>
+
+
 
 
 

@@ -1,7 +1,6 @@
-<script setup>
+﻿<script setup>
 import { computed, onMounted, ref } from 'vue'
 import { api } from '../api'
-import LoadProgress from '../components/LoadProgress.vue'
 
 const emit = defineEmits(['nav', 'publish', 'edit'])
 const items = ref([])
@@ -220,7 +219,7 @@ function fmt(ts) {
         </template>
       </div>
 
-      <LoadProgress v-if="claimsLoading" :loading="claimsLoading" text="正在读取申请记录…" />
+      <div v-if="claimsLoading" class="empty" style="padding:6px 0">正在读取申请记录…</div>
       <div v-if="successMsg" class="success-line">{{ successMsg }}</div>
 
       <div v-if="lostClaims.length" style="margin:12px 0">
@@ -287,7 +286,7 @@ function fmt(ts) {
 
       <div v-if="claims.length" class="tip-small" style="margin:4px 0 8px">信息对比度只作提示，不自动通过、不自动拒绝、不改变排序。最终由发布者决定。</div>
 
-      <LoadProgress v-if="loading" :loading="loading" text="正在读取我的发布…" />
+      <div v-if="loading" class="empty">正在读取我的发布…</div>
       <div v-else-if="!items.length" class="empty">
         还没有发布记录<br><br>
         <button type="button" class="btn" @click="$emit('publish', 'lost')">发布寻物</button>
@@ -373,6 +372,8 @@ function fmt(ts) {
 .claim-hint.hint-strong { background:#EEF8F1; border:1px solid #CFE8D7; color:#2F6B45; }
 .claim-hint.hint-weak { background:#F8F6FB; border:1px solid #E5DEEC; color:#8B7A9B; }
 </style>
+
+
 
 
 

@@ -1,7 +1,6 @@
-<script setup>
+﻿<script setup>
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { api } from '../api'
-import LoadProgress from '../components/LoadProgress.vue'
 
 const emit = defineEmits(['nav'])
 
@@ -233,7 +232,7 @@ function openMemo(s) {
         <span @click="$emit('nav', 'ask')">借雨伞</span>
       </div>
 
-      <LoadProgress v-if="loading" :loading="loading" text="正在读取校园数据…" />\n<div class="home-stats">
+      <div class="home-stats">
         <div><b>{{ loading ? '—' : shown.total }}</b><span>已发布</span></div>
         <div><b>{{ loading ? '—' : shown.closed }}</b><span>已找回</span></div>
         <div><b>{{ loading ? '—' : shown.today }}</b><span>今日新增</span></div>
@@ -274,6 +273,7 @@ function openMemo(s) {
 .bell { position:relative; }
 .bell-dot { position:absolute; top:-4px; right:-7px; min-width:13px; height:13px; padding:0 3px; border-radius:99px; background:#E05A5A; color:#fff; font-size:7px; line-height:13px; text-align:center; }
 </style>
+
 
 
 
