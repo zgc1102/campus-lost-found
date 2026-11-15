@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { api } from '../api'
 
@@ -90,10 +90,10 @@ function goSlide(i) {
 
 async function load() {
   loading.value = true
-  try {
-    const list = await api.items(true)
+  const itemTask = api.items(true).then((list) => {
     if (Array.isArray(list)) items.value = list
-    const allAnns = await api.announcements().catch(() => [])
+  }).catch(() => {}).finally(() => { loading.value = false; restartTimer() })
+  const annTask = api.announcements().then((allAnns) => {
     const anns = (Array.isArray(allAnns) ? allAnns : []).filter((a) => !/测试|刷新测试|验收测试/.test(String(a.title || '') + String(a.body || '')))
     if (Array.isArray(anns) && anns.length) {
       const annSlides = anns.slice(0, 2).map((a) => ({
@@ -105,13 +105,11 @@ async function load() {
       slides.value = annSlides.concat(defaultSlides).slice(0, 5)
       slideIndex.value = 0
     }
-  } catch (_) {
-    // 保留上一次缓存内容，避免网络抖动把首页清空
-  } finally {
-    loading.value = false
-    restartTimer()
-  }
-  api.notices().then((noticeRes) => { unread.value = Number(noticeRes?.unread || 0) }).catch(() => {})
+  }).catch(() => {})
+  const noticeTask = api.notices().then((noticeRes) => {
+    unread.value = Number(noticeRes?.unread || 0)
+  }).catch(() => {})
+  await Promise.allSettled([itemTask, annTask, noticeTask])
 }
 
 onMounted(load)

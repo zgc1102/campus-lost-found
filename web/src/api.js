@@ -1,4 +1,4 @@
-const API_BASE = '/api'
+﻿const API_BASE = '/api'
 const USER_KEY = 'sg:user:v1'
 
 function owner() {
@@ -71,7 +71,8 @@ async function cachedGet(path, ttl = 30000) {
 }
 
 async function call(path, options = {}) {
-  if ((options.method || 'GET').toUpperCase() !== 'GET') clearApiCache()
+  const { skipCacheClear, timeout: _timeout, ...fetchOptions } = options
+  if (!skipCacheClear && (fetchOptions.method || 'GET').toUpperCase() !== 'GET') clearApiCache()
   const headers = {
     'Content-Type': 'application/json',
     'X-Owner': owner(),
@@ -82,7 +83,7 @@ async function call(path, options = {}) {
   const timer = setTimeout(() => controller.abort(), timeout)
   let res
   try {
-    res = await fetch(API_BASE + path, { ...options, headers, signal: controller.signal })
+    res = await fetch(API_BASE + path, { ...fetchOptions, headers, signal: controller.signal })
   } catch (e) {
     if (e && e.name === 'AbortError') throw new Error('读取超时，请检查网络后重试')
     throw e
@@ -119,10 +120,10 @@ export const api = {
     return call('/items/' + encodeURIComponent(id) + '/claims', { method: 'POST', body: JSON.stringify(body || {}) })
   },
   claimCheck(id, message) {
-    return call('/items/' + encodeURIComponent(id) + '/claim-check', { method: 'POST', body: JSON.stringify({ message }) })
+    return call('/items/' + encodeURIComponent(id) + '/claim-check', { method: 'POST', body: JSON.stringify({ message }), skipCacheClear: true })
   },
   compareAI(id, otherId) {
-    return call('/items/' + encodeURIComponent(id) + '/compare-ai', { method: 'POST', body: JSON.stringify({ otherId }), timeout: 60000 })
+    return call('/items/' + encodeURIComponent(id) + '/compare-ai', { method: 'POST', body: JSON.stringify({ otherId }), timeout: 60000, skipCacheClear: true })
   },
   report(id) {
     return call('/items/' + encodeURIComponent(id) + '/report', { method: 'POST' })
@@ -152,7 +153,7 @@ export const api = {
     return call('/items/' + encodeURIComponent(id), { method: 'PATCH', body: JSON.stringify(item) })
   },
   ask(question) {
-    return call('/ask', { method: 'POST', body: JSON.stringify({ question }) })
+    return call('/ask', { method: 'POST', body: JSON.stringify({ question }), skipCacheClear: true })
   },
   async askStream(question, onDelta) {
     const res = await fetch('/api/ask/stream', {
@@ -189,19 +190,19 @@ export const api = {
     return final || {}
   },
   vision(image) {
-    return call('/vision/analyze', { method: 'POST', body: JSON.stringify({ image, mime: 'image/jpeg' }) })
+    return call('/vision/analyze', { method: 'POST', body: JSON.stringify({ image, mime: 'image/jpeg' }), skipCacheClear: true })
   },
   format(title, desc, place) {
-    return call('/format', { method: 'POST', body: JSON.stringify({ title, desc, place }) })
+    return call('/format', { method: 'POST', body: JSON.stringify({ title, desc, place }), skipCacheClear: true })
   },
   notices() {
     return call('/notices')
   },
   readNotices() {
-    return call('/notices/read', { method: 'POST' })
+    return call('/notices/read', { method: 'POST', skipCacheClear: true })
   },
   readNotice(id) {
-    return call('/notices/' + encodeURIComponent(id) + '/read', { method: 'POST' })
+    return call('/notices/' + encodeURIComponent(id) + '/read', { method: 'POST', skipCacheClear: true })
   },
   noticeContact(id) {
     return call('/notices/' + encodeURIComponent(id) + '/contact', { method: 'POST' })
@@ -222,7 +223,7 @@ export const api = {
     return call('/reports/' + encodeURIComponent(id) + '/block', { method: 'POST' })
   },
   reportMessages(id) {
-    return call('/reports/' + encodeURIComponent(id) + '/messages/list', { method: 'POST' })
+    return call('/reports/' + encodeURIComponent(id) + '/messages/list', { method: 'POST', skipCacheClear: true })
   },
   reportSend(id, text) {
     return call('/reports/' + encodeURIComponent(id) + '/messages/send', { method: 'POST', body: JSON.stringify({ text }) })
@@ -325,4 +326,6 @@ export function oldUrl(screen = 'home', extra = '') {
     : '/用户端.html'
   return base + '?' + extra + '#' + screen
 }
+
+
 

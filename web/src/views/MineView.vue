@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { computed, onMounted, ref } from 'vue'
 import { api } from '../api'
 
@@ -28,25 +28,17 @@ onMounted(() => load())
 async function load(silent = false) {
   if (!silent) loading.value = true
   claimsLoading.value = true
-  try {
-    const list = await api.mine().catch(() => [])
+  const itemTask = api.mine().then((list) => {
     if (Array.isArray(list)) items.value = list
-  } finally {
-    if (!silent) loading.value = false
-  }
-  try {
-    const cs = await api.claims()
+  }).catch(() => {}).finally(() => { if (!silent) loading.value = false })
+  const claimTask = api.claims().then((cs) => {
     claims.value = cs.received || []
     sentClaims.value = cs.sent || []
-  } catch (_) {
-    claimsLoading.value = false
-  } finally {
-    claimsLoading.value = false
-  }
-  try {
-    const tags = await api.myTags()
+  }).catch(() => {}).finally(() => { claimsLoading.value = false })
+  const tagTask = api.myTags().then((tags) => {
     myTag.value = Array.isArray(tags) && tags.length ? tags[0] : null
-  } catch (_) {}
+  }).catch(() => {})
+  await Promise.allSettled([itemTask, claimTask, tagTask])
 }
 async function login() {
   authMsg.value = ''
