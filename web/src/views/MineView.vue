@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed, onMounted, ref } from 'vue'
 import { api } from '../api'
 
@@ -151,6 +151,13 @@ function claimVerdict(c) {
   if (n >= 60) return '建议核对'
   return '相似度较低'
 }
+function claimConfidence(c) {
+  const n = Number(c?.confidence) || 0
+  if (c?.verdict === 'mismatch') return Math.min(n, 20)
+  if (c?.verdict === 'unclear') return Math.min(n, 55)
+  if (/无关|不一致|不符|对不上|不属于/.test(String(c?.reason || ''))) return Math.min(n, 20)
+  return n
+}
 function status(x) {
   return ({ pending: '审核中', approved: '进行中', rejected: '未通过', closed: '已结束', claimed: '进行中', removed: '已下架' })[x.status] || x.status
 }
@@ -207,7 +214,7 @@ function fmt(ts) {
         <div v-for="c in lostClaims" :key="c.id" class="mini">
           <div class="mh">{{ c.itemTitle }}<span class="st">{{ claimStatus(c.status) }}</span></div>
           <div class="mmeta">{{ c.message }}</div>
-          <div v-if="c.aiCheck" class="claim-ai-line">信息对比度 {{ c.aiCheck.confidence }}% · {{ claimVerdict(c.aiCheck) }}</div>
+          <div v-if="c.aiCheck" class="claim-ai-line">信息对比度 {{ claimConfidence(c.aiCheck) }}% · {{ claimVerdict(c.aiCheck) }}</div>
           <div v-if="c.aiCheck?.reason" class="tip-small">依据：{{ c.aiCheck.reason }}</div>
           <div v-if="c.hint" class="claim-hint" :class="'hint-' + c.hint.type">{{ c.hint.text }}<template v-if="c.hint.type === 'strong'"> 对比度 {{ c.hint.score }}%，地点和描述有相近项。</template></div>
           <div v-if="c.status === 'accepted'" class="mact">
@@ -257,7 +264,7 @@ function fmt(ts) {
         <div v-for="c in sentClaims" :key="'s'+c.id" class="mini">
           <div class="mh">{{ c.itemTitle }}<span class="st">{{ claimStatus(c.status) }}</span></div>
           <div class="mmeta">{{ c.message }}</div>
-          <div v-if="c.aiCheck && c.itemType !== 'help'" class="claim-ai-line">信息对比度 {{ c.aiCheck.confidence }}% · {{ claimVerdict(c.aiCheck) }}</div>
+          <div v-if="c.aiCheck && c.itemType !== 'help'" class="claim-ai-line">信息对比度 {{ claimConfidence(c.aiCheck) }}% · {{ claimVerdict(c.aiCheck) }}</div>
           <div v-if="c.status === 'accepted' && c.itemType !== 'help'" class="mmeta">取件码：{{ c.returnCode || '向对方索取' }}</div>
         </div>
       </div>
@@ -352,3 +359,4 @@ function fmt(ts) {
 .claim-hint.hint-strong { background:#EEF8F1; border:1px solid #CFE8D7; color:#2F6B45; }
 .claim-hint.hint-weak { background:#F8F6FB; border:1px solid #E5DEEC; color:#8B7A9B; }
 </style>
+

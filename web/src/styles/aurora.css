@@ -848,3 +848,8 @@ body:has(.sheet.show) .bottom-nav{transform:translate(-50%,120%)!important;}
 }
 
 
+
+@media (min-width: 900px) {
+  .bottom-nav { position: static !important; left: auto !important; transform: none !important; width: 100% !important; max-width: 1180px !important; margin: 0 auto !important; border-radius: 0 !important; }
+  .scroll { padding-bottom: 24px !important; }
+}

@@ -348,6 +348,8 @@ function fmt(ts) {
       <div v-if="contact" class="nd-contact">联系方式：{{ contact }}</div>
       <div v-if="actionMsg" class="nd-msg">{{ actionMsg }}</div>
 
+      <div v-if="!selected.report && !selected.item && selected.itemId" class="nd-legacy">原物品已删除或数据不完整，无法生成匹配报告。</div>
+
       <div class="nd-actions">
         <template v-if="selected.type === 'pickup' && selected.report">
           <button type="button" class="btn" @click="revealContact">联系捡到的人</button>
@@ -367,7 +369,6 @@ function fmt(ts) {
           <button type="button" class="btn ghost" @click="ignoreNotice">忽略</button>
         </template>
         <template v-else>
-          <div v-if="!selected.item" class="nd-legacy">原物品已删除或数据不完整，无法生成匹配报告。</div>
           <button v-if="selected.item" type="button" class="btn ghost" @click="compareOpen = true">查看匹配报告</button>
           <button type="button" class="btn ghost" @click="ignoreNotice">忽略</button>
         </template>
@@ -537,3 +538,8 @@ function fmt(ts) {
 </style>
 
 
+
+<style scoped>
+.nd-legacy { display:block; flex:0 0 100%; width:100%; margin:10px 0 12px; font-size:12px; line-height:1.6; color:#A97A00; }
+.nd-actions { display:flex; flex:0 0 100%; width:100%; gap:8px; justify-content:flex-end; flex-wrap:wrap; }
+</style>

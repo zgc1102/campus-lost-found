@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { api } from '../api'
 import CountUp from '../components/CountUp.vue'
@@ -291,13 +291,6 @@ function onAiPhoto(e) {
 }
 async function submitClaim() {
   if (!selected.value) return
-  const msg = claimMsg.value.trim()
-  if (msg.length < 6) {
-    claimState.value = selected.value.type === 'lost'
-      ? '写一下你是在哪里、什么时候捡到的（至少 6 字）'
-      : '写一条公开描述里没有的细节（至少 6 字）'
-    return
-  }
   claiming.value = true
   claimState.value = ''
   try {
@@ -317,8 +310,9 @@ async function submitClaim() {
 
 async function runClaimCheck() {
   if (!selected.value) return
-  if (claimMsg.value.trim().length < 6) {
-    claimCheckError.value = '先写下至少 6 个字的物品特征，再做核验'
+  if (!claimMsg.value.trim()) {
+    claimCheck.value = null
+    claimCheckError.value = '没有填写线索，可直接提交，让发布者当面核对'
     return
   }
   claimChecking.value = true

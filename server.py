@@ -629,6 +629,16 @@ def detect_lost_found(text):
 
 def claim_ai_check(item, claim):
     """对多轮申请做一次总体一致性核验"""
+    msg = (claim.get("message") or "").strip()
+    if len(msg) < 4:
+        return {"verdict": "unclear", "confidence": 10,
+                "reason": "没有填写具体线索，需当面核对", "points": [], "at": now_ms()}
+    public_text = (item.get("title") or "") + " " + (item.get("desc") or "")
+    public_overlap = _cosine(_bigrams(public_text), _bigrams(msg)) if public_text and msg else 0.0
+    if public_overlap >= 0.55:
+        return {"verdict": "unclear", "confidence": 45,
+                "reason": "只复述公开描述，没有独立新线索",
+                "points": ["公开信息重合", "仍需当面核对"], "at": now_ms()}
     cfg = load_ai_config()
     if not (cfg.get("enabled") and cfg.get("api_key") and cfg.get("base_url")):
         return None
