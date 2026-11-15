@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { api } from '../api'
 import LoadProgress from '../components/LoadProgress.vue'
@@ -107,7 +107,7 @@ async function load() {
       slideIndex.value = 0
     }
   } catch (_) {
-    items.value = []
+    // 保留上一次缓存内容，避免网络抖动把首页清空
   } finally {
     loading.value = false
     restartTimer()

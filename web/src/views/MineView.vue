@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { computed, onMounted, ref } from 'vue'
 import { api } from '../api'
 import LoadProgress from '../components/LoadProgress.vue'
@@ -40,8 +40,7 @@ async function load(silent = false) {
     claims.value = cs.received || []
     sentClaims.value = cs.sent || []
   } catch (_) {
-    claims.value = []
-    sentClaims.value = []
+    claimsLoading.value = false
   } finally {
     claimsLoading.value = false
   }

@@ -25,7 +25,7 @@ function readLocal(path) {
     if (!raw) return null
     const hit = JSON.parse(raw)
     if (!hit || !hit.at || !hit.data) return null
-    if (Date.now() - hit.at > 60000) return null
+    if (Date.now() - hit.at > 24 * 3600 * 1000) return null
     return hit
   } catch (_) { return null }
 }
