@@ -17,14 +17,19 @@ const pct = ref(8)
 let timer = null
 
 function stop() {
-  if (timer) { clearInterval(timer); timer = null }
+  if (timer) { clearTimeout(timer); timer = null }
 }
 function start() {
   stop()
-  pct.value = Math.max(8, pct.value)
-  timer = setInterval(() => {
-    if (pct.value < 90) pct.value = Math.min(90, pct.value + Math.max(1, Math.round((90 - pct.value) / 8)))
-  }, 420)
+  pct.value = 8
+  const tick = () => {
+    if (pct.value < 90) {
+      const step = Math.max(1, Math.round(Math.random() * 6 + 1))
+      pct.value = Math.min(90, pct.value + step)
+    }
+    timer = setTimeout(tick, 280 + Math.round(Math.random() * 520))
+  }
+  timer = setTimeout(tick, 300 + Math.round(Math.random() * 250))
 }
 watch(() => props.loading, (v) => {
   if (v) start()

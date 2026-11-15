@@ -1,4 +1,4 @@
-const API_BASE = '/api'
+﻿const API_BASE = '/api'
 const USER_KEY = 'sg:user:v1'
 
 function owner() {
@@ -12,7 +12,34 @@ function owner() {
   return id
 }
 
+const GET_CACHE = new Map()
+const INFLIGHT = new Map()
+function cloneData(data) {
+  try { return structuredClone(data) } catch (_) { return JSON.parse(JSON.stringify(data)) }
+}
+function clearApiCache() {
+  GET_CACHE.clear()
+  INFLIGHT.clear()
+}
+async function cachedGet(path, ttl = 30000) {
+  const key = owner() + '|' + path
+  const hit = GET_CACHE.get(key)
+  if (hit && Date.now() - hit.at < ttl) return cloneData(hit.data)
+  if (INFLIGHT.has(key)) return cloneData(await INFLIGHT.get(key))
+  const task = call(path).then((data) => {
+    GET_CACHE.set(key, { at: Date.now(), data })
+    INFLIGHT.delete(key)
+    return data
+  }).catch((e) => {
+    INFLIGHT.delete(key)
+    throw e
+  })
+  INFLIGHT.set(key, task)
+  return cloneData(await task)
+}
+
 async function call(path, options = {}) {
+  if ((options.method || 'GET').toUpperCase() !== 'GET') clearApiCache()
   const headers = {
     'Content-Type': 'application/json',
     'X-Owner': owner(),
@@ -266,3 +293,4 @@ export function oldUrl(screen = 'home', extra = '') {
     : '/用户端.html'
   return base + '?' + extra + '#' + screen
 }
+
