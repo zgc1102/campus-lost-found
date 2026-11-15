@@ -646,17 +646,14 @@ def claim_ai_check(item, claim):
                   % (item.get("title") or "", item.get("desc") or "", said))
     else:
         prompt = ("你是校园失物招领的信息比对助手。发布者描述：\n标题：%s\n描述：%s\n"
-                  "独有特征（申请人看不到，用于防冒领）：%s\n"
                   "申请人先后说：\n%s\n"
                   "只陈述公开信息的重合情况，不做身份判定，不建议通过或拒绝。"
                   "公开描述里已有的内容即使完全复述，也不能算作独立证据；"
-                  "只有命中独有特征，才可以把 confidence 给到 80 以上。"
                   "如果申请人只复述公开描述，confidence 最高 45，verdict 只能是 unclear。"
-                  "如果独有特征为空，confidence 最高 55，verdict 只能是 unclear。"
                   '只输出 JSON：{"verdict":"match|unclear|mismatch","confidence":0-100,'
                   '"reason":"30字以内","points":["逐条比对1","逐条比对2"]}；'
                   "points 给 3 到 5 条逐条比对结果，每条 12 字以内，例如“颜色描述一致”“地点吻合”“时间对不上”。"
-                  % (item.get("title") or "", item.get("desc") or "", item.get("secret") or "", said))
+                  % (item.get("title") or "", item.get("desc") or "", said))
     try:
         data = _post_chat(cfg.get("base_url").rstrip("/") + "/chat/completions",
                           {"model": cfg.get("model") or "deepseek-chat", "temperature": 0,
@@ -3540,8 +3537,8 @@ class Handler(BaseHTTPRequestHandler):
             item_id = path[len("/api/items/"):-len("/claim-check")]
             body = self._read_body()
             message = str(body.get("message") or "").strip()[:200]
-            if len(message) < 6:
-                return self._json({"error": "请先写下至少 6 字的认领说明"}, 400)
+            if len(message) < 2:
+                return self._json({"error": "请先写下你的认领说明"}, 400)
             with LOCK:
                 items = load_items()
                 target = next((x for x in items if x.get("id") == item_id), None)
@@ -3583,8 +3580,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"error": "电话号码不正确：" + _chk["reason"]}, 400)
             if _chk.get("normalized"):
                 contact = _chk["normalized"]
-            if _target0.get("type") != "help" and len(message) < 6:
-                return self._json({"error": "请补充一条至少 6 字的核验细节"}, 400)
+            if _target0.get("type") == "help" and len(message) < 2:
+                return self._json({"error": "请说明一下你的申请理由"}, 400)
             with LOCK:
                 items = load_items()
                 target = next((x for x in items if x.get("id") == item_id), None)
@@ -4437,7 +4434,7 @@ class Handler(BaseHTTPRequestHandler):
                     if it.get("id") == item_id:
                         if not owner or it.get("ownerToken") != owner:
                             return self._json({"error": "forbidden"}, 403)
-                        for k in ("title", "desc", "place", "eventTime", "secret", "photo"):
+                        for k in ("title", "desc", "place", "eventTime", "photo"):
                             if k in patch:
                                 it[k] = patch[k]
                         if "cat" in patch:
@@ -4560,7 +4557,6 @@ class Handler(BaseHTTPRequestHandler):
             "desc": str(body.get("desc") or "").strip()[:300],
             "place": str(body.get("place") or "").strip()[:40],
             "eventTime": str(body.get("eventTime") or "")[:40],
-            "secret": str(body.get("secret") or "").strip()[:100],
             "photo": body.get("photo") if isinstance(body.get("photo"), str) else None,
             "fields": {k: str((body.get("fields") or {}).get(k) or "")[:30]
                        for k in ("color", "brand", "condition", "feature", "contents")}
@@ -4834,6 +4830,7 @@ if __name__ == "__main__":
     except Exception:
         pass
     main()
+
 
 
 

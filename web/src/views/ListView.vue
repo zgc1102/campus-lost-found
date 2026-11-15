@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { api } from '../api'
 import CountUp from '../components/CountUp.vue'
@@ -595,7 +595,7 @@ function openOldHelp() {
       <template v-if="selected.status === 'approved'">
         <button v-if="!claimOpen" type="button" class="btn" style="width:100%;margin-top:14px" :disabled="!canClaim(selected)" @click="canClaim(selected) && (claimOpen = true)">{{ actionLabel(selected) }}</button>
         <div v-if="claimOpen" class="claimbox">
-        <div class="tip-small" style="margin:0 0 8px">写一条公开描述里没有的细节（至少 6 字），对方核对后才会通过。</div>
+        <div class="tip-small" style="margin:0 0 8px">补充一句你知道的信息（选填），不填也可以提交。</div>
         <textarea v-model="claimMsg" maxlength="200" :placeholder="selected.type === 'lost' ? '例如：我昨天在图书馆一层捡到，伞柄有白色划痕。' : '例如：我昨天在图书馆一层丢了，伞柄有白色划痕。'" style="width:100%;box-sizing:border-box;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:11px;padding:10px;font-family:inherit;font-size:11px;min-height:70px"></textarea>
         <input v-model="claimPhone" maxlength="30" :placeholder="selected.type === 'lost' ? '你的联系方式（方便失主联系你）' : '你的联系方式（手机号 / 微信号）'" style="width:100%;box-sizing:border-box;margin-top:7px;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:11px;padding:10px;font-family:inherit;font-size:11px">
         <div v-if="claimState" class="sa" style="margin-top:6px">{{ claimState }}</div>
@@ -954,3 +954,4 @@ function openOldHelp() {
 <style scoped>
 .type-suggest { margin-top:6px; padding:7px 8px; border-radius:7px; background:#FFF8E8; border:1px solid #F0D6A8; color:#8A5A16; font-size:10px; line-height:1.6; }
 </style>
+

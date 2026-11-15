@@ -143,7 +143,7 @@ function claimStatus(s) {
 }
 function claimVerdict(c) {
   if (!c) return '暂无参考'
-  if (c.verdict === 'mismatch') return '明显不一致'
+  if (c.verdict === 'mismatch') return '差异较大'
   if (c.verdict === 'unclear') return '建议核对'
   const n = Number(c.confidence)
   if (!Number.isFinite(n) || n <= 0) return '暂无参考'
