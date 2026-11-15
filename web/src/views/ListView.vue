@@ -317,8 +317,8 @@ async function submitClaim() {
 
 async function runClaimCheck() {
   if (!selected.value) return
-  if (claimMsg.value.trim().length < 2) {
-    claimCheckError.value = '先写下你记得的物品特征，再做核验'
+  if (claimMsg.value.trim().length < 6) {
+    claimCheckError.value = '先写下至少 6 个字的物品特征，再做核验'
     return
   }
   claimChecking.value = true
