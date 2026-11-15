@@ -197,7 +197,7 @@ function useOwnTarget() {
     showReasons: ownShowReasons.value
   }
   ownOpen.value = false
-  openDetail(target)
+  openDetail(target, true)
 }
 function closeDetail() {
   if (sessionStorage.getItem('sg:radarReturn')) {

@@ -80,6 +80,7 @@ async function runDetective() {
     })
     detective.value = data
     detectiveSteps.value = data.steps || []
+    setTimeout(() => document.querySelector('.dt-summary')?.scrollIntoView({ block: 'center', behavior: 'smooth' }), 120)
   } catch (e) {
     error.value = e.message || '推理失败'
   } finally {

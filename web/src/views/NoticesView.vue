@@ -230,7 +230,7 @@ async function copyCompare() {
   const main = s.type === 'match' ? matchSource.value : s.item
   const other = s.type === 'match' ? matchTarget.value : null
   const lines = s.type === 'match'
-    ? ['匹配报告', '系统匹配：' + (main?.title || '—'), '系统匹配分：' + matchSystemScore.value + '%', '另一条匹配：' + (other?.title || '—'), '当前重算分：' + (matchLocalScore.value === null ? '—' : matchLocalScore.value + '%'), '口径：系统分为发布时评分，当前重算分为两条文本重算，仅供推荐，不代表归属。']
+    ? ['匹配报告', '系统匹配：' + (main?.title || '—'), '系统匹配分：' + matchSystemScore.value + '%', '对方发布：' + (other?.title || '—'), '当前重算分：' + (matchLocalScore.value === null ? '—' : matchLocalScore.value + '%'), '口径：系统分为发布时评分，当前重算分为两条文本重算，仅供推荐，不代表归属。']
     : ['匹配对比报告', '发布物品：' + (main?.title || '—'), '信息对比度：' + (s.claimAi?.confidence ?? '—') + '%', '当前文本相似度：' + currentSimilarity() + '%', '说明：仅供参考，最终请自行认真核对。']
   try {
     await navigator.clipboard.writeText(lines.join('\n'))
@@ -364,6 +364,7 @@ function fmt(ts) {
           <button type="button" class="btn ghost" @click="ignoreNotice">忽略</button>
         </template>
         <template v-else>
+          <div v-if="!selected.item" class="nd-legacy">原物品已删除或数据不完整，无法生成匹配报告。</div>
           <button v-if="selected.item" type="button" class="btn ghost" @click="compareOpen = true">查看匹配报告</button>
           <button type="button" class="btn ghost" @click="ignoreNotice">忽略</button>
         </template>
@@ -385,7 +386,7 @@ function fmt(ts) {
           </div>
           <div class="compare-col">
             <template v-if="selected.type === 'match'">
-              <div class="cc-tag other">另一条匹配</div>
+              <div class="cc-tag other">对方发布</div>
               <div class="cc-title">{{ matchTarget ? matchTarget.title : '没有找到对应条目' }}</div>
               <div class="cc-meta">{{ matchTarget ? (matchTarget.place || '未填写地点') + ' · ' + fmt(matchTarget.createdAt) : '这是一条旧的系统提醒' }}</div>
               <p>{{ matchTarget ? matchTarget.desc : '这条旧通知没有保存完整的匹配对，无法还原另一条物品。' }}</p>
@@ -401,8 +402,8 @@ function fmt(ts) {
         </div>
         <div class="compare-scores">
           <template v-if="selected.type === 'match'">
-            <div><b><CountUp :value="matchSystemScore" suffix="%" /></b><span>系统匹配分（发布时）</span></div>
-            <div><b><CountUp v-if="matchLocalScore !== null" :value="matchLocalScore" suffix="%" /><template v-else>—</template></b><span>当前重算分</span></div>
+            <div><b><CountUp :value="matchSystemScore" suffix="%" /></b><span>发布时系统分</span></div>
+            <div><b><CountUp v-if="matchLocalScore !== null" :value="matchLocalScore" suffix="%" /><template v-else>—</template></b><span>按当前描述重算</span></div>
           </template>
           <template v-else>
             <div><b>{{ selected.claimAi ? selected.claimAi.confidence + '%' : '—' }}</b><span>信息对比度</span></div>
@@ -531,4 +532,5 @@ function fmt(ts) {
 .cc-score { margin-top:6px; display:inline-block; font-size:9px; color:#5B2A91; background:#F1E8FB; border-radius:5px; padding:2px 6px; }
 .cc-score.other-score { color:#2F5FA8; background:#EEF4FF; }
 </style>
+
 

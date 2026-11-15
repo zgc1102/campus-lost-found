@@ -1845,7 +1845,7 @@ def agent_detective(item, items):
         "timeline": timeline,
         "actions": actions[:6],
         "steps": [
-            {"tool": "read_item", "finding": "读取丢失地点：%s" % (item.get("place") or "未填写")},
+            {"tool": "read_item", "finding": item.get("place") or "未填写地点"},
             {"tool": "match", "finding": "比对 %d 条反向信息，命中 %d 条" % (len(items), len(matches))},
             {"tool": "hotspot", "finding": "计算校园高频区域"},
             {"tool": "plan", "finding": "生成 %d 条行动建议" % len(actions[:6])},

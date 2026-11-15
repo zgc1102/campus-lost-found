@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { computed, onMounted, ref } from 'vue'
 import { api } from '../api'
 
@@ -205,6 +205,7 @@ function fmt(ts) {
           <div class="mh">{{ c.itemTitle }}<span class="st">{{ claimStatus(c.status) }}</span></div>
           <div class="mmeta">{{ c.message }}</div>
           <div v-if="c.aiCheck" class="claim-ai-line">信息对比度 {{ c.aiCheck.confidence }}% · {{ claimVerdict(c.aiCheck) }}</div>
+          <div v-if="c.aiCheck?.reason" class="tip-small">依据：{{ c.aiCheck.reason }}</div>
           <div v-if="c.status === 'accepted'" class="mact">
             <button type="button" class="btn" @click="completeClaim(c)">归还</button>
           </div>
@@ -212,6 +213,11 @@ function fmt(ts) {
             <button type="button" class="btn" @click="actClaim(c, 'accepted')">通过</button>
             <button type="button" class="btn ghost" @click="actClaim(c, 'need_more')">补充</button>
             <button type="button" class="btn ghost" @click="actClaim(c, 'rejected')">拒绝</button>
+          </div>
+          <div v-else-if="c.status === 'need_more'" class="mact">
+            <button type="button" class="btn" @click="actClaim(c, 'accepted')">通过</button>
+            <button type="button" class="btn ghost" @click="actClaim(c, 'rejected')">拒绝</button>
+            <button type="button" class="btn ghost" @click="actClaim(c, 'need_more')">再次提醒补充</button>
           </div>
           <div v-if="codeFor && codeFor.id === c.id" class="code-box">
             <input v-model="codeInput" inputmode="numeric" maxlength="6" placeholder="输入对方提供的 4~6 位取件码">
@@ -233,6 +239,10 @@ function fmt(ts) {
           <div v-else-if="c.status === 'pending'" class="mact">
             <button type="button" class="btn" @click="actClaim(c, 'accepted')">接受帮忙</button>
             <button type="button" class="btn ghost" @click="actClaim(c, 'need_more')">请补充</button>
+            <button type="button" class="btn ghost" @click="actClaim(c, 'rejected')">婉拒</button>
+          </div>
+          <div v-else-if="c.status === 'need_more'" class="mact">
+            <button type="button" class="btn" @click="actClaim(c, 'accepted')">接受帮忙</button>
             <button type="button" class="btn ghost" @click="actClaim(c, 'rejected')">婉拒</button>
           </div>
         </div>
