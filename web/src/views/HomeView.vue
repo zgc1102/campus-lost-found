@@ -91,7 +91,7 @@ function goSlide(i) {
 async function load() {
   loading.value = true
   try {
-    const [list, allAnns, noticeRes] = await Promise.all([api.items(), api.announcements(), api.notices().catch(() => ({ unread: 0 }))])
+    const [list, allAnns, noticeRes] = await Promise.all([api.items(true), api.announcements(), api.notices().catch(() => ({ unread: 0 }))])
     const anns = (Array.isArray(allAnns) ? allAnns : []).filter((a) => !/测试|刷新测试|验收测试/.test(String(a.title || '') + String(a.body || '')))
     if (Array.isArray(list)) items.value = list
     unread.value = Number(noticeRes?.unread || 0)

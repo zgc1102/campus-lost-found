@@ -2598,9 +2598,34 @@ class Handler(BaseHTTPRequestHandler):
                 if side == "received":
                     out["itemDesc"] = it.get("desc") or ""
                     out["itemPlace"] = it.get("place") or ""
-                    out["itemSecret"] = it.get("secret") or ""
                     out["itemCat"] = it.get("cat") or ""
                     out["itemPhoto"] = it.get("photo") or ""
+                    # 只提示事实，不自动通过/拒绝
+                    if it.get("type") == "found":
+                        own_lost = [x for x in items.values()
+                                    if x.get("ownerToken") == c.get("from")
+                                    and x.get("type") == "lost"
+                                    and x.get("status") in ("approved", "claimed", "closed")
+                                    and x.get("id") != it.get("id")]
+                        best = max(own_lost, key=lambda x: match_score(x, it), default=None)
+                        best_score = match_score(best, it) if best else 0
+                        if best and best_score >= 0.85:
+                            out["hint"] = {
+                                "type": "strong",
+                                "title": best.get("title") or "一条寻物",
+                                "place": best.get("place") or "",
+                                "desc": best.get("desc") or "",
+                                "score": int(round(best_score * 100)),
+                                "text": "对方也发布过一条寻物，地点和描述与你这件物品高度相近。"
+                            }
+                    if "hint" not in out and c.get("message"):
+                        copy = _cosine(_bigrams(it.get("desc") or ""), _bigrams(c.get("message") or ""))
+                        if copy >= 0.60:
+                            out["hint"] = {
+                                "type": "weak",
+                                "score": int(round(copy * 100)),
+                                "text": "这条留言和你写的信息几乎一样，可能只是照着写了一遍，建议再确认一下。"
+                            }
                     # 联系方式：没通过之前只给打码版本
                     if c.get("contact"):
                         out["claimContact"] = (
@@ -2679,6 +2704,17 @@ class Handler(BaseHTTPRequestHandler):
                     row["matchScore"] = n.get("matchScore")
                 mine.append(row)
             mine.sort(key=lambda x: x.get("at") or 0, reverse=True)
+            # 同一物品的相似提醒只保留最新一条，避免 62/45/61 同时出现
+            deduped = []
+            seen_match = set()
+            for row in mine:
+                if row.get("type") == "match" and row.get("itemId"):
+                    key = (row.get("itemId"), row.get("matchTargetId") or "")
+                    if key in seen_match:
+                        continue
+                    seen_match.add(key)
+                deduped.append(row)
+            mine = deduped
             unread = sum(1 for n in mine if not n.get("read"))
             return self._json({"items": mine[:50], "unread": unread})
 

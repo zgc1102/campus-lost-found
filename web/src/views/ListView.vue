@@ -494,7 +494,7 @@ function openOldHelp() {
       <div v-if="aiPhotoState" class="ai-photo-state">{{ aiPhotoState }}</div>
 
       <div class="list-meta">
-        <b>{{ visible.length }}</b> 条{{ type === 'lost' ? '招领' : '寻物' }} · {{ copy.hint }}
+        <b>{{ loading ? '—' : visible.length }}</b> 条{{ type === 'lost' ? '招领' : '寻物' }} · {{ copy.hint }}
         <button type="button" class="closed-toggle" @click="showClosed = !showClosed">{{ showClosed ? '隐藏已结束' : '显示已结束' }}</button>
       </div>
 
@@ -548,7 +548,7 @@ function openOldHelp() {
       <button type="button" class="sheet-x" aria-label="关闭" @click="closeDetail">✕</button>
       <div class="detail-modal-grid">
       <div class="dm-left">
-      <div class="big-thumb" @click="selected.photoUrl && (photoOpen = true)">
+      <div class="big-thumb" :class="{ 'no-photo': !selected.photoUrl }" @click="selected.photoUrl && (photoOpen = true)">
         <img v-if="selected.photoUrl" :src="selected.photoUrl" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:16px">
         <span v-else>{{ thumbText(selected) }}</span>
       </div>
@@ -935,3 +935,8 @@ function openOldHelp() {
 </style>
 
 
+
+<style scoped>
+.big-thumb.no-photo { min-height:120px !important; height:120px !important; font-size:34px; }
+@media (max-width:640px) { .big-thumb.no-photo { min-height:110px !important; height:110px !important; } }
+</style>

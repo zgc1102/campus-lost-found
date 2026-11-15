@@ -138,3 +138,8 @@ body { overflow-y: scroll !important; }
   justify-content: center;
   padding: 0 !important;
 }
+
+@media (min-width: 900px) {
+  .bottom-nav { position: static !important; margin: 0 auto !important; max-width: 1180px; box-shadow: none !important; }
+  .scroll { padding-bottom: 24px !important; }
+}

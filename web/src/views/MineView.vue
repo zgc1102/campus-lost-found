@@ -206,6 +206,7 @@ function fmt(ts) {
           <div class="mmeta">{{ c.message }}</div>
           <div v-if="c.aiCheck" class="claim-ai-line">信息对比度 {{ c.aiCheck.confidence }}% · {{ claimVerdict(c.aiCheck) }}</div>
           <div v-if="c.aiCheck?.reason" class="tip-small">依据：{{ c.aiCheck.reason }}</div>
+          <div v-if="c.hint" class="claim-hint" :class="'hint-' + c.hint.type">{{ c.hint.text }}<template v-if="c.hint.type === 'strong'"> 对比度 {{ c.hint.score }}%，地点和描述有相近项。</template></div>
           <div v-if="c.status === 'accepted'" class="mact">
             <button type="button" class="btn" @click="completeClaim(c)">归还</button>
           </div>
@@ -342,3 +343,9 @@ function fmt(ts) {
 .success-line { margin:10px 0; padding:8px 10px; background:#EAF7EE; border:1px solid #CFE8D6; color:#2F7D46; border-radius:8px; font-size:11px; }
 </style>
 
+
+<style scoped>
+.claim-hint { margin-top:5px; padding:6px 8px; border-radius:7px; font-size:9px; line-height:1.6; }
+.claim-hint.hint-strong { background:#EEF8F1; border:1px solid #CFE8D7; color:#2F6B45; }
+.claim-hint.hint-weak { background:#F8F6FB; border:1px solid #E5DEEC; color:#8B7A9B; }
+</style>
