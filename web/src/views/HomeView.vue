@@ -1,6 +1,7 @@
-<script setup>
+﻿<script setup>
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { api } from '../api'
+import LoadProgress from '../components/LoadProgress.vue'
 
 const emit = defineEmits(['nav'])
 
@@ -91,10 +92,10 @@ function goSlide(i) {
 async function load() {
   loading.value = true
   try {
-    const [list, allAnns, noticeRes] = await Promise.all([api.items(true), api.announcements(), api.notices().catch(() => ({ unread: 0 }))])
-    const anns = (Array.isArray(allAnns) ? allAnns : []).filter((a) => !/测试|刷新测试|验收测试/.test(String(a.title || '') + String(a.body || '')))
+    const list = await api.items(true)
     if (Array.isArray(list)) items.value = list
-    unread.value = Number(noticeRes?.unread || 0)
+    const allAnns = await api.announcements().catch(() => [])
+    const anns = (Array.isArray(allAnns) ? allAnns : []).filter((a) => !/测试|刷新测试|验收测试/.test(String(a.title || '') + String(a.body || '')))
     if (Array.isArray(anns) && anns.length) {
       const annSlides = anns.slice(0, 2).map((a) => ({
         star: a.pinned ? '📌' : '📢',
@@ -111,6 +112,7 @@ async function load() {
     loading.value = false
     restartTimer()
   }
+  api.notices().then((noticeRes) => { unread.value = Number(noticeRes?.unread || 0) }).catch(() => {})
 }
 
 onMounted(load)
@@ -231,7 +233,7 @@ function openMemo(s) {
         <span @click="$emit('nav', 'ask')">借雨伞</span>
       </div>
 
-      <div class="home-stats">
+      <LoadProgress v-if="loading" :loading="loading" text="正在读取校园数据…" />\n<div class="home-stats">
         <div><b>{{ loading ? '—' : shown.total }}</b><span>已发布</span></div>
         <div><b>{{ loading ? '—' : shown.closed }}</b><span>已找回</span></div>
         <div><b>{{ loading ? '—' : shown.today }}</b><span>今日新增</span></div>
@@ -272,3 +274,6 @@ function openMemo(s) {
 .bell { position:relative; }
 .bell-dot { position:absolute; top:-4px; right:-7px; min-width:13px; height:13px; padding:0 3px; border-radius:99px; background:#E05A5A; color:#fff; font-size:7px; line-height:13px; text-align:center; }
 </style>
+
+
+

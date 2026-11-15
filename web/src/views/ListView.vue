@@ -1,7 +1,8 @@
-<script setup>
+﻿<script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { api } from '../api'
 import CountUp from '../components/CountUp.vue'
+import LoadProgress from '../components/LoadProgress.vue'
 
 const props = defineProps({
   type: { type: String, default: 'lost' }
@@ -519,7 +520,7 @@ function openOldHelp() {
         </button>
       </div>
 
-      <div v-if="loading" class="empty">正在读取校园数据…</div>
+      <LoadProgress v-if="loading" :loading="loading" text="正在读取校园数据…" />
       <div v-else-if="!visible.length" class="empty">暂时没有{{ type === 'lost' ? '招领' : '寻物' }}，换个关键词试试</div>
       <div v-else class="vue-list">
         <article v-for="it in visible" :key="it.id" class="item" @click="openDetail(it)">
@@ -948,4 +949,7 @@ function openOldHelp() {
 <style scoped>
 .type-suggest { margin-top:6px; padding:7px 8px; border-radius:7px; background:#FFF8E8; border:1px solid #F0D6A8; color:#8A5A16; font-size:10px; line-height:1.6; }
 </style>
+
+
+
 

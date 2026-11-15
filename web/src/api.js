@@ -18,7 +18,18 @@ async function call(path, options = {}) {
     'X-Owner': owner(),
     ...(options.headers || {})
   }
-  const res = await fetch(API_BASE + path, { ...options, headers })
+  const timeout = options.timeout || 20000
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeout)
+  let res
+  try {
+    res = await fetch(API_BASE + path, { ...options, headers, signal: controller.signal })
+  } catch (e) {
+    if (e && e.name === 'AbortError') throw new Error('读取超时，请检查网络后重试')
+    throw e
+  } finally {
+    clearTimeout(timer)
+  }
   if (!res.ok) {
     let message = 'HTTP ' + res.status
     let body = null
@@ -52,7 +63,7 @@ export const api = {
     return call('/items/' + encodeURIComponent(id) + '/claim-check', { method: 'POST', body: JSON.stringify({ message }) })
   },
   compareAI(id, otherId) {
-    return call('/items/' + encodeURIComponent(id) + '/compare-ai', { method: 'POST', body: JSON.stringify({ otherId }) })
+    return call('/items/' + encodeURIComponent(id) + '/compare-ai', { method: 'POST', body: JSON.stringify({ otherId }), timeout: 60000 })
   },
   report(id) {
     return call('/items/' + encodeURIComponent(id) + '/report', { method: 'POST' })

@@ -1,6 +1,7 @@
-<script setup>
+﻿<script setup>
 import { computed, onMounted, ref } from 'vue'
 import { api } from '../api'
+import LoadProgress from '../components/LoadProgress.vue'
 
 const emit = defineEmits(['nav', 'publish'])
 const props = defineProps({
@@ -129,7 +130,7 @@ async function submitHelp() {
         </button>
       </div>
 
-      <div v-if="loading" class="empty">正在读取求助…</div>
+      <LoadProgress v-if="loading" :loading="loading" text="正在读取爱心求助…" />
       <div v-else-if="!visible.length" class="empty">这个方向暂时没有求助</div>
       <div v-else class="vue-list">
         <article v-for="it in visible" :key="it.id" class="item" @click="openDetail(it)">
@@ -235,4 +236,7 @@ async function submitHelp() {
 .modal-backdrop { position:fixed; inset:0; z-index:150; background:rgba(10,5,20,.62); }
 .sheet.help-detail-modal { z-index:160; box-shadow:0 26px 70px rgba(12,6,22,.38) !important; clip-path:none !important; }
 </style>
+
+
+
 
