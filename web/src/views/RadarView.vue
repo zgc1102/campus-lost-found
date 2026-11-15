@@ -21,6 +21,16 @@ const detectiveSteps = ref([])
 const selectedMatch = ref(null)
 const fromPublished = ref(false)
 const visibleActions = computed(() => (detective.value?.actions || []).filter((a) => a && String(a.title || '').trim()))
+const detectiveLoading = ref(false)
+const detectiveStage = ref(0)
+const detectiveElapsed = ref(0)
+let detectiveTimer = null
+const detectiveStageText = computed(() => ([
+  '正在整理你给出的线索…',
+  '正在匹配站内相似招领…',
+  '正在统计高频区域…',
+  '正在生成下一步行动建议…'
+][detectiveStage.value] || '正在推理…'))
 function radarSnapshot() {
   return {
     title: title.value, place: place.value, cat: cat.value,
@@ -69,6 +79,16 @@ async function scan() {
 async function runDetective() {
   error.value = ''
   loading.value = true
+  detectiveLoading.value = true
+  detectiveStage.value = 0
+  detectiveElapsed.value = 0
+  clearInterval(detectiveTimer)
+  detectiveTimer = setInterval(() => {
+    detectiveElapsed.value += 1
+    if (detectiveElapsed.value >= 4) detectiveStage.value = 1
+    if (detectiveElapsed.value >= 10) detectiveStage.value = 2
+    if (detectiveElapsed.value >= 18) detectiveStage.value = 3
+  }, 1000)
   try {
     const data = await api.detective({
       title: title.value.trim(),
@@ -85,12 +105,16 @@ async function runDetective() {
   } catch (e) {
     error.value = e.message || '推理失败'
   } finally {
+    clearInterval(detectiveTimer)
+    detectiveLoading.value = false
     loading.value = false
   }
 }
 
-function askCampus() {
-  emit('nav', 'ask')
+function scrollToScan() {
+  document.querySelector('.rd-match')?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+}
+function askCampus() {  emit('nav', 'ask')
 }
 function toolLabel(t) {
   return ({ scan_items: '扫描公开信息', match: '匹配线索', hotspot: '统计高频区域', read_item: '读取丢失地点', plan: '生成行动建议' })[t] || '智能处理'
@@ -220,7 +244,12 @@ function organizePublish() {
         </div>
         <label>最后一次见到它 <i>时间 / 地点</i></label>
         <input v-model="lastSeen" maxlength="60" placeholder="例如：今天 15:00 在图书馆三楼还用过">
-        <button type="button" class="rf-run" :disabled="loading" @click="runDetective">{{ loading ? '推理中…' : '开始推理' }}</button>
+        <button type="button" class="rf-run" :disabled="detectiveLoading" @click="runDetective">{{ detectiveLoading ? '推理中…' : '开始推理' }}</button>
+        <div v-if="detectiveLoading" class="dt-wait">
+          <div class="dt-wait-top"><b>{{ detectiveStageText }}</b><span>已用 {{ detectiveElapsed }} 秒</span></div>
+          <div class="dt-wait-bar"><i :style="{ width: Math.min(92, 10 + detectiveElapsed * 3) + '%' }"></i></div>
+          <div class="dt-wait-bottom">通常需要 15–30 秒，不要刷新页面<button type="button" @click="scrollToScan">先看扫描结果</button></div>
+        </div>
       </div>
 
       <template v-if="detective">
@@ -387,4 +416,14 @@ function organizePublish() {
 .rd-hot-n { min-width:92px; text-align:right; display:flex; flex-direction:column; gap:1px; font-size:9px; line-height:1.35; }
 .rd-hot-n b { color:#5B2A91; font-weight:600; }
 .rd-hot-n i { color:#8E7FA3; font-style:normal; }
+</style>
+
+<style scoped>
+.dt-wait { margin-top:8px; padding:9px 10px; border:1px solid #E7D9F4; border-radius:9px; background:#FBF8FF; }
+.dt-wait-top { display:flex; justify-content:space-between; gap:8px; font-size:10px; color:#5B2A91; }
+.dt-wait-top span { color:#9A8BAD; white-space:nowrap; }
+.dt-wait-bar { height:4px; background:#EEE7F7; border-radius:99px; margin:7px 0 6px; overflow:hidden; }
+.dt-wait-bar i { display:block; height:100%; background:#8A52C7; border-radius:99px; transition:width .4s; }
+.dt-wait-bottom { display:flex; justify-content:space-between; align-items:center; gap:6px; font-size:8.5px; color:#9A8BAD; }
+.dt-wait-bottom button { border:0; background:transparent; color:#5B2A91; font-family:inherit; font-size:9px; padding:2px 0; }
 </style>

@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { api } from '../api'
 import CountUp from '../components/CountUp.vue'
@@ -11,6 +11,7 @@ const emit = defineEmits(['nav', 'publish'])
 
 const items = ref([])
 const loading = ref(true)
+const loadError = ref('')
 const query = ref('')
 const selected = ref(null)
 const claimMsg = ref('')
@@ -370,6 +371,7 @@ watch(showClosed, () => load())
 
 async function load() {
   loading.value = true
+  loadError.value = ''
   try {
     const list = await api.items(showClosed.value)
     if (Array.isArray(list)) items.value = list
@@ -379,8 +381,8 @@ async function load() {
       const hit = items.value.find((x) => x.id === focus)
       if (hit) openDetail(hit)
     }
-  } catch (_) {
-    items.value = []
+  } catch (e) {
+    loadError.value = e.message || '加载失败，请稍后重试'
   } finally {
     loading.value = false
   }
@@ -521,6 +523,11 @@ function openOldHelp() {
       </div>
 
       <LoadProgress v-if="loading" :loading="loading" text="正在读取校园数据…" />
+      <div v-else-if="loadError" class="load-error">
+        <b>校园数据没有加载成功</b>
+        <span>{{ loadError }}</span>
+        <button type="button" @click="load">重试</button>
+      </div>
       <div v-else-if="!visible.length" class="empty">暂时没有{{ type === 'lost' ? '招领' : '寻物' }}，换个关键词试试</div>
       <div v-else class="vue-list">
         <article v-for="it in visible" :key="it.id" class="item" @click="openDetail(it)">
@@ -953,3 +960,10 @@ function openOldHelp() {
 
 
 
+
+<style scoped>
+.load-error { margin:14px 0; padding:14px; border:1px solid #F0CFC8; border-radius:10px; background:#FFF7F5; display:flex; flex-direction:column; gap:5px; align-items:flex-start; }
+.load-error b { color:#A33B2E; font-size:12px; }
+.load-error span { color:#9A6B62; font-size:10px; line-height:1.6; }
+.load-error button { margin-top:4px; border:0; border-radius:7px; background:#5B2A91; color:#fff; padding:7px 12px; font-family:inherit; font-size:10px; }
+</style>
