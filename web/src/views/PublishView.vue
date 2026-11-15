@@ -28,6 +28,8 @@ const form = reactive({
 })
 const submitting = ref(false)
 const result = ref(null)
+const typeConfirm = ref(null)
+const prechecking = ref(false)
 const error = ref('')
 const photo = ref('')
 const photoOpen = ref(false)
@@ -242,6 +244,45 @@ async function submit() {
       photo: photo.value || null,
       phoneConfirmed: phoneConfirmed.value
     }
+    if (!isHelp.value) {
+      prechecking.value = true
+      try {
+        const pre = await api.precheck(item)
+        if (pre && pre.suggestion && pre.suggestion !== item.type) {
+          typeConfirm.value = {
+            item,
+            from: item.type,
+            to: pre.suggestion,
+            checkId: pre.checkId,
+            reason: pre.ai?.reason || '标题和描述更像另一种类型'
+          }
+          submitting.value = false
+          prechecking.value = false
+          return
+        }
+        if (pre && pre.checkId) item.checkId = pre.checkId
+      } catch (_) {
+        // AI 预检失败不阻塞发布，后面正式审核仍会兜底
+      } finally {
+        prechecking.value = false
+      }
+    }
+    await doCreate(item)
+  } catch (e) {
+    if (e.body && e.body.needConfirm) {
+      needPhoneConfirm.value = true
+      error.value = '这个号码需要确认，请核对后勾选'
+    } else {
+      error.value = e.message || '提交失败，请稍后再试'
+    }
+    submitting.value = false
+  }
+}
+
+async function doCreate(item) {
+  submitting.value = true
+  error.value = ''
+  try {
     const saved = props.editItem
       ? await api.update(props.editItem.id, item)
       : await api.create(item)
@@ -259,6 +300,21 @@ async function submit() {
   } finally {
     submitting.value = false
   }
+}
+
+async function confirmTypeChange(change) {
+  const c = typeConfirm.value
+  if (!c) return
+  typeConfirm.value = null
+  const item = { ...c.item }
+  if (change) {
+    kind.value = c.to
+    item.type = c.to
+    item.checkId = c.checkId
+  } else {
+    item.checkId = c.checkId
+  }
+  await doCreate(item)
 }
 function askDetective() {
   if (!result.value) return
@@ -301,6 +357,18 @@ function askDetective() {
 
       <div v-if="isHelp" class="help-picker">
         <button v-for="c in helpCats" :key="c.id" type="button" :class="{ on: helpCatLocal === c.id }" @click="helpCatLocal = c.id">{{ c.name }}</button>
+      </div>
+
+      <div v-if="typeConfirm" class="type-confirm">
+        <div class="tc-kicker">发布前确认</div>
+        <h3>你发的这条，更像「{{ typeConfirm.to === 'found' ? '失物招领' : '寻物启事' }}」</h3>
+        <p>你选的是「{{ typeConfirm.from === 'found' ? '失物招领' : '寻物启事' }}」。AI 判断依据：{{ typeConfirm.reason }}</p>
+        <div class="tc-actions">
+          <button type="button" class="btn" @click="confirmTypeChange(true)">改为{{ typeConfirm.to === 'found' ? '失物招领' : '寻物启事' }}发布</button>
+          <button type="button" class="btn ghost" @click="confirmTypeChange(false)">仍然按原类型发布</button>
+          <button type="button" class="btn ghost" @click="typeConfirm = null">返回修改</button>
+        </div>
+        <div class="tc-note">最终由你决定；选“仍然按原类型发布”不会被阻止。</div>
       </div>
 
       <div v-if="result" class="okpanel" style="margin-top:14px">
@@ -414,10 +482,10 @@ function askDetective() {
           我确认这个号码正确，可以联系到我
         </label>
 
-        <button type="button" class="submit-btn" :disabled="submitting" @click="submit">
-          {{ submitting ? '提交中…' : '提交发布 · 智能先审核' }}
+        <button type="button" class="submit-btn" :disabled="submitting || prechecking" @click="submit">
+          {{ prechecking ? 'AI 正在核对类型…' : (submitting ? '正在提交…' : '提交发布 · 先核对类型再审核') }}
         </button>
-        <div class="pub-note">提交后先审文字和图片，通过后同学才能看到；智能匹配仅供参考，实际以现场和校方失物招领点为准</div>
+        <div class="pub-note">提交前先核对类型；提交后 AI 审核文字和图片，通过后上架。智能匹配仅供参考，实际以现场和校方失物招领点为准</div>
         <button type="button" class="btn ghost" style="width:100%;margin:10px 0 20px;padding:11px" @click="fillDemo">一键填入示例，快速体验</button>
       </template>
     </div>
@@ -532,3 +600,13 @@ function askDetective() {
 
 
 
+
+<style scoped>
+.type-confirm { margin:14px 0; padding:14px 15px; border:1px solid #E7C98F; border-radius:12px; background:#FFF9EC; box-shadow:0 8px 24px rgba(92,64,20,.08); }
+.tc-kicker { font-size:9px; letter-spacing:.12em; color:#A56A16; }
+.type-confirm h3 { margin:5px 0 6px; font-size:14px; color:#5B3A10; }
+.type-confirm p { margin:0; font-size:10px; line-height:1.7; color:#7C6648; }
+.tc-actions { display:flex; flex-direction:column; gap:6px; margin-top:10px; }
+.tc-actions .btn { width:100%; }
+.tc-note { margin-top:7px; font-size:8.5px; color:#9B8768; }
+</style>

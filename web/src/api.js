@@ -1,4 +1,4 @@
-﻿const API_BASE = '/api'
+const API_BASE = '/api'
 const USER_KEY = 'sg:user:v1'
 
 function owner() {
@@ -115,6 +115,9 @@ export const api = {
   },
   create(item) {
     return call('/items', { method: 'POST', body: JSON.stringify(item) })
+  },
+  precheck(item) {
+    return call('/precheck', { method: 'POST', body: JSON.stringify(item) })
   },
   claim(id, body) {
     return call('/items/' + encodeURIComponent(id) + '/claims', { method: 'POST', body: JSON.stringify(body || {}) })
