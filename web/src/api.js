@@ -1,4 +1,4 @@
-﻿const API_BASE = '/api'
+const API_BASE = '/api'
 const USER_KEY = 'sg:user:v1'
 
 function owner() {
@@ -14,20 +14,52 @@ function owner() {
 
 const GET_CACHE = new Map()
 const INFLIGHT = new Map()
+const LS_PREFIX = 'sg:api-cache:v1:'
 function cloneData(data) {
   try { return structuredClone(data) } catch (_) { return JSON.parse(JSON.stringify(data)) }
+}
+function lsKey(path) { return LS_PREFIX + owner() + '|' + path }
+function readLocal(path) {
+  try {
+    const raw = localStorage.getItem(lsKey(path))
+    if (!raw) return null
+    const hit = JSON.parse(raw)
+    if (!hit || !hit.at || !hit.data) return null
+    if (Date.now() - hit.at > 60000) return null
+    return hit
+  } catch (_) { return null }
+}
+function writeLocal(path, data) {
+  try { localStorage.setItem(lsKey(path), JSON.stringify({ at: Date.now(), data })) } catch (_) {}
 }
 function clearApiCache() {
   GET_CACHE.clear()
   INFLIGHT.clear()
+  try {
+    const keys = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i)
+      if (k && k.startsWith(LS_PREFIX)) keys.push(k)
+    }
+    keys.forEach((k) => localStorage.removeItem(k))
+  } catch (_) {}
 }
 async function cachedGet(path, ttl = 30000) {
   const key = owner() + '|' + path
+  const local = readLocal(path)
+  if (local) {
+    if (Date.now() - local.at > ttl) {
+      // 先在后台刷新，界面先显示上次数据
+      call(path).then((data) => { writeLocal(path, data); GET_CACHE.set(key, { at: Date.now(), data }) }).catch(() => {})
+    }
+    return cloneData(local.data)
+  }
   const hit = GET_CACHE.get(key)
   if (hit && Date.now() - hit.at < ttl) return cloneData(hit.data)
   if (INFLIGHT.has(key)) return cloneData(await INFLIGHT.get(key))
   const task = call(path).then((data) => {
     GET_CACHE.set(key, { at: Date.now(), data })
+    writeLocal(path, data)
     INFLIGHT.delete(key)
     return data
   }).catch((e) => {
