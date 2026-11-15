@@ -117,6 +117,12 @@ function editItem(item) {
     <AdminView />
   </div>
   <div v-else class="phone">
+    <nav v-if="view !== 'map' && view !== 'ask' && view !== 'tag-scan'" class="desktop-nav" aria-label="桌面导航">
+      <button type="button" :class="{ on: view === 'home' }" @click="go('home')">首页</button>
+      <button type="button" :class="{ on: view === 'lost' || view === 'found' }" @click="go('lost')">失物招领</button>
+      <button type="button" :class="{ on: view === 'help' }" @click="go('help')">爱心互助</button>
+      <button type="button" :class="{ on: view === 'mine' }" @click="go('mine')">我的</button>
+    </nav>
     <HomeView v-if="view === 'home'" @nav="go" />
     <ListView v-else-if="view === 'lost' || view === 'found'" :type="view" @nav="go" @publish="publish" />
     <HelpView v-else-if="view === 'help'" :key="helpCat" :initial-cat="helpCat" @nav="go" @publish="publish" />

@@ -853,3 +853,11 @@ body:has(.sheet.show) .bottom-nav{transform:translate(-50%,120%)!important;}
   .bottom-nav { position: static !important; left: auto !important; transform: none !important; width: 100% !important; max-width: 1180px !important; margin: 0 auto !important; border-radius: 0 !important; }
   .scroll { padding-bottom: 24px !important; }
 }
+
+.desktop-nav { display: none; }
+@media (min-width: 900px) {
+  .bottom-nav { display: none !important; }
+  .desktop-nav { display: flex; align-items: center; justify-content: center; gap: 6px; position: sticky; top: 0; z-index: 90; background: rgba(250,248,255,.96); border-bottom: 1px solid #EADFF5; padding: 8px 12px; backdrop-filter: blur(10px); }
+  .desktop-nav button { border: 0; background: transparent; color: #7A6C8E; font-family: inherit; font-size: 12px; padding: 7px 16px; border-radius: 8px; cursor: pointer; }
+  .desktop-nav button.on { background: #5B2A91; color: #fff; font-weight: 600; }
+}
