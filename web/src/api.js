@@ -117,7 +117,7 @@ export const api = {
     return call('/items', { method: 'POST', body: JSON.stringify(item) })
   },
   precheck(item) {
-    return call('/precheck', { method: 'POST', body: JSON.stringify(item) })
+    return call('/precheck', { method: 'POST', body: JSON.stringify(item), skipCacheClear: true })
   },
   claim(id, body) {
     return call('/items/' + encodeURIComponent(id) + '/claims', { method: 'POST', body: JSON.stringify(body || {}) })
