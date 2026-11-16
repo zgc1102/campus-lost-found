@@ -3776,7 +3776,22 @@ class Handler(BaseHTTPRequestHandler):
             if not side:
                 return self._json({"error": "无权查看这条对话"}, 403)
             if not is_send:
-                return self._json({"ok": True, "messages": report.get("messages") or [], "side": side})
+                body = self._read_body()
+                after = str(body.get("after") or "").strip()
+                try:
+                    after_at = int(body.get("afterAt") or 0)
+                except Exception:
+                    after_at = 0
+                msgs = report.get("messages") or []
+                if after:
+                    idx = next((i for i, m in enumerate(msgs) if m.get("id") == after), -1)
+                    if idx >= 0:
+                        msgs = msgs[idx + 1:]
+                    elif after_at:
+                        msgs = [m for m in msgs if int(m.get("at") or 0) > after_at]
+                elif after_at:
+                    msgs = [m for m in msgs if int(m.get("at") or 0) > after_at]
+                return self._json({"ok": True, "messages": msgs, "side": side})
             body = self._read_body()
             text = str(body.get("text") or "").strip()[:200]
             client_msg_id = str(body.get("clientMsgId") or "").strip()[:80]
