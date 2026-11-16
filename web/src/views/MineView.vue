@@ -93,8 +93,10 @@ async function cancelMyTag() {
 }
 
 async function actClaim(c, status) {
+  if (status === 'rejected' && !window.confirm('确定拒绝这条申请吗？')) return
   try {
-    await api.claimAction(c.id, { status })
+    if (c.itemType === 'help') await api.helpClaimAction(c.id, { status })
+    else await api.claimAction(c.id, { status })
     await load(true)
   } catch (e) {
     authMsg.value = e.message || '操作失败'
@@ -105,7 +107,7 @@ async function completeClaim(c) {
   successMsg.value = ''
   if (c.itemType === 'help') {
     try {
-      await api.claimComplete(c.id, { code: '' })
+      await api.helpClaimComplete(c.id)
       successMsg.value = '已完成帮助'
       await load(true)
     } catch (e) {

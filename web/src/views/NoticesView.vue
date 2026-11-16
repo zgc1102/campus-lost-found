@@ -49,7 +49,7 @@ const myItems = ref([])
 const branch = computed(() => {
   const s = selected.value
   if (!s) return 'system'
-  if (s.type === 'pickup' && s.report) return 'pickup'
+  if (s.report && ['pickup', 'pickup_photo_request', 'pickup_photo_supplement', 'pickup_reopen'].includes(s.type)) return 'pickup'
   if (s.itemType === 'help') return 'help'
   if (s.claimId && (s.itemType === 'lost' || s.itemType === 'found')) return 'claim'
   return 'system'
@@ -200,7 +200,11 @@ function typeLabel(t, itemType = '') {
       help_rejected: '❌ 帮忙申请被婉拒',
       help_need_more: '📝 帮忙申请待补充',
       help_supplement: '💬 帮忙人补充了说明',
-      help_done: '🎉 爱心帮助已完成'
+      help_done: '🎉 爱心帮助已完成',
+      help_restored: '↩️ 帮忙申请已拉回',
+      pickup_photo_request: '📷 失主请你补充照片',
+      pickup_photo_supplement: '📷 捡到者补充了照片',
+      pickup_reopen: '🔓 拾光码上报已重新打开'
     })[t] || '爱心求助提醒'
   }
   return ({
@@ -210,7 +214,11 @@ function typeLabel(t, itemType = '') {
     rejected: '❌ 申请被拒',
     need_more: '📝 申请待补充',
     done: '🎉 已完成归还',
-    pickup: '🔖 拾光码提醒'
+    claim_restored: '↩️ 认领申请已拉回',
+    pickup: '🔖 拾光码提醒',
+    pickup_photo_request: '📷 失主请你补充照片',
+    pickup_photo_supplement: '📷 捡到者补充了照片',
+    pickup_reopen: '🔓 拾光码上报已重新打开'
   })[t] || '通知'
 }
 function openNotice(n) {
@@ -431,13 +439,71 @@ async function publishReport() {
   } catch (e) { actionMsg.value = e.message || '公开失败' }
 }
 
+async function restoreClaim() {
+  const rid = selected.value?.claimId
+  if (!rid) return
+  try {
+    await api.claimRestore(rid)
+    actionMsg.value = '已拉回这条认领申请'
+    await refreshSelected()
+  } catch (e) {
+    actionMsg.value = e.message || '拉回失败'
+  }
+}
+async function restoreHelpClaim() {
+  const rid = selected.value?.claimId
+  if (!rid) return
+  try {
+    await api.helpClaimRestore(rid)
+    actionMsg.value = '已拉回这条帮忙申请'
+    await refreshSelected()
+  } catch (e) {
+    actionMsg.value = e.message || '拉回失败'
+  }
+}
+async function requestPickupPhoto() {
+  const rid = selected.value?.report?.id
+  if (!rid) return
+  try {
+    await api.requestReportPhoto(rid)
+    selected.value.report.needPhoto = true
+    actionMsg.value = '已请对方补充照片'
+    await refreshSelected()
+  } catch (e) {
+    actionMsg.value = e.message || '请求失败'
+  }
+}
+async function supplementPickupPhoto(image) {
+  const rid = selected.value?.report?.id
+  if (!rid || !image) return
+  try {
+    await api.supplementReportPhoto(rid, image)
+    selected.value.report.photo = image
+    selected.value.report.needPhoto = false
+    actionMsg.value = '照片已通过审核并上传'
+    await refreshSelected()
+  } catch (e) {
+    actionMsg.value = e.message || '照片上传失败'
+  }
+}
+async function reopenPickup() {
+  const rid = selected.value?.report?.id
+  if (!rid) return
+  try {
+    await api.reopenReport(rid)
+    actionMsg.value = '已重新打开这次上报'
+    await refreshSelected()
+  } catch (e) {
+    actionMsg.value = e.message || '重新打开失败'
+  }
+}
 async function closeReport() {
   try {
     const rid = selected.value.report?.id
     if (!rid) return
     await api.reportClose(rid)
     selected.value.report.status = 'closed'
-    actionMsg.value = '已标记为找回 / 关闭，拾光码已自动停用'
+    actionMsg.value = '已关闭这次上报，拾光码仍然有效'
   } catch (e) { actionMsg.value = e.message || '关闭失败' }
 }
 
@@ -488,7 +554,12 @@ async function supplementClaimImage(image) {
   claimImageError.value = ''
   try {
     await api.claimSupplementImage(rid, image)
-    if (selected.value?.claimId === rid) selected.value.claimImage = image
+    if (selected.value?.claimId === rid) {
+      selected.value.claimImage = image
+      selected.value.claimStatus = 'pending'
+      selected.value.claimNeedImage = false
+      selected.value.hasClaimImage = true
+    }
     actionMsg.value = '图片已通过审核并上传，等待发布者查看'
     await refreshSelected()
     if (selected.value?.claimId === rid && !selected.value.claimImage) selected.value.claimImage = image
@@ -553,9 +624,9 @@ async function saveClaimPhone(phoneInput) {
     claimPhoneSaving.value = false
   }
 }
-async function blockReport() {  const rid = selected.value.report?.id
+async function blockReport() {
+  const rid = selected.value.report?.id
   if (!rid) return
-  if (!confirm('屏蔽这个人？屏蔽后双方都看不到对方的新消息，也不能再互发。')) return
   try {
     await api.reportBlock(rid)
     selected.value.report.status = 'closed'
@@ -571,7 +642,6 @@ async function blockReport() {  const rid = selected.value.report?.id
 async function blockClaim() {
   const rid = selected.value?.claimId
   if (!rid) return
-  if (!confirm('屏蔽对方？屏蔽后双方不能再互发消息，也不能再查看对方手机号。')) return
   try {
     if (selected.value.itemType === 'help') await api.helpClaimBlock(rid)
     else await api.claimBlock(rid)
@@ -740,19 +810,19 @@ function fmt(ts) {
         <div v-if="selected.report && selected.itemType !== 'help'" class="nd-state">{{ ({pending:'待确认', contacted:'已联系', published:'已公开', closed:'已找回'})[selected.report.status] || selected.report.status }}</div>
       </div>
 
-      <NoticePickup v-if="branch === 'pickup'" :notice="selected" @reveal="askRevealPhone('report')" @publish="publishReport" @block="blockReport" @close="closeReport" @ignore="ignoreNotice">
+      <NoticePickup v-if="branch === 'pickup'" :notice="selected" @reveal="askRevealPhone('report')" @publish="publishReport" @block="blockReport" @close="closeReport" @ignore="ignoreNotice" @request-photo="requestPickupPhoto" @supplement-photo="supplementPickupPhoto" @reopen="reopenPickup">
         <template #chat>
           <NoticeChat :messages="chat" :outbox="outbox" :side="chatSide" :loading="chatLoading" :error="chatError" :blocked="chatBlocked" :blocked-by="blockedBy" :closed="chatClosed" placeholder="回复捡到者，不需要暴露手机号" @send="sendChat" @retry="retryOutbox" @refresh="refreshChat" />
         </template>
       </NoticePickup>
 
-      <NoticeClaim v-else-if="branch === 'claim'" :notice="selected" :image-busy="claimImageBusy" :image-error="claimImageError" @claim-action="claimAction" @reveal="askRevealPhone('claim')" @block="blockClaim" @compare="compareOpen = true" @ignore="ignoreNotice" @supplement="supplementClaim" @supplement-image="supplementClaimImage" @pickup-code="generatePickupCode">
+      <NoticeClaim v-else-if="branch === 'claim'" :notice="selected" :image-busy="claimImageBusy" :image-error="claimImageError" @claim-action="claimAction" @reveal="askRevealPhone('claim')" @block="blockClaim" @compare="compareOpen = true" @ignore="ignoreNotice" @supplement="supplementClaim" @supplement-image="supplementClaimImage" @pickup-code="generatePickupCode" @restore="restoreClaim">
         <template #chat>
           <NoticeChat :messages="chat" :outbox="outbox" :side="chatSide" :loading="chatLoading" :error="chatError" :blocked="chatBlocked" :blocked-by="blockedBy" :closed="chatClosed" placeholder="回复对方，不需要暴露手机号" @send="sendChat" @retry="retryOutbox" @refresh="refreshChat" />
         </template>
       </NoticeClaim>
 
-      <NoticeHelp v-else-if="branch === 'help'" :notice="selected" :supplementing="helpSupplementing" :phone-saving="claimPhoneSaving" :supplement-msg="helpSupplementMsg" :phone-msg="claimPhoneMsg" @supplement="supplementHelp" @save-phone="saveClaimPhone" @help-action="helpAction" @complete="completeHelp" @block="blockClaim" @compare="compareOpen = true" @ignore="ignoreNotice" @withdraw="withdrawHelpClaim" @remove="removeHelpClaim" />
+      <NoticeHelp v-else-if="branch === 'help'" :notice="selected" :supplementing="helpSupplementing" :phone-saving="claimPhoneSaving" :supplement-msg="helpSupplementMsg" :phone-msg="claimPhoneMsg" @supplement="supplementHelp" @save-phone="saveClaimPhone" @help-action="helpAction" @complete="completeHelp" @block="blockClaim" @compare="compareOpen = true" @ignore="ignoreNotice" @withdraw="withdrawHelpClaim" @remove="removeHelpClaim" @restore="restoreHelpClaim" />
 
       <NoticeSystem v-else :notice="selected" @compare="compareOpen = true" @ignore="ignoreNotice" />
 

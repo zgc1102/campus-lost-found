@@ -252,6 +252,21 @@ export const api = {
   helpClaimRemove(id) {
     return call('/help-claims/' + encodeURIComponent(id) + '/remove', { method: 'PATCH', body: '{}', skipCacheClear: true })
   },
+  claimRestore(id) {
+    return call('/claims/' + encodeURIComponent(id) + '/restore', { method: 'PATCH', body: '{}', skipCacheClear: true })
+  },
+  helpClaimRestore(id) {
+    return call('/help-claims/' + encodeURIComponent(id) + '/restore', { method: 'PATCH', body: '{}', skipCacheClear: true })
+  },
+  requestReportPhoto(id) {
+    return call('/reports/' + encodeURIComponent(id) + '/request-photo', { method: 'POST', body: '{}', skipCacheClear: true })
+  },
+  supplementReportPhoto(id, image) {
+    return call('/reports/' + encodeURIComponent(id) + '/supplement-photo', { method: 'POST', body: JSON.stringify({ image }), skipCacheClear: true })
+  },
+  reopenReport(id) {
+    return call('/reports/' + encodeURIComponent(id) + '/reopen', { method: 'POST', body: '{}', skipCacheClear: true })
+  },
   claimCancel(id) {
     return call('/claims/' + encodeURIComponent(id) + '/cancel', { method: 'POST', body: '{}', skipCacheClear: true })
   },

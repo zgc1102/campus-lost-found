@@ -7,9 +7,24 @@ const props = defineProps({
   supplementMsg: { type: String, default: '' },
   phoneMsg: { type: String, default: '' }
 })
-const emit = defineEmits(['supplement', 'save-phone', 'help-action', 'complete', 'block', 'compare', 'ignore', 'withdraw', 'remove'])
+const emit = defineEmits(['supplement', 'save-phone', 'help-action', 'complete', 'block', 'compare', 'ignore', 'withdraw', 'remove', 'restore'])
 const supp = ref('')
 const phone = ref('')
+function requestReject() {
+  if (window.confirm('确定婉拒这条帮忙申请吗？婉拒后可以在已婉拒状态拉回。')) emit('help-action', 'rejected')
+}
+function requestBlock() {
+  if (window.confirm('确定屏蔽这位帮忙人吗？屏蔽后不能再联系。')) emit('block')
+}
+function requestRemove() {
+  if (window.confirm('确定结束与 TA 的沟通吗？结束后名额会空出，可以再拉回。')) emit('remove')
+}
+function requestWithdraw() {
+  if (window.confirm('确定撤回这条帮忙申请吗？撤回后名额会空出。')) emit('withdraw')
+}
+function requestRestore() {
+  if (window.confirm('确定把这条申请拉回来吗？')) emit('restore')
+}
 function statusText(s) {
   return ({ pending: '待处理', accepted: '进行中', completed: '已完成', rejected: '已婉拒', need_more: '待补充', canceled: '已取消', withdrawn: '已撤回', removed: '已结束' })[s] || s || ''
 }
@@ -64,15 +79,16 @@ function submitPhone() {
     <div v-if="phoneMsg" class="nd-phone-msg">{{ phoneMsg }}</div>
   </div>
   <div class="nd-actions">
-    <template v-if="(notice.isPublisher || notice.item?.isMine) && notice.claimId && notice.claimStatus === 'pending'">
+    <template v-if="(notice.isPublisher || notice.item?.isMine) && notice.claimId && ['pending','need_more'].includes(notice.claimStatus)">
       <button type="button" class="btn" @click="$emit('help-action', 'accepted')">接受并公布双方手机号</button>
-      <button type="button" class="btn ghost" @click="$emit('help-action', 'need_more')">请补充</button>
-      <button type="button" class="btn ghost" @click="$emit('help-action', 'rejected')">婉拒</button>
-      <button v-if="notice.canBlockClaim" type="button" class="btn ghost" @click="$emit('block')">屏蔽对方</button>
+      <button type="button" class="btn ghost" :disabled="notice.claimStatus === 'need_more'" @click="$emit('help-action', 'need_more')">{{ notice.claimStatus === 'need_more' ? '已请求补充' : '请补充' }}</button>
+      <button type="button" class="btn ghost" @click="requestReject">婉拒</button>
+      <button v-if="notice.canBlockClaim" type="button" class="btn ghost" @click="requestBlock">屏蔽对方</button>
     </template>
     <button v-if="(notice.isPublisher || notice.item?.isMine) && notice.claimId && notice.claimStatus === 'accepted'" type="button" class="btn" @click="$emit('complete')">完成帮助</button>
-    <button v-if="(notice.isPublisher || notice.item?.isMine) && notice.claimId && notice.claimStatus === 'accepted'" type="button" class="btn ghost" @click="$emit('remove')">结束与 TA 的沟通</button>
-    <button v-if="notice.isClaimant && notice.claimId && ['pending','accepted'].includes(notice.claimStatus)" type="button" class="btn ghost" @click="$emit('withdraw')">撤回申请</button>
+    <button v-if="(notice.isPublisher || notice.item?.isMine) && notice.claimId && notice.claimStatus === 'accepted'" type="button" class="btn ghost" @click="requestRemove">结束与 TA 的沟通</button>
+    <button v-if="(notice.isPublisher || notice.item?.isMine) && ['rejected','removed'].includes(notice.claimStatus)" type="button" class="btn ghost" @click="requestRestore">拉回申请</button>
+    <button v-if="notice.isClaimant && notice.claimId && ['pending','accepted'].includes(notice.claimStatus)" type="button" class="btn ghost" @click="requestWithdraw">撤回申请</button>
     <button v-if="notice.item" type="button" class="btn ghost" @click="$emit('compare')">查看匹配报告</button>
     <button type="button" class="btn ghost" @click="$emit('ignore')">忽略</button>
   </div>

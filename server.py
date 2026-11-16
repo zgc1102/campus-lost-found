@@ -2831,6 +2831,7 @@ class Handler(BaseHTTPRequestHandler):
                 if rp:
                     _tag = tags_by_code.get(rp.get("tagCode")) or {}
                     row["isReportOwner"] = bool(rp.get("owner") == owner)
+                    row["isReportFinder"] = bool(rp.get("finder") == owner)
                     row["hasReportPhoto"] = bool(rp.get("photo"))
                     row["report"] = {
                         "id": rp.get("id"), "itemName": rp.get("itemName"),
@@ -2838,6 +2839,8 @@ class Handler(BaseHTTPRequestHandler):
                         "photoReview": rp.get("photoModeration") or {},
                         "tagCode": rp.get("tagCode"), "tagItem": rp.get("tagItem"),
                         "status": rp.get("status") or "pending",
+                        "needPhoto": bool(rp.get("needPhoto")),
+                        "blocked": bool(rp.get("blocked")),
                         "at": rp.get("createdAt"),
                         "itemId": rp.get("itemId") or "",
                         "phoneRevealed": bool(rp.get("phoneRevealed")),
@@ -4504,6 +4507,104 @@ class Handler(BaseHTTPRequestHandler):
                 save_notices(notices)
             return self._json({"ok": True, "itemId": created["id"]})
 
+        if path.startswith("/api/reports/") and path.endswith("/request-photo"):
+            owner = self._owner()
+            report_id = path[len("/api/reports/"):-len("/request-photo")]
+            with LOCK:
+                reports = load_tag_reports()
+                report = next((r for r in reports if r.get("id") == report_id), None)
+                if not report:
+                    return self._json({"error": "捡到上报不存在"}, 404)
+                if report.get("owner") != owner:
+                    return self._json({"error": "只有失主能请求补图"}, 403)
+                if report.get("status") == "closed":
+                    return self._json({"error": "这次上报已经关闭"}, 409)
+                if report.get("needPhoto"):
+                    return self._json({"ok": True, "already": True})
+                report["needPhoto"] = True
+                report["photoRequestedAt"] = now_ms()
+                report["updatedAt"] = now_ms()
+                save_tag_reports(reports)
+                if report.get("finder"):
+                    notices = load_notices()
+                    add_notice(notices, report.get("finder"), "pickup_photo_request",
+                               "失主想请你补充一张《%s》的照片" % (report.get("itemName") or "物品"),
+                               "", "")
+                    if notices:
+                        notices[-1]["reportId"] = report_id
+                    save_notices(notices)
+            return self._json({"ok": True, "needPhoto": True})
+
+        if path.startswith("/api/reports/") and path.endswith("/supplement-photo"):
+            owner = self._owner()
+            report_id = path[len("/api/reports/"):-len("/supplement-photo")]
+            body = self._read_body()
+            image = str(body.get("image") or "")
+            if not re.match(r"^data:image/(jpeg|jpg|png|webp);base64,", image):
+                return self._json({"error": "只支持 JPG / PNG / WebP 图片"}, 400)
+            image = compress_image_data(image)
+            if len(image) > 2_500_000:
+                return self._json({"error": "图片太大，请压缩后再上传"}, 400)
+            _mod = vision_moderate(image)
+            if not _mod.get("ok"):
+                return self._json({"error": "图片审核服务暂时不可用，请稍后再试"}, 503)
+            if not _mod.get("safe", True) and float(_mod.get("confidence") or 0) >= 0.6:
+                return self._json({"error": "图片未通过安全审核：" + (_mod.get("reason") or "请更换图片")}, 400)
+            with LOCK:
+                reports = load_tag_reports()
+                report = next((r for r in reports if r.get("id") == report_id), None)
+                if not report:
+                    return self._json({"error": "捡到上报不存在"}, 404)
+                if report.get("finder") != owner:
+                    return self._json({"error": "只有捡到者能补充照片"}, 403)
+                if report.get("status") == "closed":
+                    return self._json({"error": "这次上报已经关闭"}, 409)
+                report["photo"] = image
+                report["photoModeration"] = {k: v for k, v in _mod.items()
+                                             if k in ("ok", "safe", "category", "confidence", "reason")}
+                report["needPhoto"] = False
+                report["updatedAt"] = now_ms()
+                save_tag_reports(reports)
+                notices = load_notices()
+                add_notice(notices, report.get("owner"), "pickup_photo_supplement",
+                           "捡到者补充了《%s》的照片，请查看" % (report.get("itemName") or "物品"),
+                           "", "")
+                if notices:
+                    notices[-1]["reportId"] = report_id
+                save_notices(notices)
+            return self._json({"ok": True})
+
+        if path.startswith("/api/reports/") and path.endswith("/reopen"):
+            owner = self._owner()
+            report_id = path[len("/api/reports/"):-len("/reopen")]
+            with LOCK:
+                reports = load_tag_reports()
+                report = next((r for r in reports if r.get("id") == report_id), None)
+                if not report:
+                    return self._json({"error": "捡到上报不存在"}, 404)
+                if report.get("owner") != owner:
+                    return self._json({"error": "只有失主能重新打开"}, 403)
+                if report.get("status") != "closed":
+                    return self._json({"error": "这次上报还没有关闭"}, 409)
+                report["status"] = "pending"
+                report["updatedAt"] = now_ms()
+                save_tag_reports(reports)
+                if report.get("itemId"):
+                    items = load_items()
+                    for it in items:
+                        if it.get("id") == report["itemId"] and it.get("status") == "closed":
+                            it["status"] = "approved"
+                            it["updatedAt"] = now_ms()
+                    save_items(items)
+                notices = load_notices()
+                add_notice(notices, report.get("finder"), "pickup_reopen",
+                           "失主重新打开了《%s》的上报，可以继续沟通" % (report.get("itemName") or "物品"),
+                           "", "")
+                if notices:
+                    notices[-1]["reportId"] = report_id
+                save_notices(notices)
+            return self._json({"ok": True})
+
         if path.startswith("/api/reports/") and path.endswith("/block"):
             owner = self._owner()
             report_id = path[len("/api/reports/"):-len("/block")]
@@ -5067,6 +5168,67 @@ class Handler(BaseHTTPRequestHandler):
                            item.get("id"), claim.get("id"))
                 save_notices(notices)
             return self._json({"ok": True, "status": "removed"})
+
+        if path.startswith("/api/claims/") and path.endswith("/restore"):
+            owner = self._owner()
+            claim_id = path[len("/api/claims/"):-len("/restore")]
+            with LOCK:
+                claims = load_claims()
+                claim = next((c for c in claims if c.get("id") == claim_id), None)
+                if not claim:
+                    return self._json({"error": "认领记录不存在"}, 404)
+                item = next((x for x in load_items() if x.get("id") == claim.get("itemId")), None)
+                if not item or item.get("ownerToken") != owner:
+                    return self._json({"error": "只有发布者能拉回申请"}, 403)
+                if claim.get("status") != "rejected":
+                    return self._json({"error": "只有已拒绝的申请能拉回"}, 409)
+                claim["status"] = "pending"
+                claim["rejectReason"] = ""
+                claim["updatedAt"] = now_ms()
+                save_claims(claims)
+                notices = load_notices()
+                add_notice(notices, claim.get("from"), "claim_restored",
+                           "发布者把你对《%s》的申请拉回来了，请继续沟通" % (item.get("title") or ""),
+                           item.get("id"), claim.get("id"))
+                save_notices(notices)
+            return self._json({"ok": True, "status": "pending"})
+
+        if path.startswith("/api/help-claims/") and path.endswith("/restore"):
+            owner = self._owner()
+            claim_id = path[len("/api/help-claims/"):-len("/restore")]
+            with LOCK:
+                tasks = load_help_tasks()
+                items = load_items()
+                claim = next((c for c in tasks if c.get("id") == claim_id), None)
+                if not claim:
+                    return self._json({"error": "帮忙申请不存在"}, 404)
+                item = next((x for x in items if x.get("id") == claim.get("itemId")), None)
+                if not item or item.get("ownerToken") != owner:
+                    return self._json({"error": "只有发布者能拉回申请"}, 403)
+                if claim.get("status") not in ("rejected", "removed"):
+                    return self._json({"error": "只有已婉拒或已结束的申请能拉回"}, 409)
+                target = "pending" if claim.get("status") == "rejected" else "accepted"
+                if target == "accepted":
+                    need = max(1, int(item.get("needCount") or 1))
+                    accepted_now = [c for c in tasks if c.get("itemId") == item.get("id")
+                                    and c.get("status") in ("accepted", "completed")]
+                    if len(accepted_now) >= need:
+                        return self._json({"error": "需要的帮忙人数已经够了"}, 400)
+                claim["status"] = target
+                claim["updatedAt"] = now_ms()
+                if target == "accepted":
+                    need = max(1, int(item.get("needCount") or 1))
+                    accepted_now = [c for c in tasks if c.get("itemId") == item.get("id")
+                                    and c.get("status") in ("accepted", "completed")]
+                    item["status"] = "claimed" if len(accepted_now) >= need else "approved"
+                save_help_tasks(tasks)
+                save_items(items)
+                notices = load_notices()
+                add_notice(notices, claim.get("from"), "help_restored",
+                           "发布者把你的《%s》帮忙申请拉回来了" % (item.get("title") or ""),
+                           item.get("id"), claim.get("id"))
+                save_notices(notices)
+            return self._json({"ok": True, "status": target})
 
         if path.startswith("/api/claims/") and path.endswith("/cancel"):
             owner = self._owner()

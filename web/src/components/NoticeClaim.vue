@@ -7,7 +7,7 @@ const props = defineProps({
   imageBusy: { type: Boolean, default: false },
   imageError: { type: String, default: '' }
 })
-const emit = defineEmits(['claim-action', 'reveal', 'block', 'compare', 'ignore', 'supplement', 'supplement-image', 'pickup-code'])
+const emit = defineEmits(['claim-action', 'reveal', 'block', 'compare', 'ignore', 'supplement', 'supplement-image', 'pickup-code', 'restore'])
 const supp = ref('')
 const imageMsg = ref('')
 const imagePreview = ref('')
@@ -19,6 +19,28 @@ watch(() => props.imageError, (v) => {
     imageMsg.value = '上传失败，可以重新点“确认上传”'
   }
 })
+watch(() => [props.notice.claimStatus, props.notice.claimNeedImage], ([status]) => {
+  if (status === 'need_more') {
+    imagePreview.value = ''
+    imageMsg.value = ''
+    uploading.value = false
+  }
+})
+function requestReject() {
+  if (window.confirm('确定拒绝这条认领申请吗？拒绝后可以在已拒绝状态点“拉回申请”恢复。')) {
+    emit('claim-action', 'rejected')
+  }
+}
+function requestBlock() {
+  if (window.confirm('确定屏蔽对方吗？屏蔽后双方不能再互发消息。')) {
+    emit('block')
+  }
+}
+function requestRestore() {
+  if (window.confirm('确定把这条已拒绝的申请拉回来吗？')) {
+    emit('restore')
+  }
+}
 function submitSupp() {
   const text = supp.value.trim()
   if (text.length < 2) return
@@ -93,10 +115,10 @@ function reviewText(r) {
         <input type="file" accept="image/*" @change="onImage">
         <span>{{ uploading ? '正在上传…' : '选择照片' }}</span>
       </label>
-      <div v-if="imagePreview && !notice.claimImage" style="margin-top:7px">
+      <div v-if="imagePreview" style="margin-top:7px">
         <img :src="imagePreview" alt="预览" title="双击查看大图" style="max-width:100%;max-height:160px;border-radius:8px;border:1px solid #EADFF5;cursor:zoom-in" @dblclick="openImage">
       </div>
-      <button v-if="imagePreview && !notice.claimImage" type="button" class="btn" style="margin-top:7px;width:100%" :disabled="imageBusy || uploading" @click="submitImage">{{ imageBusy || uploading ? '审核上传中…' : '确认上传' }}</button>
+      <button v-if="imagePreview" type="button" class="btn" style="margin-top:7px;width:100%" :disabled="imageBusy || uploading" @click="submitImage">{{ imageBusy || uploading ? '审核上传中…' : '确认上传' }}</button>
       <div v-if="imageMsg" class="nd-phone-msg">{{ imageMsg }}</div>
       <div v-if="imageError" class="nd-send-error">{{ imageError }}</div>
     </div>
@@ -104,10 +126,11 @@ function reviewText(r) {
   <div class="nd-actions">
     <template v-if="(notice.isPublisher || notice.item?.isMine) && notice.claimId && (!notice.claimStatus || ['pending','need_more'].includes(notice.claimStatus))">
       <button type="button" class="btn" @click="$emit('claim-action', 'accepted')">通过认领并公布双方手机号</button>
-      <button v-if="notice.claimStatus !== 'need_more'" type="button" class="btn ghost" @click="$emit('claim-action', 'need_more', true)">请补充图片</button>
-      <button type="button" class="btn ghost" @click="$emit('claim-action', 'rejected')">拒绝</button>
-      <button v-if="notice.canBlockClaim" type="button" class="btn ghost" @click="$emit('block')">屏蔽对方</button>
+      <button type="button" class="btn ghost" :disabled="notice.claimStatus === 'need_more'" @click="$emit('claim-action', 'need_more', true)">{{ notice.claimStatus === 'need_more' ? '已请求补充图片' : '请补充图片' }}</button>
+      <button type="button" class="btn ghost" @click="requestReject">拒绝</button>
+      <button v-if="notice.canBlockClaim" type="button" class="btn ghost" @click="requestBlock">屏蔽对方</button>
     </template>
+    <button v-if="(notice.isPublisher || notice.item?.isMine) && notice.claimStatus === 'rejected'" type="button" class="btn ghost" @click="requestRestore">拉回申请</button>
     <button v-if="notice.item" type="button" class="btn ghost" @click="$emit('compare')">查看匹配报告</button>
     <button type="button" class="btn ghost" @click="$emit('ignore')">忽略</button>
   </div>
