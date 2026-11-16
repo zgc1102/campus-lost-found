@@ -50,15 +50,10 @@ function statusText(s) {
     <div v-if="notice.claimImage" style="margin-top:8px">
       <img :src="notice.claimImage" alt="补充图片" style="max-width:100%;max-height:220px;border-radius:9px;border:1px solid #EADFF5">
     </div>
-    <div v-if="notice.claimNeedImage && notice.isClaimant" class="nd-phone-fill">
-      <p>发布者请你补充一张图片，图片会展示给对方核对。</p>
+    <div v-if="notice.isClaimant && notice.claimStatus === 'need_more'" class="nd-phone-fill">
+      <p>辛苦你上传一张物品照片，方便发布者核对，谢谢配合。</p>
       <input type="file" accept="image/*" @change="onImage">
       <div v-if="imageMsg" class="nd-phone-msg">{{ imageMsg }}</div>
-    </div>
-    <div v-else-if="notice.isClaimant && notice.claimStatus === 'need_more'" class="nd-phone-fill">
-      <p>发布者请你补充线索，补充后会自动回到待处理。</p>
-      <textarea v-model="supp" maxlength="200" placeholder="补充物品特征、时间、地点等具体线索"></textarea>
-      <button type="button" @click="submitSupp">提交补充</button>
     </div>
   <slot name="chat" />
   <div class="nd-actions">

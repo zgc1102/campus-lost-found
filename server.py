@@ -2784,6 +2784,7 @@ class Handler(BaseHTTPRequestHandler):
                     row["report"] = {
                         "id": rp.get("id"), "itemName": rp.get("itemName"),
                         "message": rp.get("message"), "contact": rp.get("contact"),
+                        "photo": rp.get("photo") or "",
                         "tagCode": rp.get("tagCode"), "tagItem": rp.get("tagItem"),
                         "status": rp.get("status") or "pending",
                         "at": rp.get("createdAt"),
@@ -3267,6 +3268,15 @@ class Handler(BaseHTTPRequestHandler):
             message = str(body.get("message") or "").strip()[:160]
             contact = str(body.get("contact") or "").strip()[:40]
             found_item = str(body.get("itemName") or "").strip()[:40]
+            photo = str(body.get("photo") or "")
+            if photo:
+                if not re.match(r"^data:image/(jpeg|jpg|png|webp);base64,", photo):
+                    return self._json({"error": "只支持 JPG / PNG / WebP 图片"}, 400)
+                if len(photo) > 2_500_000:
+                    return self._json({"error": "图片太大，请压缩后再上传"}, 400)
+                _mod = vision_moderate(photo)
+                if _mod.get("ok") and not _mod.get("safe", True) and float(_mod.get("confidence") or 0) >= 0.6:
+                    return self._json({"error": "图片未通过安全审核：" + (_mod.get("reason") or "请更换图片")}, 400)
             if not contact:
                 return self._json({"error": "请先留下手机号，方便失主联系你"}, 400)
             _pchk = phone_check(contact)
@@ -3308,6 +3318,7 @@ class Handler(BaseHTTPRequestHandler):
                     "itemName": found_item or "捡到物品",
                     "message": message or "我捡到了，请联系我",
                     "contact": contact,
+                    "photo": photo,
                     "status": "pending",
                     "createdAt": now_ms(),
                     "updatedAt": now_ms(),
