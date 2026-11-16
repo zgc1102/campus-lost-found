@@ -2675,8 +2675,10 @@ class Handler(BaseHTTPRequestHandler):
                             }
                     # 联系方式：没通过之前只给打码版本
                     if c.get("contact"):
+                        _claim_revealed = c.get("phoneRevealed") and not (
+                            it.get("type") == "help" and c.get("phoneRevealedBy") != it.get("ownerToken"))
                         out["claimContact"] = (
-                            c.get("contact") if (c.get("status") in ("accepted", "completed") or c.get("phoneRevealed"))
+                            c.get("contact") if (c.get("status") in ("accepted", "completed") or _claim_revealed)
                             else mask_contact(c.get("contact"))
                         )
                 if c.get("status") in ("accepted", "completed") or c.get("phoneRevealed"):
@@ -2746,7 +2748,9 @@ class Handler(BaseHTTPRequestHandler):
                     row["claimStatus"] = cl.get("status") or "pending"
                     row["claimMessage"] = cl.get("message") or ""
                     _revealed = bool(cl.get("phoneRevealed")) or cl.get("status") in ("accepted", "completed")
-                    row["claimPhoneRevealed"] = bool(cl.get("phoneRevealed"))
+                    if it and it.get("type") == "help" and cl.get("phoneRevealed") and cl.get("phoneRevealedBy") != it.get("ownerToken"):
+                        _revealed = False
+                    row["claimPhoneRevealed"] = bool(cl.get("phoneRevealed")) and _revealed
                     row["claimContact"] = (cl.get("contact") if _revealed
                                            else mask_contact(cl.get("contact")))
                     if _revealed and it:
