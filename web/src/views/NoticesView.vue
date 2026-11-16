@@ -481,8 +481,10 @@ async function supplementClaimImage(image) {
   claimImageError.value = ''
   try {
     await api.claimSupplementImage(rid, image)
+    if (selected.value?.claimId === rid) selected.value.claimImage = image
     actionMsg.value = '图片已通过审核并上传，等待发布者查看'
     await refreshSelected()
+    if (selected.value?.claimId === rid && !selected.value.claimImage) selected.value.claimImage = image
   } catch (e) {
     claimImageError.value = e.message || '图片上传失败'
     actionMsg.value = claimImageError.value

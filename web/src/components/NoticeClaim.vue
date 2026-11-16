@@ -16,6 +16,10 @@ function submitSupp() {
   emit('supplement', text)
   supp.value = ''
 }
+function openImage() {
+  const url = imagePreview.value || props.notice.claimImage
+  if (url) window.open(url, '_blank', 'noopener')
+}
 function onImage(e) {
   const file = e.target.files && e.target.files[0]
   if (!file) return
@@ -64,7 +68,7 @@ function statusText(s) {
     <div v-if="notice.claimPickupCode" class="nd-pickup-code">取件码：<b>{{ notice.claimPickupCode }}</b><span>双方核对后交接</span></div>
     <button v-if="notice.canGeneratePickupCode" type="button" class="btn ghost" style="margin-top:8px" @click="$emit('pickup-code')">生成取件码</button>
     <div v-if="notice.claimImage" style="margin-top:8px">
-      <img :src="notice.claimImage" alt="补充图片" style="max-width:100%;max-height:220px;border-radius:9px;border:1px solid #EADFF5">
+      <img :src="notice.claimImage" alt="补充图片" title="双击查看大图" style="max-width:100%;max-height:220px;border-radius:9px;border:1px solid #EADFF5;cursor:zoom-in" @dblclick="openImage">
     </div>
     <div v-if="notice.isClaimant && notice.claimStatus === 'need_more'" class="nd-phone-fill upload-box">
       <p>辛苦你上传一张物品照片，方便发布者核对，谢谢配合。</p>
@@ -73,7 +77,7 @@ function statusText(s) {
         <span>{{ uploading ? '正在上传…' : '选择照片' }}</span>
       </label>
       <div v-if="imagePreview && !notice.claimImage" style="margin-top:7px">
-        <img :src="imagePreview" alt="预览" style="max-width:100%;max-height:160px;border-radius:8px;border:1px solid #EADFF5">
+        <img :src="imagePreview" alt="预览" title="双击查看大图" style="max-width:100%;max-height:160px;border-radius:8px;border:1px solid #EADFF5;cursor:zoom-in" @dblclick="openImage">
       </div>
       <button v-if="imagePreview && !notice.claimImage" type="button" class="btn" style="margin-top:7px;width:100%" :disabled="imageBusy || uploading" @click="submitImage">{{ imageBusy || uploading ? '审核上传中…' : '确认上传' }}</button>
       <div v-if="imageMsg" class="nd-phone-msg">{{ imageMsg }}</div>

@@ -7,6 +7,9 @@ function time(ts) {
   if (!Number.isFinite(d.getTime())) return ''
   return `${d.getMonth() + 1}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
+function openPhoto() {
+  if (props.notice.report?.photo) window.open(props.notice.report.photo, '_blank', 'noopener')
+}
 </script>
 
 <template>
@@ -17,7 +20,7 @@ function time(ts) {
     <div class="nd-kv"><span>上报时间</span><b>{{ time(notice.report?.at) }}</b></div>
     <div class="nd-message">{{ notice.report?.message }}</div>
     <div v-if="notice.report?.photo" style="margin-top:8px">
-      <img :src="notice.report.photo" alt="物品照片" style="max-width:100%;max-height:220px;border-radius:9px;border:1px solid #EADFF5">
+      <img :src="notice.report.photo" alt="物品照片" title="双击查看大图" style="max-width:100%;max-height:220px;border-radius:9px;border:1px solid #EADFF5;cursor:zoom-in" @dblclick="openPhoto">
     </div>
     <div v-if="notice.report?.phoneRevealed" class="nd-kv"><span>我的手机号</span><b>{{ notice.report?.ownerContact || '未留手机号' }}</b></div>
     <div v-if="notice.report?.phoneRevealed" class="nd-kv"><span>捡到者手机号</span><b>{{ notice.report?.contact || '未留手机号' }}</b></div>

@@ -42,6 +42,9 @@ async function onPhoto(e) {
   reader.readAsDataURL(file)
   e.target.value = ''
 }
+function openPhoto() {
+  if (photo.value) window.open(photo.value, '_blank', 'noopener')
+}
 async function send() {
   if (!contact.value.trim()) {
     error.value = '请先留下手机号，方便失主联系你'
@@ -129,6 +132,7 @@ async function sendChat() {
         <div v-if="sent" class="scan-done">
           <b>已通知失主</b>
           <span>失主会在「通知」里看到你的留言。谢谢你把东西还回去。</span>
+          <div v-if="photo" style="margin-top:7px"><img :src="photo" alt="你上传的物品照片" title="双击查看大图" style="max-width:100%;max-height:180px;border-radius:9px;border:1px solid #EADFF5;cursor:zoom-in" @dblclick="openPhoto"></div>
         </div>
         <div v-if="sent && reportId" class="scan-chat">
           <div class="sc-title">和失主匿名沟通</div>
@@ -149,7 +153,7 @@ async function sendChat() {
           <input v-model="contact" maxlength="20" inputmode="tel" placeholder="手机号，只有失主能看到">
           <label>辛苦上传一张物品照片（可选）</label>
           <input type="file" accept="image/*" @change="onPhoto">
-          <div v-if="photo" style="margin-top:6px"><img :src="photo" alt="物品照片" style="max-width:100%;max-height:180px;border-radius:9px;border:1px solid #EADFF5"></div>
+          <div v-if="photo" style="margin-top:6px"><img :src="photo" alt="物品照片" title="双击查看大图" style="max-width:100%;max-height:180px;border-radius:9px;border:1px solid #EADFF5;cursor:zoom-in" @dblclick="openPhoto"></div>
           <div v-if="photoMsg" class="tip-small">{{ photoMsg }}</div>
           <div v-if="error" class="warn-box">{{ error }}</div>
           <button type="button" class="primary scan-submit" :disabled="sending" @click="send">{{ sending ? '发送中…' : '通知失主' }}</button>
