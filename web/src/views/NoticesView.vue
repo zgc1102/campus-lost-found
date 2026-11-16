@@ -675,12 +675,11 @@ function fmt(ts) {
 
       <div class="nd-actions">
         <template v-if="selected.type === 'pickup' && selected.report">
-          <button type="button" class="btn" @click="revealContact">联系捡到的人</button>
+          <button v-if="!selected.report.phoneRevealed" type="button" class="btn" @click="askRevealPhone('report')">公布双方手机号并联系</button>
           <button v-if="selected.report.status !== 'published' && selected.report.status !== 'closed'" type="button" class="btn ghost" @click="publishReport">公开为招领</button>
-          <button v-if="!selected.report.phoneRevealed" type="button" class="btn ghost" @click="askRevealPhone('report')">公布双方手机号</button>
-          <button v-if="selected.report.status !== 'closed'" type="button" class="btn ghost" @click="closeReport">已找回 / 关闭</button>
-          <button type="button" class="btn ghost" @click="blockReport">屏蔽此人</button>
-          <button type="button" class="btn ghost" @click="ignoreNotice">不是我的 / 忽略</button>
+          <button type="button" class="btn ghost" @click="blockReport">屏蔽</button>
+          <button v-if="selected.report.status !== 'closed'" type="button" class="btn ghost" @click="closeReport">关闭</button>
+          <button type="button" class="btn ghost" @click="ignoreNotice">忽略</button>
         </template>
         <template v-else-if="selected.itemType === 'help'">
           <template v-if="(selected.isPublisher || selected.item?.isMine) && selected.claimId && selected.claimStatus === 'pending'">
