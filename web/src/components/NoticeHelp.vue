@@ -7,11 +7,11 @@ const props = defineProps({
   supplementMsg: { type: String, default: '' },
   phoneMsg: { type: String, default: '' }
 })
-const emit = defineEmits(['supplement', 'save-phone', 'help-action', 'complete', 'block', 'compare', 'ignore', 'cancel'])
+const emit = defineEmits(['supplement', 'save-phone', 'help-action', 'complete', 'block', 'compare', 'ignore', 'withdraw', 'remove'])
 const supp = ref('')
 const phone = ref('')
 function statusText(s) {
-  return ({ pending: '待处理', accepted: '进行中', completed: '已完成', rejected: '已婉拒', need_more: '待补充', canceled: '已取消' })[s] || s || ''
+  return ({ pending: '待处理', accepted: '进行中', completed: '已完成', rejected: '已婉拒', need_more: '待补充', canceled: '已取消', withdrawn: '已撤回', removed: '已结束' })[s] || s || ''
 }
 function submitSupp() {
   const text = supp.value.trim()
@@ -71,8 +71,8 @@ function submitPhone() {
       <button v-if="notice.canBlockClaim" type="button" class="btn ghost" @click="$emit('block')">屏蔽对方</button>
     </template>
     <button v-if="(notice.isPublisher || notice.item?.isMine) && notice.claimId && notice.claimStatus === 'accepted'" type="button" class="btn" @click="$emit('complete')">完成帮助</button>
-    <button v-if="(notice.isPublisher || notice.item?.isMine) && notice.claimId && notice.claimStatus === 'accepted'" type="button" class="btn ghost" @click="$emit('cancel')">结束与 TA 的沟通</button>
-    <button v-if="notice.isClaimant && notice.claimId && ['pending','accepted'].includes(notice.claimStatus)" type="button" class="btn ghost" @click="$emit('cancel')">取消申请</button>
+    <button v-if="(notice.isPublisher || notice.item?.isMine) && notice.claimId && notice.claimStatus === 'accepted'" type="button" class="btn ghost" @click="$emit('remove')">结束与 TA 的沟通</button>
+    <button v-if="notice.isClaimant && notice.claimId && ['pending','accepted'].includes(notice.claimStatus)" type="button" class="btn ghost" @click="$emit('withdraw')">撤回申请</button>
     <button v-if="notice.item" type="button" class="btn ghost" @click="$emit('compare')">查看匹配报告</button>
     <button type="button" class="btn ghost" @click="$emit('ignore')">忽略</button>
   </div>

@@ -193,7 +193,9 @@ function typeLabel(t, itemType = '') {
       accepted: '✅ 帮忙申请已通过',
       rejected: '❌ 帮忙申请被婉拒',
       need_more: '📝 帮忙申请待补充',
-      done: '🎉 爱心帮助已完成'
+      done: '🎉 爱心帮助已完成',
+      help_withdraw: '↩️ 帮忙人已撤回申请',
+      help_removed: '🚪 发布者已结束沟通'
     })[t] || '爱心求助提醒'
   }
   return ({
@@ -621,15 +623,26 @@ async function submitClaimPhonePrompt() {
   }
 }
 
-async function cancelHelp() {
+async function withdrawHelpClaim() {
   const rid = selected.value?.claimId
   if (!rid) return
   try {
-    await api.claimCancel(rid)
-    actionMsg.value = '这条申请已取消，名额已经空出'
+    await api.helpClaimWithdraw(rid)
+    actionMsg.value = '已撤回申请，名额已经空出'
     await refreshSelected()
   } catch (e) {
-    actionMsg.value = e.message || '取消失败'
+    actionMsg.value = e.message || '撤回失败'
+  }
+}
+async function removeHelpClaim() {
+  const rid = selected.value?.claimId
+  if (!rid) return
+  try {
+    await api.helpClaimRemove(rid)
+    actionMsg.value = '已结束与对方的沟通，名额已经空出'
+    await refreshSelected()
+  } catch (e) {
+    actionMsg.value = e.message || '操作失败'
   }
 }
 async function completeHelp() {
@@ -731,7 +744,7 @@ function fmt(ts) {
         </template>
       </NoticeClaim>
 
-      <NoticeHelp v-else-if="branch === 'help'" :notice="selected" :supplementing="helpSupplementing" :phone-saving="claimPhoneSaving" :supplement-msg="helpSupplementMsg" :phone-msg="claimPhoneMsg" @supplement="supplementHelp" @save-phone="saveClaimPhone" @help-action="helpAction" @complete="completeHelp" @block="blockClaim" @compare="compareOpen = true" @ignore="ignoreNotice" @cancel="cancelHelp" />
+      <NoticeHelp v-else-if="branch === 'help'" :notice="selected" :supplementing="helpSupplementing" :phone-saving="claimPhoneSaving" :supplement-msg="helpSupplementMsg" :phone-msg="claimPhoneMsg" @supplement="supplementHelp" @save-phone="saveClaimPhone" @help-action="helpAction" @complete="completeHelp" @block="blockClaim" @compare="compareOpen = true" @ignore="ignoreNotice" @withdraw="withdrawHelpClaim" @remove="removeHelpClaim" />
 
       <NoticeSystem v-else :notice="selected" @compare="compareOpen = true" @ignore="ignoreNotice" />
 

@@ -4787,6 +4787,69 @@ class Handler(BaseHTTPRequestHandler):
         path = unquote(urlparse(self.path).path)
         patch = self._read_body()
 
+        if path.startswith("/api/help-claims/") and path.endswith("/withdraw"):
+            owner = self._owner()
+            claim_id = path[len("/api/help-claims/"):-len("/withdraw")]
+            with LOCK:
+                tasks = load_help_tasks()
+                items = load_items()
+                claim = next((c for c in tasks if c.get("id") == claim_id), None)
+                if not claim:
+                    return self._json({"error": "帮忙申请不存在"}, 404)
+                if claim.get("from") != owner:
+                    return self._json({"error": "只有申请人可以撤回"}, 403)
+                if claim.get("status") not in ("pending", "accepted"):
+                    return self._json({"error": "这条申请当前不能撤回"}, 409)
+                item = next((x for x in items if x.get("id") == claim.get("itemId")), None)
+                if not item:
+                    return self._json({"error": "求助不存在"}, 404)
+                claim["status"] = "withdrawn"
+                claim["withdrawnAt"] = now_ms()
+                claim["updatedAt"] = now_ms()
+                need = max(1, int(item.get("needCount") or 1))
+                accepted_now = [c for c in tasks if c.get("itemId") == item.get("id") and c.get("status") == "accepted"]
+                item["status"] = "claimed" if len(accepted_now) >= need else "approved"
+                save_help_tasks(tasks)
+                save_items(items)
+                notices = load_notices()
+                add_notice(notices, item.get("ownerToken"), "help_withdraw",
+                           "有一位帮忙人撤回了《%s》的申请，名额已空出" % (item.get("title") or ""),
+                           item.get("id"), claim.get("id"))
+                save_notices(notices)
+            return self._json({"ok": True, "status": "withdrawn"})
+
+        if path.startswith("/api/help-claims/") and path.endswith("/remove"):
+            owner = self._owner()
+            claim_id = path[len("/api/help-claims/"):-len("/remove")]
+            with LOCK:
+                tasks = load_help_tasks()
+                items = load_items()
+                claim = next((c for c in tasks if c.get("id") == claim_id), None)
+                if not claim:
+                    return self._json({"error": "帮忙申请不存在"}, 404)
+                item = next((x for x in items if x.get("id") == claim.get("itemId")), None)
+                if not item:
+                    return self._json({"error": "求助不存在"}, 404)
+                if item.get("ownerToken") != owner:
+                    return self._json({"error": "只有发布者可以结束沟通"}, 403)
+                if claim.get("status") not in ("pending", "accepted"):
+                    return self._json({"error": "这条申请当前不能结束"}, 409)
+                claim["status"] = "removed"
+                claim["removedAt"] = now_ms()
+                claim["removedBy"] = owner
+                claim["updatedAt"] = now_ms()
+                need = max(1, int(item.get("needCount") or 1))
+                accepted_now = [c for c in tasks if c.get("itemId") == item.get("id") and c.get("status") == "accepted"]
+                item["status"] = "claimed" if len(accepted_now) >= need else "approved"
+                save_help_tasks(tasks)
+                save_items(items)
+                notices = load_notices()
+                add_notice(notices, claim.get("from"), "help_removed",
+                           "发布者结束了与你的《%s》沟通，名额已空出" % (item.get("title") or ""),
+                           item.get("id"), claim.get("id"))
+                save_notices(notices)
+            return self._json({"ok": True, "status": "removed"})
+
         if path.startswith("/api/claims/") and path.endswith("/cancel"):
             owner = self._owner()
             claim_id = path[len("/api/claims/"):-len("/cancel")]
@@ -4801,6 +4864,8 @@ class Handler(BaseHTTPRequestHandler):
                     in_help = bool(claim)
                 if not claim:
                     return self._json({"error": "not found"}, 404)
+                if in_help:
+                    return self._json({"error": "帮忙申请请使用专用撤回/结束接口"}, 400)
                 item = next((x for x in items if x.get("id") == claim.get("itemId")), None)
                 if not item:
                     return self._json({"error": "not found"}, 404)
