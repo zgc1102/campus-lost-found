@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 清华校园拾光里 · 服务端 v4
@@ -4223,6 +4223,8 @@ class Handler(BaseHTTPRequestHandler):
                     help_mode = bool(claim)
                 if not claim:
                     return self._json({"error": "认领记录不存在"}, 404)
+                if help_mode:
+                    return self._json({"error": "帮忙申请请使用专用接口"}, 400)
                 item = next((x for x in load_items() if x.get("id") == claim.get("itemId")), None)
                 if not item or item.get("ownerToken") != owner:
                     return self._json({"error": "只有发布者可以屏蔽对方"}, 403)
@@ -4250,6 +4252,8 @@ class Handler(BaseHTTPRequestHandler):
                     help_mode = bool(claim)
                 if not claim:
                     return self._json({"error": "认领记录不存在"}, 404)
+                if help_mode:
+                    return self._json({"error": "帮忙申请请使用专用接口"}, 400)
                 items = load_items()
                 item = next((x for x in items if x.get("id") == claim.get("itemId")), None)
                 if not item:
@@ -4286,6 +4290,8 @@ class Handler(BaseHTTPRequestHandler):
                     help_mode = bool(claim)
                 if not claim:
                     return self._json({"error": "认领记录不存在"}, 404)
+                if help_mode:
+                    return self._json({"error": "帮忙申请请使用专用接口"}, 400)
                 item = next((x for x in load_items() if x.get("id") == claim.get("itemId")), None)
                 if not item:
                     return self._json({"error": "物品不存在"}, 404)
