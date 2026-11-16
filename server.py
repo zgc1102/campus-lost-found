@@ -3592,6 +3592,8 @@ class Handler(BaseHTTPRequestHandler):
                 contact = _chk["normalized"]
             if _target0.get("type") in ("lost", "found") and not contact:
                 return self._json({"error": "请先留下手机号，方便对方确认后联系你"}, 400)
+            if _target0.get("type") in ("lost", "found") and len(message) < 2:
+                return self._json({"error": "请补充一句物品特征或来源，不能只留手机号"}, 400)
             if _target0.get("type") == "help" and len(message) < 2:
                 return self._json({"error": "请说明一下你的申请理由"}, 400)
             with LOCK:
@@ -3837,34 +3839,24 @@ class Handler(BaseHTTPRequestHandler):
                 _ok, _why = moderate_tag(text)
                 if not _ok:
                     return self._json({"error": "消息未通过审核：" + _why}, 400)
-                with LOCK:
-                    claims = load_claims()
-                    claim = next((c for c in claims if c.get("id") == claim_id), None)
-                    help_mode = False
-                    if not claim:
-                        tasks = load_help_tasks()
-                        claim = next((c for c in tasks if c.get("id") == claim_id), None)
-                        help_mode = bool(claim)
-                    if not claim:
-                        return self._json({"error": "认领记录不存在"}, 404)
-                    if client_msg_id:
-                        for old in (claim.get("messages") or []):
-                            if old.get("from") == side and old.get("clientMsgId") == client_msg_id:
-                                return self._json({"ok": True, "message": old, "duplicate": True})
-                    msg = {
-                        "id": "cm_" + uuid.uuid4().hex[:12],
-                        "from": side,
-                        "text": text,
-                        "at": now_ms(),
-                        "clientMsgId": client_msg_id
-                    }
-                    claim.setdefault("messages", []).append(msg)
-                    claim["messages"] = claim["messages"][-50:]
-                    claim["updatedAt"] = now_ms()
-                    if help_mode:
-                        save_help_tasks(tasks)
-                    else:
-                        save_claims(claims)
+                if client_msg_id:
+                    for old in (claim.get("messages") or []):
+                        if old.get("from") == side and old.get("clientMsgId") == client_msg_id:
+                            return self._json({"ok": True, "message": old, "duplicate": True})
+                msg = {
+                    "id": "cm_" + uuid.uuid4().hex[:12],
+                    "from": side,
+                    "text": text,
+                    "at": now_ms(),
+                    "clientMsgId": client_msg_id
+                }
+                claim.setdefault("messages", []).append(msg)
+                claim["messages"] = claim["messages"][-50:]
+                claim["updatedAt"] = now_ms()
+                if help_mode:
+                    save_help_tasks(tasks)
+                else:
+                    save_claims(claims)
                 return self._json({"ok": True, "message": msg, "duplicate": False})
 
         if path.startswith("/api/reports/") and (path.endswith("/messages/list") or path.endswith("/messages/send")):

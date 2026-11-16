@@ -215,7 +215,8 @@ function makeClientMsgId() {
 }
 function sendChat() {
   const text = chatText.value.trim()
-  if (!text || !selected.value?.report?.id || chatBlocked.value) return
+  const targetId = selected.value?.report?.id || selected.value?.claimId
+  if (!text || !targetId || chatBlocked.value) return
   const item = {
     clientMsgId: makeClientMsgId(),
     text,
@@ -232,18 +233,19 @@ async function sendOutbox(item) {
   if (!item || item.status === 'sending') return
   item.status = 'sending'
   item.error = ''
-  const rid = selected.value?.report?.id
+  const rid = selected.value?.report?.id || selected.value?.claimId
+  const kind = chatKind.value
   if (!rid) {
     item.status = 'failed'
     item.error = '聊天已关闭'
     return
   }
   try {
-    const r = chatKind.value === 'claim'
+    const r = kind === 'claim'
       ? await api.claimSend(rid, item.text, item.clientMsgId)
       : await api.reportSend(rid, item.text, item.clientMsgId)
     if (r?.message) {
-      if (selected.value?.report?.id === rid) appendChat(r.message)
+      if ((selected.value?.report?.id || selected.value?.claimId) === rid) appendChat(r.message)
       outbox.value = outbox.value.filter((x) => x.clientMsgId !== item.clientMsgId)
     } else {
       item.status = 'failed'

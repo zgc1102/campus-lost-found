@@ -359,16 +359,18 @@ function askDetective() {
         <button v-for="c in helpCats" :key="c.id" type="button" :class="{ on: helpCatLocal === c.id }" @click="helpCatLocal = c.id">{{ c.name }}</button>
       </div>
 
-      <div v-if="typeConfirm" class="type-confirm">
-        <div class="tc-kicker">发布前确认</div>
-        <h3>你发的这条，更像「{{ typeConfirm.to === 'found' ? '失物招领' : '寻物启事' }}」</h3>
-        <p>你选的是「{{ typeConfirm.from === 'found' ? '失物招领' : '寻物启事' }}」。AI 判断依据：{{ typeConfirm.reason }}</p>
-        <div class="tc-actions">
-          <button type="button" class="btn" @click="confirmTypeChange(true)">改为{{ typeConfirm.to === 'found' ? '失物招领' : '寻物启事' }}发布</button>
-          <button type="button" class="btn ghost" @click="confirmTypeChange(false)">仍然按原类型发布</button>
-          <button type="button" class="btn ghost" @click="typeConfirm = null">返回修改</button>
+      <div v-if="typeConfirm" class="tc-overlay">
+        <div class="type-confirm">
+          <div class="tc-kicker">发布前确认</div>
+          <h3>你发的这条，更像「{{ typeConfirm.to === 'found' ? '失物招领' : '寻物启事' }}」</h3>
+          <p>你选的是「{{ typeConfirm.from === 'found' ? '失物招领' : '寻物启事' }}」。AI 判断依据：{{ typeConfirm.reason }}</p>
+          <div class="tc-actions">
+            <button type="button" class="btn" @click="confirmTypeChange(true)">改为{{ typeConfirm.to === 'found' ? '失物招领' : '寻物启事' }}发布</button>
+            <button type="button" class="btn ghost" @click="confirmTypeChange(false)">仍然按原类型发布</button>
+            <button type="button" class="btn ghost" @click="typeConfirm = null">返回修改</button>
+          </div>
+          <div class="tc-note">最终由你决定；选“仍然按原类型发布”不会被阻止。</div>
         </div>
-        <div class="tc-note">最终由你决定；选“仍然按原类型发布”不会被阻止。</div>
       </div>
 
       <div v-if="result" class="okpanel" style="margin-top:14px">
@@ -602,7 +604,8 @@ function askDetective() {
 
 
 <style scoped>
-.type-confirm { margin:14px 0; padding:14px 15px; border:1px solid #E7C98F; border-radius:12px; background:#FFF9EC; box-shadow:0 8px 24px rgba(92,64,20,.08); }
+.tc-overlay { position:fixed; inset:0; z-index:9999; background:rgba(28,18,42,.62); display:flex; align-items:center; justify-content:center; padding:18px; }
+.type-confirm { width:min(420px,100%); max-height:86vh; overflow:auto; padding:16px; border:1px solid #E7C98F; border-radius:14px; background:#FFF9EC; box-shadow:0 18px 50px rgba(20,10,35,.28); }
 .tc-kicker { font-size:9px; letter-spacing:.12em; color:#A56A16; }
 .type-confirm h3 { margin:5px 0 6px; font-size:14px; color:#5B3A10; }
 .type-confirm p { margin:0; font-size:10px; line-height:1.7; color:#7C6648; }
