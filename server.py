@@ -4826,11 +4826,16 @@ class Handler(BaseHTTPRequestHandler):
                     save_claims(claims)
                 save_items(items)
                 notices = load_notices()
-                other = item.get("ownerToken") if owner == claim.get("from") else claim.get("from")
-                add_notice(notices, other, "rejected",
-                           ("有一位帮忙人取消了《%s》的申请，名额已空出" % (item.get("title") or ""))
-                           if in_help else ("《%s》的申请已取消" % (item.get("title") or "")),
-                           item.get("id"), claim.get("id"))
+                if owner == claim.get("from"):
+                    other = item.get("ownerToken")
+                    text = (("有一位帮忙人取消了《%s》的申请，名额已空出" % (item.get("title") or ""))
+                            if in_help else ("申请人取消了《%s》的申请" % (item.get("title") or "")))
+                else:
+                    other = claim.get("from")
+                    text = (("发布者结束了与你的《%s》沟通，名额已空出" % (item.get("title") or ""))
+                            if in_help else ("发布者取消了你的《%s》申请" % (item.get("title") or "")))
+                if other:
+                    add_notice(notices, other, "claim", text, item.get("id"), claim.get("id"))
                 save_notices(notices)
             return self._json({"ok": True, "status": "canceled"})
 
