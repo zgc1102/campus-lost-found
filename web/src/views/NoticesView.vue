@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { api } from '../api'
 import CountUp from '../components/CountUp.vue'
 
@@ -19,11 +19,7 @@ const chatSending = ref(false)
 const sendError = ref('')
 const pendingChat = ref(null)
 const chatSide = ref('owner')
-const chatInputFocused = ref(false)
 let sendClientId = ''
-let chatPollTimer = null
-let chatPolling = false
-let chatPollFailures = 0
 const compareOpen = ref(false)
 const myItems = ref([])
 
@@ -164,7 +160,6 @@ async function loadChat(rid) {
     chatError.value = e.message || '聊天记录加载失败'
   } finally {
     chatLoading.value = false
-    if (!chatError.value) scheduleChatPoll(5000)
   }
 }
 function chatKey(m) {
@@ -220,68 +215,8 @@ async function sendChat() {
     pendingChat.value = null
   } finally {
     chatSending.value = false
-    scheduleChatPoll(5000)
   }
 }
-function stopChatPoll() {
-  if (chatPollTimer) {
-    clearTimeout(chatPollTimer)
-    chatPollTimer = null
-  }
-}
-function scheduleChatPoll(ms = 5000) {
-  stopChatPoll()
-  if (!selected.value?.report?.id || chatError.value) return
-  chatPollTimer = setTimeout(pollChat, ms)
-}
-async function pollChat() {
-  chatPollTimer = null
-  if (!selected.value?.report?.id || chatLoading.value || chatSending.value || chatInputFocused.value) {
-    scheduleChatPoll(5000)
-    return
-  }
-  if (document.hidden) {
-    scheduleChatPoll(5000)
-    return
-  }
-  if (chatPolling) return
-  chatPolling = true
-  const rid = selected.value.report.id
-  const last = chat.value[chat.value.length - 1]
-  try {
-    const r = await api.reportMessages(rid, last?.id, last?.at)
-    if (selected.value?.report?.id !== rid) return
-    const list = Array.isArray(r.messages) ? r.messages : []
-    list.forEach(appendChat)
-    if (r.side) chatSide.value = r.side
-    chatPollFailures = 0
-    scheduleChatPoll(5000)
-  } catch (_) {
-    chatPollFailures += 1
-    scheduleChatPoll(Math.min(60000, 5000 * Math.pow(2, chatPollFailures)))
-  } finally {
-    chatPolling = false
-  }
-}
-function onChatFocus() {
-  chatInputFocused.value = true
-  stopChatPoll()
-}
-function onChatBlur() {
-  chatInputFocused.value = false
-  scheduleChatPoll(3000)
-}
-function onVisibilityChange() {
-  if (document.hidden) stopChatPoll()
-  else scheduleChatPoll(1000)
-}
-onUnmounted(() => {
-  stopChatPoll()
-  document.removeEventListener('visibilitychange', onVisibilityChange)
-})
-onMounted(() => {
-  document.addEventListener('visibilitychange', onVisibilityChange)
-})
 
 function goItem() {
   if (!selected.value?.itemId) return
@@ -291,7 +226,6 @@ function goItem() {
   }
   sessionStorage.setItem('sg:focusItem', selected.value.itemId)
   const t = selected.value.itemType === 'help' ? 'help' : selected.value.itemType === 'lost' ? 'lost' : 'found'
-  stopChatPoll()
   selected.value = null
   emit('nav', t)
 }
@@ -375,7 +309,6 @@ async function copyCompare() {
 }
 
 function ignoreNotice() {
-  stopChatPoll()
   selected.value = null
 }
 function fmt(ts) {
@@ -466,7 +399,7 @@ function fmt(ts) {
         </template>
         <div v-if="sendError" class="nd-send-error">{{ sendError }}，内容已保留，可再次点击发送。</div>
         <div class="nd-chat-input">
-          <input v-model="chatText" maxlength="200" :disabled="chatSending" placeholder="回复捡到者，不需要暴露手机号" @input="onChatInput" @focus="onChatFocus" @blur="onChatBlur">
+          <input v-model="chatText" maxlength="200" :disabled="chatSending" placeholder="回复捡到者，不需要暴露手机号" @input="onChatInput">
           <button type="button" :disabled="chatSending || !chatText.trim()" @click="sendChat">{{ chatSending ? '发送中…' : '发送' }}</button>
         </div>
       </div>
@@ -707,4 +640,3 @@ function fmt(ts) {
 .nd-send-error { margin-top:5px; font-size:8.5px; color:#A23B2A; }
 .nd-chat-input button:disabled, .nd-chat-input input:disabled { opacity:.55; }
 </style>
-
