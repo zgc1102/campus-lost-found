@@ -234,6 +234,12 @@ export const api = {
   claimContact(id, phone) {
     return call('/claims/' + encodeURIComponent(id) + '/contact', { method: 'POST', body: JSON.stringify({ phone }), skipCacheClear: true })
   },
+  claimRevealPhone(id) {
+    return call('/claims/' + encodeURIComponent(id) + '/reveal-phone', { method: 'POST', body: '{}', skipCacheClear: true })
+  },
+  reportRevealPhone(id) {
+    return call('/reports/' + encodeURIComponent(id) + '/reveal-phone', { method: 'POST', body: '{}', skipCacheClear: true })
+  },
   claimMessages(id, after, afterAt) {
     return call('/claims/' + encodeURIComponent(id) + '/messages/list', {
       method: 'POST',

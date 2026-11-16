@@ -23,6 +23,10 @@ const blockedBy = ref('')
 const claimPhoneInput = ref('')
 const claimPhoneSaving = ref(false)
 const claimPhoneMsg = ref('')
+const revealOpen = ref(false)
+const revealTarget = ref('')
+const revealing = ref(false)
+const revealMsg = ref('')
 const compareOpen = ref(false)
 const targetOpen = ref(false)
 const myItems = ref([])
@@ -146,6 +150,9 @@ function openNotice(n) {
   blockedBy.value = ''
   claimPhoneInput.value = ''
   claimPhoneMsg.value = ''
+  revealOpen.value = false
+  revealTarget.value = ''
+  revealMsg.value = ''
   compareOpen.value = false
   targetOpen.value = false
   chatKind.value = n.reportId ? 'report' : 'claim'
@@ -315,6 +322,35 @@ async function closeReport() {
   } catch (e) { actionMsg.value = e.message || '关闭失败' }
 }
 
+function askRevealPhone(target) {
+  revealTarget.value = target
+  revealMsg.value = ''
+  revealOpen.value = true
+}
+async function doRevealPhone() {
+  if (revealing.value) return
+  revealing.value = true
+  revealMsg.value = ''
+  try {
+    if (revealTarget.value === 'claim') {
+      const r = await api.claimRevealPhone(selected.value.claimId)
+      selected.value.claimPhoneRevealed = true
+      selected.value.ownerContact = r.ownerContact || ''
+      selected.value.claimContact = r.claimContact || selected.value.claimContact
+    } else {
+      const r = await api.reportRevealPhone(selected.value.report.id)
+      selected.value.report.phoneRevealed = true
+      selected.value.report.ownerContact = r.ownerContact || ''
+      selected.value.report.contact = r.finderContact || selected.value.report.contact
+    }
+    revealOpen.value = false
+    actionMsg.value = '已公布双方手机号，双方现在可以互相看到'
+  } catch (e) {
+    revealMsg.value = e.message || '公布失败'
+  } finally {
+    revealing.value = false
+  }
+}
 async function saveClaimPhone() {
   const rid = selected.value?.claimId
   if (!rid || claimPhoneSaving.value) return
@@ -453,6 +489,9 @@ function fmt(ts) {
         <div class="nd-kv"><span>拾光码物品</span><b>{{ selected.report.tagItem || '我的物品' }}</b></div>
         <div class="nd-kv"><span>上报时间</span><b>{{ fmt(selected.report.at) }}</b></div>
         <div class="nd-message">{{ selected.report.message }}</div>
+        <div v-if="selected.report.phoneRevealed" class="nd-kv"><span>我的手机号</span><b>{{ selected.report.ownerContact || '未留手机号' }}</b></div>
+        <div v-if="selected.report.phoneRevealed" class="nd-kv"><span>捡到者手机号</span><b>{{ selected.report.contact || '未留手机号' }}</b></div>
+        <button v-if="!selected.report.phoneRevealed" type="button" class="btn" style="margin-top:9px;width:100%" @click="askRevealPhone('report')">公布双方手机号</button>
       </div>
 
       <div v-if="selected.claimId && selected.itemType !== 'help'" class="nd-card">
@@ -476,6 +515,7 @@ function fmt(ts) {
         </div>
         <div v-if="selected.claimStatus === 'accepted' || selected.claimStatus === 'completed'" class="nd-exchange-ok">双方手机号已交换，可以直接联系。</div>
         <div v-else class="nd-exchange-tip">发布者通过申请后，双方手机号自动交换；未通过前只显示打码号码。</div>
+        <button v-if="selected.canRevealPhone && !selected.claimPhoneRevealed" type="button" class="btn" style="margin-top:8px;width:100%" @click="askRevealPhone('claim')">公布双方手机号</button>
         <div v-if="claimPhoneMsg" class="nd-phone-msg">{{ claimPhoneMsg }}</div>
       </div>
 
@@ -566,6 +606,19 @@ function fmt(ts) {
           <button v-if="selected.item" type="button" class="btn ghost" @click="compareOpen = true">查看匹配报告</button>
           <button type="button" class="btn ghost" @click="ignoreNotice">忽略</button>
         </template>
+      </div>
+    </div>
+
+    <div v-if="revealOpen" class="reveal-overlay" @click.self="revealOpen = false">
+      <div class="reveal-card">
+        <div class="compare-kicker">公布手机号</div>
+        <h3>确认公布双方手机号？</h3>
+        <p>公布后，你和对方都能看到彼此的完整手机号，方便直接联系。请确认对方身份后再公布。</p>
+        <div v-if="revealMsg" class="nd-send-error">{{ revealMsg }}</div>
+        <div class="reveal-actions">
+          <button type="button" class="btn" :disabled="revealing" @click="doRevealPhone">{{ revealing ? '公布中…' : '确认公布' }}</button>
+          <button type="button" class="btn ghost" :disabled="revealing" @click="revealOpen = false">取消</button>
+        </div>
       </div>
     </div>
 
@@ -802,4 +855,13 @@ function fmt(ts) {
 .nd-exchange-ok { margin-top:7px; font-size:9px; color:#2F7D46; }
 .nd-exchange-tip { margin-top:7px; font-size:8.5px; line-height:1.6; color:#8E7FA3; }
 .nd-phone-msg { margin-top:5px; font-size:8.5px; color:#5B2A91; }
+</style>
+
+<style scoped>
+.reveal-overlay { position:fixed; inset:0; z-index:10000; background:rgba(28,18,42,.62); display:flex; align-items:center; justify-content:center; padding:18px; }
+.reveal-card { width:min(400px,100%); background:#fff; border-radius:14px; padding:16px; box-shadow:0 18px 50px rgba(20,10,35,.3); }
+.reveal-card h3 { margin:6px 0 7px; font-size:15px; color:#3B1D63; }
+.reveal-card p { margin:0; font-size:10px; line-height:1.7; color:#6F607F; }
+.reveal-actions { display:flex; flex-direction:column; gap:7px; margin-top:12px; }
+.reveal-actions .btn { width:100%; }
 </style>

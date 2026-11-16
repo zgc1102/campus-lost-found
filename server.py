@@ -1268,6 +1268,27 @@ def moderate_text(text, title="用户输入", allow_help=False):
     return True, ""
 
 
+def _can_reveal_phone(item, claim, owner, all_items):
+    """谁有权把双方手机号公布出来。只允许发布者；双方都发过时只允许捡到物品的人。"""
+    if not item or not claim:
+        return False
+    is_owner = item.get("ownerToken") == owner
+    is_claimer = claim.get("from") == owner
+    if not (is_owner or is_claimer):
+        return False
+    claimer = claim.get("from")
+    both_posted = any(
+        x.get("ownerToken") == claimer
+        and x.get("type") == ("lost" if item.get("type") == "found" else "found")
+        and x.get("status") in ("approved", "claimed", "closed")
+        for x in all_items
+    )
+    finder = item.get("ownerToken") if item.get("type") == "found" else claimer
+    if both_posted:
+        return owner == finder
+    return is_owner
+
+
 def public_item(it, owner=None):
     """用户端能看到的内容：不含核验特征、发布者令牌，电话脱敏"""
     out = {k: v for k, v in it.items()
@@ -2652,12 +2673,13 @@ class Handler(BaseHTTPRequestHandler):
                     # 联系方式：没通过之前只给打码版本
                     if c.get("contact"):
                         out["claimContact"] = (
-                            c.get("contact") if c.get("status") in ("accepted", "completed")
+                            c.get("contact") if (c.get("status") in ("accepted", "completed") or c.get("phoneRevealed"))
                             else mask_contact(c.get("contact"))
                         )
-                if c.get("status") in ("accepted", "completed"):
+                if c.get("status") in ("accepted", "completed") or c.get("phoneRevealed"):
                     out["ownerContact"] = (it.get("contact") or {}).get("phone") or ""
                     out["claimContact"] = c.get("contact") or ""
+                    out["phoneRevealed"] = bool(c.get("phoneRevealed"))
                 if c.get("status") == "accepted" and c.get("returnCode"):
                     if c.get("returnCodeFor") == owner:
                         out["returnCode"] = c.get("returnCode")
@@ -2692,12 +2714,14 @@ class Handler(BaseHTTPRequestHandler):
                 with LOCK:
                     save_tag_reports(list(report_map.values()))
             mine = []
+            tags_by_code = {t.get("code"): t for t in load_tags()}
             for n in notices:
                 if n.get("owner") != owner:
                     continue
                 row = dict(n)
                 rp = report_map.get(n.get("reportId"))
                 if rp:
+                    _tag = tags_by_code.get(rp.get("tagCode")) or {}
                     row["report"] = {
                         "id": rp.get("id"), "itemName": rp.get("itemName"),
                         "message": rp.get("message"), "contact": rp.get("contact"),
@@ -2705,6 +2729,8 @@ class Handler(BaseHTTPRequestHandler):
                         "status": rp.get("status") or "pending",
                         "at": rp.get("createdAt"),
                         "itemId": rp.get("itemId") or "",
+                        "phoneRevealed": bool(rp.get("phoneRevealed")),
+                        "ownerContact": _tag.get("phone") if rp.get("phoneRevealed") else "",
                     }
                 it = item_map.get(n.get("itemId"))
                 if it:
@@ -2716,8 +2742,13 @@ class Handler(BaseHTTPRequestHandler):
                 if cl:
                     row["claimStatus"] = cl.get("status") or "pending"
                     row["claimMessage"] = cl.get("message") or ""
-                    row["claimContact"] = (cl.get("contact") if cl.get("status") in ("accepted", "completed")
+                    _revealed = bool(cl.get("phoneRevealed")) or cl.get("status") in ("accepted", "completed")
+                    row["claimPhoneRevealed"] = bool(cl.get("phoneRevealed"))
+                    row["claimContact"] = (cl.get("contact") if _revealed
                                            else mask_contact(cl.get("contact")))
+                    if _revealed and it:
+                        row["ownerContact"] = (it.get("contact") or {}).get("phone") or ""
+                    row["canRevealPhone"] = bool(it and _can_reveal_phone(it, cl, owner, item_map.values()))
                     row["claimAi"] = cl.get("aiCheck") or None
                 if n.get("type") == "match":
                     src = item_map.get(n.get("matchSourceId"))
@@ -3809,6 +3840,33 @@ class Handler(BaseHTTPRequestHandler):
                                    "accepted": accepted})
 
 
+        if path.startswith("/api/claims/") and path.endswith("/reveal-phone"):
+            owner = self._owner()
+            claim_id = path[len("/api/claims/"):-len("/reveal-phone")]
+            with LOCK:
+                claims = load_claims()
+                claim = next((c for c in claims if c.get("id") == claim_id), None)
+                if not claim:
+                    return self._json({"error": "认领记录不存在"}, 404)
+                items = load_items()
+                item = next((x for x in items if x.get("id") == claim.get("itemId")), None)
+                if not item:
+                    return self._json({"error": "物品不存在"}, 404)
+                if not _can_reveal_phone(item, claim, owner, items):
+                    return self._json({"error": "当前只有发布者可以公布双方手机号"}, 403)
+                owner_phone = (item.get("contact") or {}).get("phone") or ""
+                claimer_phone = claim.get("contact") or ""
+                if not owner_phone:
+                    return self._json({"error": "发布者还没有留手机号，请先补充"}, 400)
+                if not claimer_phone:
+                    return self._json({"error": "认领人还没有留手机号"}, 400)
+                claim["phoneRevealed"] = True
+                claim["phoneRevealedBy"] = owner
+                claim["phoneRevealedAt"] = now_ms()
+                claim["updatedAt"] = now_ms()
+                save_claims(claims)
+                return self._json({"ok": True, "ownerContact": owner_phone, "claimContact": claimer_phone})
+
         if path.startswith("/api/claims/") and (path.endswith("/messages/list") or path.endswith("/messages/send")):
             owner = self._owner()
             is_send = path.endswith("/messages/send")
@@ -3858,6 +3916,30 @@ class Handler(BaseHTTPRequestHandler):
                 else:
                     save_claims(claims)
                 return self._json({"ok": True, "message": msg, "duplicate": False})
+
+        if path.startswith("/api/reports/") and path.endswith("/reveal-phone"):
+            owner = self._owner()
+            report_id = path[len("/api/reports/"):-len("/reveal-phone")]
+            with LOCK:
+                reports = load_tag_reports()
+                report = next((r for r in reports if r.get("id") == report_id), None)
+                if not report:
+                    return self._json({"error": "上报不存在"}, 404)
+                if report.get("owner") != owner:
+                    return self._json({"error": "只有失主可以公布手机号"}, 403)
+                tags = load_tags()
+                tag = next((t for t in tags if t.get("code") == report.get("tagCode")), None)
+                owner_phone = (tag or {}).get("phone") or ""
+                finder_phone = report.get("contact") or ""
+                if not owner_phone:
+                    return self._json({"error": "你还没有留手机号，请先补充"}, 400)
+                if not finder_phone:
+                    return self._json({"error": "捡到者还没有留手机号"}, 400)
+                report["phoneRevealed"] = True
+                report["phoneRevealedAt"] = now_ms()
+                report["updatedAt"] = now_ms()
+                save_tag_reports(reports)
+                return self._json({"ok": True, "ownerContact": owner_phone, "finderContact": finder_phone})
 
         if path.startswith("/api/reports/") and (path.endswith("/messages/list") or path.endswith("/messages/send")):
             owner = self._owner()
