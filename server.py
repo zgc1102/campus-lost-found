@@ -2459,6 +2459,32 @@ class Handler(BaseHTTPRequestHandler):
                                "queue": st.get("state") or "", "position": pos,
                                "item": item if item.get("status") != "pending" else None})
 
+        if path.startswith("/api/claims/") and path.endswith("/image"):
+            owner = self._owner()
+            claim_id = path[len("/api/claims/"):-len("/image")]
+            with LOCK:
+                claims = load_claims()
+                claim = next((c for c in claims if c.get("id") == claim_id), None)
+                if not claim:
+                    return self._json({"error": "认领记录不存在"}, 404)
+                item = next((x for x in load_items() if x.get("id") == claim.get("itemId")), None)
+                if not item:
+                    return self._json({"error": "物品不存在"}, 404)
+                if owner not in (item.get("ownerToken"), claim.get("from")):
+                    return self._json({"error": "无权查看"}, 403)
+                return self._json({"image": claim.get("supplementImage") or ""})
+
+        if path.startswith("/api/reports/") and path.endswith("/image"):
+            owner = self._owner()
+            report_id = path[len("/api/reports/"):-len("/image")]
+            with LOCK:
+                report = next((r for r in load_tag_reports() if r.get("id") == report_id), None)
+                if not report:
+                    return self._json({"error": "上报不存在"}, 404)
+                if owner not in (report.get("owner"), report.get("finder")):
+                    return self._json({"error": "无权查看"}, 403)
+                return self._json({"image": report.get("photo") or ""})
+
         if path.startswith("/api/photo/"):
             item_id = path[len("/api/photo/"):]
             with LOCK:
@@ -2781,10 +2807,10 @@ class Handler(BaseHTTPRequestHandler):
                 if rp:
                     _tag = tags_by_code.get(rp.get("tagCode")) or {}
                     row["isReportOwner"] = bool(rp.get("owner") == owner)
+                    row["hasReportPhoto"] = bool(rp.get("photo"))
                     row["report"] = {
                         "id": rp.get("id"), "itemName": rp.get("itemName"),
                         "message": rp.get("message"), "contact": rp.get("contact"),
-                        "photo": rp.get("photo") or "",
                         "tagCode": rp.get("tagCode"), "tagItem": rp.get("tagItem"),
                         "status": rp.get("status") or "pending",
                         "at": rp.get("createdAt"),
@@ -2805,7 +2831,7 @@ class Handler(BaseHTTPRequestHandler):
                     row["claimStatus"] = cl.get("status") or "pending"
                     row["claimMessage"] = cl.get("message") or ""
                     row["claimNeedImage"] = bool(cl.get("needImage"))
-                    row["claimImage"] = cl.get("supplementImage") or ""
+                    row["hasClaimImage"] = bool(cl.get("supplementImage"))
                     _revealed = bool(cl.get("phoneRevealed")) or cl.get("status") in ("accepted", "completed")
                     if cl.get("status") in ("accepted", "completed"):
                         if not ((cl.get("contact") or "").strip() and ((it.get("contact") or {}).get("phone") or "").strip() if it else False):

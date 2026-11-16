@@ -231,6 +231,12 @@ export const api = {
   reportSend(id, text, clientMsgId) {
     return call('/reports/' + encodeURIComponent(id) + '/messages/send', { method: 'POST', body: JSON.stringify({ text, clientMsgId }), skipCacheClear: true })
   },
+  claimImage(id) {
+    return call('/claims/' + encodeURIComponent(id) + '/image')
+  },
+  reportImage(id) {
+    return call('/reports/' + encodeURIComponent(id) + '/image')
+  },
   claimPickupCode(id) {
     return call('/claims/' + encodeURIComponent(id) + '/pickup-code', { method: 'POST', body: '{}', skipCacheClear: true })
   },

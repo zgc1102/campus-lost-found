@@ -168,7 +168,10 @@ async function refreshSelected() {
   clearApiCache()
   await load()
   const fresh = items.value.find((x) => x.id === id)
-  if (fresh) selected.value = fresh
+  if (fresh) {
+    selected.value = fresh
+    hydrateNoticeImages(fresh)
+  }
 }
 onMounted(() => {
   document.addEventListener('visibilitychange', refreshWhenVisible)
@@ -241,6 +244,21 @@ function openNotice(n) {
     n.read = true
     unread.value = Math.max(0, unread.value - 1)
     api.readNotice(n.id).catch(() => {})
+  }
+  hydrateNoticeImages(n)
+}
+async function hydrateNoticeImages(n) {
+  if (n.hasClaimImage && n.claimId) {
+    try {
+      const r = await api.claimImage(n.claimId)
+      if (selected.value?.id === n.id && r?.image) selected.value.claimImage = r.image
+    } catch (_) {}
+  }
+  if (n.hasReportPhoto && n.report?.id) {
+    try {
+      const r = await api.reportImage(n.report.id)
+      if (selected.value?.id === n.id && r?.image) selected.value.report.photo = r.image
+    } catch (_) {}
   }
 }
 
