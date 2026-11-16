@@ -620,12 +620,13 @@ function fmt(ts) {
           </div>
         </div>
         <div v-if="selected.claimStatus" class="nd-state" style="margin-top:8px">{{ ({pending:'待处理', accepted:'进行中', completed:'已完成', rejected:'已婉拒', need_more:'待补充'})[selected.claimStatus] || selected.claimStatus }}</div>
-        <div v-if="selected.claimStatus === 'need_more'" class="help-supplement">
+        <div v-if="selected.claimStatus === 'need_more' && selected.isClaimant" class="help-supplement">
           <p>发布者请你补充一点细节，补充后会自动回到待处理。</p>
           <textarea v-model="helpSupplement" maxlength="200" placeholder="补充你能提供的具体信息，例如时间、地点、物品特征"></textarea>
           <button type="button" :disabled="helpSupplementing" @click="supplementHelp">{{ helpSupplementing ? '提交中…' : '提交补充' }}</button>
           <div v-if="helpSupplementMsg" class="nd-phone-msg">{{ helpSupplementMsg }}</div>
         </div>
+        <div v-else-if="selected.claimStatus === 'need_more'" class="nd-exchange-tip">已请帮忙人补充说明，等对方提交后会自动回到待处理。</div>
         <div class="nd-kv" style="margin-top:8px"><span>发布者手机号</span><b>{{ selected.ownerContact || (selected.item?.contact?.phone ? '已留手机号（通过后显示完整）' : '还没留手机号') }}</b></div>
         <div class="nd-kv"><span>帮忙人手机号</span><b>{{ selected.item?.isMine ? (selected.claimContact || '还没留手机号') : (selected.claimContact ? '已留手机号' : '还没留手机号') }}</b></div>
         <div v-if="selected.item?.isMine && !selected.ownerContact && !selected.item?.contact?.phone" class="nd-phone-fill">
@@ -661,17 +662,17 @@ function fmt(ts) {
           <button type="button" class="btn ghost" @click="ignoreNotice">不是我的 / 忽略</button>
         </template>
         <template v-else-if="selected.itemType === 'help'">
-          <template v-if="selected.isPublisher && selected.claimId && selected.claimStatus === 'pending'">
+          <template v-if="(selected.isPublisher || selected.item?.isMine) && selected.claimId && selected.claimStatus === 'pending'">
             <button type="button" class="btn" @click="helpAction('accepted')">接受并公布双方手机号</button>
             <button type="button" class="btn ghost" @click="helpAction('need_more')">请补充</button>
             <button type="button" class="btn ghost" @click="helpAction('rejected')">婉拒</button>
           </template>
-          <button v-if="selected.isPublisher && selected.claimId && selected.claimStatus === 'accepted'" type="button" class="btn" @click="completeHelp">完成帮助</button>
+          <button v-if="(selected.isPublisher || selected.item?.isMine) && selected.claimId && selected.claimStatus === 'accepted'" type="button" class="btn" @click="completeHelp">完成帮助</button>
           <button v-if="selected.item" type="button" class="btn ghost" @click="compareOpen = true">查看匹配报告</button>
           <button type="button" class="btn ghost" @click="ignoreNotice">忽略</button>
         </template>
         <template v-else>
-          <template v-if="selected.claimId && selected.isPublisher && ['pending','need_more'].includes(selected.claimStatus)">
+          <template v-if="(selected.isPublisher || selected.item?.isMine) && selected.claimId && (!selected.claimStatus || ['pending','need_more'].includes(selected.claimStatus))">
             <button type="button" class="btn" @click="claimAction('accepted')">通过认领</button>
             <button type="button" class="btn ghost" @click="claimAction('need_more')">请补充</button>
             <button type="button" class="btn ghost" @click="claimAction('rejected')">拒绝</button>
@@ -688,6 +689,14 @@ function fmt(ts) {
         <div class="compare-kicker">公布手机号</div>
         <h3>确认公布双方手机号？</h3>
         <p>公布后，你和对方都能看到彼此的完整手机号，方便直接联系。请确认对方身份后再公布。</p>
+        <div v-if="revealTarget === 'claim'" class="reveal-phones">
+          <div><span>你的手机号</span><b>{{ selected.item?.isMine ? (selected.ownerContact || selected.item?.contact?.phone || '尚未留') : (selected.claimContact || '尚未留') }}</b></div>
+          <div><span>对方手机号</span><b>{{ selected.item?.isMine ? (selected.claimContact || '尚未留') : (selected.ownerContact || selected.item?.contact?.phone || '尚未留') }}</b></div>
+        </div>
+        <div v-else-if="revealTarget === 'report'" class="reveal-phones">
+          <div><span>你的手机号</span><b>{{ selected.report?.ownerContact || '尚未留' }}</b></div>
+          <div><span>捡到者手机号</span><b>{{ selected.report?.contact || '尚未留' }}</b></div>
+        </div>
         <div v-if="revealMsg" class="nd-send-error">{{ revealMsg }}</div>
         <div class="reveal-actions">
           <button type="button" class="btn" :disabled="revealing" @click="doRevealPhone">{{ revealing ? '公布中…' : '确认公布' }}</button>
@@ -973,4 +982,10 @@ function fmt(ts) {
 .help-supplement p { margin:0 0 6px; font-size:9px; line-height:1.6; color:#7C6A8E; }
 .help-supplement textarea { width:100%; box-sizing:border-box; min-height:60px; background:#fff; border:1px solid #E4D6F2; border-radius:8px; padding:8px; font-family:inherit; font-size:9.5px; }
 .help-supplement button { margin-top:6px; width:100%; border:0; background:#5B2A91; color:#fff; border-radius:8px; padding:8px; font-family:inherit; font-size:9.5px; }
+</style>
+
+<style scoped>
+.reveal-phones { margin-top:9px; border:1px solid #E7DCF4; border-radius:9px; background:#FBF8FF; padding:7px 9px; }
+.reveal-phones > div { display:flex; justify-content:space-between; gap:12px; padding:4px 0; font-size:9px; color:#7C6A8E; }
+.reveal-phones b { color:#3B1D63; font-weight:600; text-align:right; }
 </style>
