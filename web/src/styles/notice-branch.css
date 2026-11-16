@@ -1,0 +1,28 @@
+.nd-card { background:#fff; border:1px solid #EFE7F7; border-radius:13px; padding:11px 12px; margin-top:10px; }
+.nd-card-title { font-size:10px; font-weight:600; color:#5B2A91; margin-bottom:6px; }
+.nd-kv { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:4px 0; font-size:9px; line-height:1.6; color:#8E7FA3; }
+.nd-kv b { color:#3F3350; font-weight:500; text-align:right; }
+.nd-message { margin-top:5px; font-size:9.5px; line-height:1.7; color:#6F607F; white-space:pre-wrap; }
+.nd-help-card { border-color:#D8E8DD; background:#FBFEFC; }
+.nd-ai-check { margin-top:8px; padding:8px; border:1px solid #E7DCF4; border-radius:9px; background:#FBF8FF; }
+.nd-ai-check b { display:block; font-size:10.5px; color:#5B2A91; }
+.nd-ai-check span { display:block; margin-top:2px; font-size:8px; color:#9A8CAD; }
+.nd-ai-check p { margin:4px 0 0; font-size:8.5px; line-height:1.6; color:#6F607F; }
+.nd-ai-points { display:flex; flex-wrap:wrap; gap:3px; margin-top:5px; }
+.nd-ai-points i { font-style:normal; font-size:8px; color:#5B2A91; background:#F1E8FB; border-radius:4px; padding:1px 4px; }
+.nd-state { margin-top:8px; display:inline-block; font-size:9px; color:#5B2A91; background:#F1E8FB; border-radius:99px; padding:3px 8px; }
+.nd-exchange-ok { margin-top:7px; font-size:9px; color:#2F7D46; }
+.nd-exchange-tip { margin-top:7px; font-size:8.5px; line-height:1.6; color:#8E7FA3; }
+.nd-phone-fill { margin-top:7px; padding:8px; border-radius:9px; background:#FBF7FF; border:1px solid #EADFF5; }
+.nd-phone-fill p { margin:0 0 6px; font-size:9px; line-height:1.6; color:#7C6A8E; }
+.nd-phone-row { display:flex; gap:6px; }
+.nd-phone-row input { flex:1; min-width:0; background:#fff; border:1px solid #E4D6F2; border-radius:8px; padding:7px; font-family:inherit; font-size:9.5px; }
+.nd-phone-row button { border:0; background:#5B2A91; color:#fff; border-radius:8px; padding:0 9px; font-family:inherit; font-size:9px; }
+.nd-phone-msg { margin-top:5px; font-size:8.5px; color:#5B2A91; }
+.nd-actions { display:flex; flex-wrap:wrap; gap:7px; margin-top:12px; }
+.nd-actions .btn { flex:1; min-width:120px; }
+.nd-blocked { margin:8px 0; padding:9px 10px; border-radius:9px; background:#F3F0F7; border:1px solid #DED4EA; display:flex; flex-direction:column; gap:3px; }
+.nd-blocked b { font-size:10px; color:#5B2A91; }
+.nd-blocked span { font-size:8.5px; line-height:1.6; color:#7E6E92; }
+.nd-contact { margin-top:8px; font-size:9px; color:#5B2A91; }
+.nd-legacy { margin-top:8px; font-size:9px; line-height:1.6; color:#A97A00; }

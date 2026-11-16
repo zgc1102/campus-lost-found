@@ -2,6 +2,11 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { api } from '../api'
 import CountUp from '../components/CountUp.vue'
+import NoticeChat from '../components/NoticeChat.vue'
+import NoticePickup from '../components/NoticePickup.vue'
+import NoticeClaim from '../components/NoticeClaim.vue'
+import NoticeHelp from '../components/NoticeHelp.vue'
+import NoticeSystem from '../components/NoticeSystem.vue'
 
 const emit = defineEmits(['nav'])
 const items = ref([])
@@ -34,6 +39,14 @@ const helpSupplementMsg = ref('')
 const compareOpen = ref(false)
 const targetOpen = ref(false)
 const myItems = ref([])
+const branch = computed(() => {
+  const s = selected.value
+  if (!s) return 'system'
+  if (s.type === 'pickup' && s.report) return 'pickup'
+  if (s.itemType === 'help') return 'help'
+  if (s.claimId && (s.itemType === 'lost' || s.itemType === 'found')) return 'claim'
+  return 'system'
+})
 
 function grams(s) {
   const x = String(s || '').replace(/\s+/g, '')
@@ -264,8 +277,8 @@ function makeClientMsgId() {
   } catch (_) {}
   return `c_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
 }
-function sendChat() {
-  const text = chatText.value.trim()
+function sendChat(textInput) {
+  const text = String(textInput || chatText.value || '').trim()
   const target = chatTargetId.value ? { id: chatTargetId.value, kind: chatKind.value } : null
   if (!text || !target || chatBlocked.value) return
   const item = {
@@ -394,9 +407,9 @@ async function doRevealPhone() {
     revealing.value = false
   }
 }
-async function supplementHelp() {
+async function supplementHelp(textInput) {
   if (!selected.value?.claimId || helpSupplementing.value) return
-  const text = helpSupplement.value.trim()
+  const text = String(textInput || helpSupplement.value || '').trim()
   if (text.length < 2) { helpSupplementMsg.value = '请写一点补充说明'; return }
   helpSupplementing.value = true
   helpSupplementMsg.value = ''
@@ -412,10 +425,10 @@ async function supplementHelp() {
     helpSupplementing.value = false
   }
 }
-async function saveClaimPhone() {
+async function saveClaimPhone(phoneInput) {
   const rid = selected.value?.claimId
   if (!rid || claimPhoneSaving.value) return
-  const phone = claimPhoneInput.value.trim()
+  const phone = String(phoneInput || claimPhoneInput.value || '').trim()
   if (!phone) { claimPhoneMsg.value = '请先填写手机号'; return }
   claimPhoneSaving.value = true
   claimPhoneMsg.value = ''
@@ -569,141 +582,24 @@ function fmt(ts) {
         <div v-if="selected.report && selected.itemType !== 'help'" class="nd-state">{{ ({pending:'待确认', contacted:'已联系', published:'已公开', closed:'已找回'})[selected.report.status] || selected.report.status }}</div>
       </div>
 
-      <div v-if="selected.type === 'pickup' && selected.report" class="nd-card">
-        <div class="nd-card-title">捡到上报</div>
-        <div class="nd-kv"><span>捡到物品</span><b>{{ selected.report.itemName || '捡到物品' }}</b></div>
-        <div class="nd-kv"><span>拾光码物品</span><b>{{ selected.report.tagItem || '我的物品' }}</b></div>
-        <div class="nd-kv"><span>上报时间</span><b>{{ fmt(selected.report.at) }}</b></div>
-        <div class="nd-message">{{ selected.report.message }}</div>
-        <div v-if="selected.report.phoneRevealed" class="nd-kv"><span>我的手机号</span><b>{{ selected.report.ownerContact || '未留手机号' }}</b></div>
-        <div v-if="selected.report.phoneRevealed" class="nd-kv"><span>捡到者手机号</span><b>{{ selected.report.contact || '未留手机号' }}</b></div>
-      </div>
-
-      <div v-if="(selected.report || (selected.claimId && selected.itemType !== 'help')) && selected.itemType !== 'help'" class="nd-card">
-        <div class="nd-card-title">匿名沟通</div>
-        <div class="nd-safety">
-          <b>安全提示</b>
-          <span>平台不会索要验证码、支付密码，也不会要求转账、扫码付款或代付。对方若主动索要二维码、付款码、验证码，或让你先转账，请立即停止并举报。官方拾光码只用于物品留言，不会要求付款；陌生人私发的二维码，一律不要扫。</span>
-        </div>
-        <div v-if="chatBlocked" class="nd-blocked">
-          <b>{{ blockedBy === chatSide ? '你已屏蔽对方' : '对方已屏蔽你' }}</b>
-          <span>双方都不能再看到对方的新消息，也不能再发送消息。</span>
-        </div>
-        <div v-if="!chatBlocked && chatError" class="nd-chat-error">
-          <span>聊天记录加载失败：{{ chatError }}</span>
-          <button type="button" @click="refreshChat">重试</button>
-        </div>
-        <div v-if="!chatBlocked && chatLoading && !chat.length" class="nd-message" style="color:#8E7FA3">正在加载聊天记录…</div>
-        <template v-if="!chatBlocked && (!chatLoading || chat.length)">
-          <div v-if="!chat.length && !outbox.length" class="nd-message" style="color:#8E7FA3">还没有消息，可以先回复对方。</div>
-          <div v-for="m in chat" :key="chatKey(m)" class="nd-chat" :class="m.from === chatSide ? 'mine' : 'other'">
-            <span>{{ m.text }}<em class="nd-chat-time">{{ chatTime(m.at) }}</em></span>
-          </div>
-          <div v-for="m in outbox" :key="m.clientMsgId" class="nd-chat" :class="m.from === chatSide ? 'mine' : 'other'">
-            <span class="pending" :class="{ failed: m.status === 'failed' }">
-              <template v-if="m.status === 'failed'">! {{ m.text }}</template>
-              <template v-else>{{ m.text }}</template>
-              <em class="nd-chat-time">{{ m.status === 'failed' ? '发送失败，点击重试' : '发送中…' }}</em>
-            </span>
-            <button v-if="m.status === 'failed'" type="button" class="nd-retry" @click="retryOutbox(m)">重试</button>
-          </div>
+      <NoticePickup v-if="branch === 'pickup'" :notice="selected" @reveal="askRevealPhone('report')" @publish="publishReport" @block="blockReport" @close="closeReport" @ignore="ignoreNotice">
+        <template #chat>
+          <NoticeChat :messages="chat" :outbox="outbox" :side="chatSide" :loading="chatLoading" :error="chatError" :blocked="chatBlocked" :blocked-by="blockedBy" placeholder="回复捡到者，不需要暴露手机号" @send="sendChat" @retry="retryOutbox" @refresh="refreshChat" />
         </template>
-        <div v-if="!chatBlocked" class="nd-chat-input">
-          <input v-model="chatText" maxlength="200" :placeholder="selected.report ? '回复捡到者，不需要暴露手机号' : '回复对方，不需要暴露手机号'">
-          <button type="button" :disabled="!chatText.trim()" @click="sendChat">发送</button>
-        </div>
-        <div v-if="!chatBlocked" class="nd-chat-foot">
-          <button type="button" class="nd-chat-refresh" :disabled="chatLoading" @click="refreshChat">{{ chatLoading ? '刷新中…' : '刷新消息' }}</button>
-          <span class="nd-chat-help">对方新消息不会自动弹出，点“刷新消息”获取最新回复；发送失败的消息可点“重试”。</span>
-        </div>
-      </div>
+      </NoticePickup>
 
-      <div v-if="!selected.report" class="nd-card">
-        <div class="nd-card-title">通知内容</div>
-        <div class="nd-message">{{ selected.text }}</div>
-        <div v-if="!selected.itemId" class="nd-legacy">这条是旧版通知，只保留了文字记录，没有可操作的上报详情。</div>
-      </div>
+      <NoticeClaim v-else-if="branch === 'claim'" :notice="selected" @claim-action="claimAction" @reveal="askRevealPhone('claim')" @block="blockClaim" @compare="compareOpen = true" @ignore="ignoreNotice">
+        <template #chat>
+          <NoticeChat :messages="chat" :outbox="outbox" :side="chatSide" :loading="chatLoading" :error="chatError" :blocked="chatBlocked" :blocked-by="blockedBy" placeholder="回复对方，不需要暴露手机号" @send="sendChat" @retry="retryOutbox" @refresh="refreshChat" />
+        </template>
+      </NoticeClaim>
 
-      <div v-if="selected.itemType === 'help'" class="nd-card nd-help-card">
-        <div class="nd-card-title">帮忙说明</div>
-        <div class="nd-message">{{ selected.claimMessage || selected.report?.message || selected.text }}</div>
-        <div v-if="selected.claimContact" class="nd-contact">对方联系方式：{{ selected.claimContact }}</div>
-        <div v-if="selected.claimAi" class="nd-ai-check">
-          <b>信息对比度：{{ selected.claimAi.confidence }}%</b>
-          <span>{{ '仅供发布者参考' }}</span>
-          <p v-if="selected.claimAi.reason">{{ selected.claimAi.reason }}</p>
-          <div v-if="selected.claimAi.points?.length" class="nd-ai-points">
-            <i v-for="p in selected.claimAi.points" :key="p">{{ p }}</i>
-          </div>
-        </div>
-        <div v-if="selected.claimStatus" class="nd-state" style="margin-top:8px">{{ ({pending:'待处理', accepted:'进行中', completed:'已完成', rejected:'已婉拒', need_more:'待补充'})[selected.claimStatus] || selected.claimStatus }}</div>
-        <div v-if="selected.claimBlocked" class="nd-blocked">
-          <b>你已屏蔽对方</b>
-          <span>双方不能再互发消息，也不能再查看对方手机号。</span>
-        </div>
-        <div v-if="selected.claimStatus === 'need_more' && selected.isClaimant" class="help-supplement">
-          <p>发布者请你补充一点细节，补充后会自动回到待处理。</p>
-          <textarea v-model="helpSupplement" maxlength="200" placeholder="补充你能提供的具体信息，例如时间、地点、物品特征"></textarea>
-          <button type="button" :disabled="helpSupplementing" @click="supplementHelp">{{ helpSupplementing ? '提交中…' : '提交补充' }}</button>
-          <div v-if="helpSupplementMsg" class="nd-phone-msg">{{ helpSupplementMsg }}</div>
-        </div>
-        <div v-else-if="selected.claimStatus === 'need_more'" class="nd-exchange-tip">已请帮忙人补充说明，等对方提交后会自动回到待处理。</div>
-        <div class="nd-kv" style="margin-top:8px"><span>发布者手机号</span><b>{{ selected.ownerContact || (selected.item?.contact?.phone ? '已留手机号（通过后显示完整）' : '还没留手机号') }}</b></div>
-        <div class="nd-kv"><span>帮忙人手机号</span><b>{{ selected.item?.isMine ? (selected.claimContact || '还没留手机号') : (selected.claimContact ? '已留手机号' : '还没留手机号') }}</b></div>
-        <div v-if="selected.item?.isMine && !selected.ownerContact && !selected.item?.contact?.phone" class="nd-phone-fill">
-          <p>你是发布者。留手机号后，接受帮忙时双方才能互相联系。</p>
-          <div class="nd-phone-row">
-            <input v-model="claimPhoneInput" maxlength="20" placeholder="补充你的手机号">
-            <button type="button" :disabled="claimPhoneSaving" @click="saveClaimPhone">{{ claimPhoneSaving ? '保存中…' : '补充手机号' }}</button>
-          </div>
-        </div>
-        <div v-if="selected.isClaimant && !selected.claimContact" class="nd-phone-fill">
-          <p>你还没有预留手机号，发布者无法接受帮忙，也无法公布双方手机号。</p>
-          <div class="nd-phone-row">
-            <input v-model="claimPhoneInput" maxlength="20" placeholder="补充你的手机号">
-            <button type="button" :disabled="claimPhoneSaving" @click="saveClaimPhone">{{ claimPhoneSaving ? '保存中…' : '补充手机号' }}</button>
-          </div>
-        </div>
-        <div v-if="(selected.claimStatus === 'accepted' || selected.claimStatus === 'completed') && selected.claimContact && (selected.ownerContact || selected.item?.contact?.phone)" class="nd-exchange-ok">双方已公布手机号，可以直接联系。</div>
-        <div v-else-if="selected.claimStatus === 'accepted' || selected.claimStatus === 'completed'" class="nd-exchange-tip" style="color:#A23B2A">帮忙人还没有预留手机号，双方手机号尚未交换。请让对方补充手机号后重新处理。</div>
-      </div>
+      <NoticeHelp v-else-if="branch === 'help'" :notice="selected" :supplementing="helpSupplementing" :phone-saving="claimPhoneSaving" :supplement-msg="helpSupplementMsg" :phone-msg="claimPhoneMsg" @supplement="supplementHelp" @save-phone="saveClaimPhone" @help-action="helpAction" @block="blockClaim" @compare="compareOpen = true" @ignore="ignoreNotice" />
+
+      <NoticeSystem v-else :notice="selected" @compare="compareOpen = true" @ignore="ignoreNotice" />
 
       <div v-if="contact" class="nd-contact">联系方式：{{ contact }}</div>
       <div v-if="actionMsg" class="nd-msg">{{ actionMsg }}</div>
-
-      <div v-if="!selected.report && !selected.item && selected.itemId" class="nd-legacy">原物品已删除或数据不完整，无法生成匹配报告。</div>
-
-      <div class="nd-actions">
-        <template v-if="selected.type === 'pickup' && selected.report">
-          <button v-if="!selected.report.phoneRevealed" type="button" class="btn" @click="askRevealPhone('report')">公布双方手机号并联系</button>
-          <button v-if="selected.report.status !== 'published' && selected.report.status !== 'closed'" type="button" class="btn ghost" @click="publishReport">公开为招领</button>
-          <button type="button" class="btn ghost" @click="blockReport">屏蔽</button>
-          <button v-if="selected.report.status !== 'closed'" type="button" class="btn ghost" @click="closeReport">关闭</button>
-          <button type="button" class="btn ghost" @click="ignoreNotice">忽略</button>
-        </template>
-        <template v-else-if="selected.itemType === 'help'">
-          <template v-if="(selected.isPublisher || selected.item?.isMine) && selected.claimId && selected.claimStatus === 'pending'">
-            <button type="button" class="btn" @click="helpAction('accepted')">接受并公布双方手机号</button>
-            <button type="button" class="btn ghost" @click="helpAction('need_more')">请补充</button>
-            <button type="button" class="btn ghost" @click="helpAction('rejected')">婉拒</button>
-            <button v-if="selected.canBlockClaim" type="button" class="btn ghost" @click="blockClaim">屏蔽对方</button>
-          </template>
-          <button v-if="(selected.isPublisher || selected.item?.isMine) && selected.claimId && selected.claimStatus === 'accepted'" type="button" class="btn" @click="completeHelp">完成帮助</button>
-          <button v-if="selected.item" type="button" class="btn ghost" @click="compareOpen = true">查看匹配报告</button>
-          <button type="button" class="btn ghost" @click="ignoreNotice">忽略</button>
-        </template>
-        <template v-else>
-          <template v-if="(selected.isPublisher || selected.item?.isMine) && selected.claimId && (!selected.claimStatus || ['pending','need_more'].includes(selected.claimStatus))">
-            <button type="button" class="btn" @click="claimAction('accepted')">通过认领</button>
-            <button type="button" class="btn ghost" @click="claimAction('need_more')">请补充</button>
-            <button type="button" class="btn ghost" @click="claimAction('rejected')">拒绝</button>
-            <button v-if="selected.canBlockClaim" type="button" class="btn ghost" @click="blockClaim">屏蔽对方</button>
-          </template>
-          <button v-if="selected.claimId && selected.canRevealPhone && !selected.claimPhoneRevealed && !['accepted','completed'].includes(selected.claimStatus)" type="button" class="btn ghost" @click="askRevealPhone('claim')">公布双方手机号</button>
-          <button v-if="selected.item" type="button" class="btn ghost" @click="compareOpen = true">查看匹配报告</button>
-          <button type="button" class="btn ghost" @click="ignoreNotice">忽略</button>
-        </template>
-      </div>
     </div>
 
     <div v-if="revealOpen" class="reveal-overlay" @click.self="revealOpen = false">
