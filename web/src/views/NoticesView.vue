@@ -15,11 +15,8 @@ const chat = ref([])
 const chatText = ref('')
 const chatLoading = ref(false)
 const chatError = ref('')
-const chatSending = ref(false)
-const sendError = ref('')
-const pendingChat = ref(null)
+const outbox = ref([])
 const chatSide = ref('owner')
-let sendClientId = ''
 const compareOpen = ref(false)
 const myItems = ref([])
 
@@ -136,9 +133,7 @@ function openNotice(n) {
   chat.value = []
   chatText.value = ''
   chatError.value = ''
-  sendError.value = ''
-  pendingChat.value = null
-  sendClientId = ''
+  outbox.value = []
   compareOpen.value = false
   if (n.reportId) loadChat(n.reportId)
   if (n.type === 'match') loadMyItems()
@@ -190,32 +185,52 @@ function makeClientMsgId() {
   } catch (_) {}
   return `c_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
 }
-function onChatInput() {
-  if (sendError.value) {
-    sendError.value = ''
-    sendClientId = ''
+function sendChat() {
+  const text = chatText.value.trim()
+  if (!text || !selected.value?.report?.id) return
+  const item = {
+    clientMsgId: makeClientMsgId(),
+    text,
+    from: chatSide.value,
+    at: Date.now(),
+    status: 'queued',
+    error: ''
+  }
+  outbox.value.push(item)
+  chatText.value = ''
+  sendOutbox(item)
+}
+async function sendOutbox(item) {
+  if (!item || item.status === 'sending') return
+  item.status = 'sending'
+  item.error = ''
+  const rid = selected.value?.report?.id
+  if (!rid) {
+    item.status = 'failed'
+    item.error = '聊天已关闭'
+    return
+  }
+  try {
+    const r = await api.reportSend(rid, item.text, item.clientMsgId)
+    if (r?.message) {
+      if (selected.value?.report?.id === rid) appendChat(r.message)
+      outbox.value = outbox.value.filter((x) => x.clientMsgId !== item.clientMsgId)
+    } else {
+      item.status = 'failed'
+      item.error = '已发送，但未收到回执'
+    }
+  } catch (e) {
+    item.status = 'failed'
+    item.error = e.message || '发送失败'
   }
 }
-async function sendChat() {
-  const text = chatText.value.trim()
-  if (!text || !selected.value?.report?.id || chatSending.value) return
-  if (!sendClientId) sendClientId = makeClientMsgId()
-  chatSending.value = true
-  sendError.value = ''
-  pendingChat.value = { text, from: chatSide.value, at: Date.now() }
-  try {
-    const r = await api.reportSend(selected.value.report.id, text, sendClientId)
-    if (r?.message) appendChat(r.message)
-    else await loadChat(selected.value.report.id)
-    chatText.value = ''
-    sendClientId = ''
-    pendingChat.value = null
-  } catch (e) {
-    sendError.value = e.message || '发送失败，请重试'
-    pendingChat.value = null
-  } finally {
-    chatSending.value = false
-  }
+function retryOutbox(item) {
+  if (!item || item.status === 'sending') return
+  sendOutbox(item)
+}
+function refreshChat() {
+  if (chatLoading.value || !selected.value?.report?.id) return
+  loadChat(selected.value.report.id)
 }
 
 function goItem() {
@@ -378,7 +393,11 @@ function fmt(ts) {
       </div>
 
       <div v-if="selected.report && selected.itemType !== 'help'" class="nd-card">
-        <div class="nd-card-title">匿名沟通</div>
+        <div class="nd-chat-head">
+          <div class="nd-card-title">匿名沟通</div>
+          <button type="button" class="nd-chat-refresh" :disabled="chatLoading" @click="refreshChat">{{ chatLoading ? '刷新中…' : '刷新消息' }}</button>
+        </div>
+        <div class="nd-chat-help">对方新消息不会自动弹出。点“刷新消息”获取最新回复；发送失败的消息可点“重试”。</div>
         <div class="nd-safety">
           <b>安全提示</b>
           <span>平台不会索要验证码、支付密码，也不会要求转账、扫码付款或代付。对方若主动索要二维码、付款码、验证码，或让你先转账，请立即停止并举报。官方拾光码只用于物品留言，不会要求付款；陌生人私发的二维码，一律不要扫。</span>
@@ -389,18 +408,22 @@ function fmt(ts) {
         </div>
         <div v-if="chatLoading && !chat.length" class="nd-message" style="color:#8E7FA3">正在加载聊天记录…</div>
         <template v-if="!chatLoading || chat.length">
-          <div v-if="!chat.length && !pendingChat" class="nd-message" style="color:#8E7FA3">还没有消息，可以先回复捡到者。</div>
+          <div v-if="!chat.length && !outbox.length" class="nd-message" style="color:#8E7FA3">还没有消息，可以先回复捡到者。</div>
           <div v-for="m in chat" :key="chatKey(m)" class="nd-chat" :class="m.from === chatSide ? 'mine' : 'other'">
             <span>{{ m.text }}<em class="nd-chat-time">{{ chatTime(m.at) }}</em></span>
           </div>
-          <div v-if="pendingChat" class="nd-chat" :class="pendingChat.from === chatSide ? 'mine' : 'other'">
-            <span class="pending">{{ pendingChat.text }}<em class="nd-chat-time">发送中…</em></span>
+          <div v-for="m in outbox" :key="m.clientMsgId" class="nd-chat" :class="m.from === chatSide ? 'mine' : 'other'">
+            <span class="pending" :class="{ failed: m.status === 'failed' }">
+              <template v-if="m.status === 'failed'">! {{ m.text }}</template>
+              <template v-else>{{ m.text }}</template>
+              <em class="nd-chat-time">{{ m.status === 'failed' ? '发送失败，点击重试' : '发送中…' }}</em>
+            </span>
+            <button v-if="m.status === 'failed'" type="button" class="nd-retry" @click="retryOutbox(m)">重试</button>
           </div>
         </template>
-        <div v-if="sendError" class="nd-send-error">{{ sendError }}，内容已保留，可再次点击发送。</div>
         <div class="nd-chat-input">
-          <input v-model="chatText" maxlength="200" :disabled="chatSending" placeholder="回复捡到者，不需要暴露手机号" @input="onChatInput">
-          <button type="button" :disabled="chatSending || !chatText.trim()" @click="sendChat">{{ chatSending ? '发送中…' : '发送' }}</button>
+          <input v-model="chatText" maxlength="200" placeholder="回复捡到者，不需要暴露手机号">
+          <button type="button" :disabled="!chatText.trim()" @click="sendChat">发送</button>
         </div>
       </div>
 
@@ -639,4 +662,13 @@ function fmt(ts) {
 .nd-chat-error button { border:1px solid #E7B9AE; background:#fff; color:#A23B2A; border-radius:7px; padding:3px 8px; font-family:inherit; font-size:9px; }
 .nd-send-error { margin-top:5px; font-size:8.5px; color:#A23B2A; }
 .nd-chat-input button:disabled, .nd-chat-input input:disabled { opacity:.55; }
+</style>
+
+<style scoped>
+.nd-chat-head { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.nd-chat-refresh { border:1px solid #D9C8EE; background:#fff; color:#5B2A91; border-radius:7px; padding:4px 8px; font-family:inherit; font-size:8.5px; }
+.nd-chat-refresh:disabled { opacity:.5; }
+.nd-chat-help { margin:5px 0 7px; font-size:8px; line-height:1.5; color:#8E7FA3; }
+.nd-chat .failed { background:#FFF1EE !important; color:#A23B2A !important; border:1px solid #F0C4B8; }
+.nd-retry { margin-left:5px; align-self:center; border:1px solid #E7B9AE; background:#fff; color:#A23B2A; border-radius:7px; padding:3px 7px; font-family:inherit; font-size:8px; }
 </style>
