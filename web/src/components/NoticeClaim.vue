@@ -1,5 +1,6 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
+import ImageViewer from './ImageViewer.vue'
 import { compressImage } from '../utils/image'
 const props = defineProps({
   notice: { type: Object, required: true },
@@ -11,6 +12,13 @@ const supp = ref('')
 const imageMsg = ref('')
 const imagePreview = ref('')
 const uploading = ref(false)
+const viewerUrl = ref('')
+watch(() => props.imageError, (v) => {
+  if (v) {
+    uploading.value = false
+    imageMsg.value = '上传失败，可以重新点“确认上传”'
+  }
+})
 function submitSupp() {
   const text = supp.value.trim()
   if (text.length < 2) return
@@ -19,7 +27,7 @@ function submitSupp() {
 }
 function openImage() {
   const url = imagePreview.value || props.notice.claimImage
-  if (url) window.open(url, '_blank', 'noopener')
+  if (url) viewerUrl.value = url
 }
 async function onImage(e) {
   const file = e.target.files && e.target.files[0]
@@ -103,6 +111,7 @@ function reviewText(r) {
     <button v-if="notice.item" type="button" class="btn ghost" @click="$emit('compare')">查看匹配报告</button>
     <button type="button" class="btn ghost" @click="$emit('ignore')">忽略</button>
   </div>
+  <ImageViewer :src="viewerUrl" @close="viewerUrl = ''" />
 </template>
 
 <style src="../styles/notice-branch.css"></style>

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 清华校园拾光里 · 服务端 v4
@@ -1250,9 +1250,14 @@ def moderate_tag(text):
 
 
 def moderate_text(text, title="用户输入", allow_help=False):
-    """所有用户可输入文本的统一 AI 审核；审核服务异常时放行规则结果"""
+    """所有用户可输入文本的统一审核；帮忙申请只走本地规则，不接外部模型。"""
     text = str(text or "").strip()
     if not text:
+        return True, ""
+    if allow_help:
+        blocked = [w for w in TITLE_BLOCK if w in text]
+        if blocked:
+            return False, "内容包含不适合校园互助的词：%s" % "、".join(blocked)
         return True, ""
     probe = {
         "type": "help" if allow_help else "found",
@@ -2868,7 +2873,7 @@ class Handler(BaseHTTPRequestHandler):
                         row["helpNeedCount"] = max(1, int(it.get("needCount") or 1))
                         row["helpAcceptedCount"] = sum(
                             1 for c in claim_map.values()
-                            if c.get("itemId") == it.get("id") and c.get("status") == "accepted")
+                            if c.get("itemId") == it.get("id") and c.get("status") in ("accepted", "completed"))
                     _finder = (it.get("ownerToken") if it and it.get("type") == "found" else cl.get("from")) if it else ""
                     row["canGeneratePickupCode"] = bool(cl.get("status") == "accepted" and _finder == owner and not cl.get("pickupCode"))
                     row["claimContact"] = (cl.get("contact") if _revealed
@@ -3759,6 +3764,8 @@ class Handler(BaseHTTPRequestHandler):
             if _target0.get("ownerToken") == owner:
                 return self._json({"error": "这是你自己发布的内容，不能认领自己的发布"}, 400)
             if _target0.get("status") == "claimed":
+                if _target0.get("type") == "help":
+                    return self._json({"error": "需要的帮忙人数已经够了"}, 400)
                 return self._json({"error": "这个物品已经被别人认领了"}, 400)
             if _target0.get("status") != "approved":
                 return self._json({"error": "这条已经不在可认领状态"}, 400)
@@ -3786,6 +3793,8 @@ class Handler(BaseHTTPRequestHandler):
                 if target.get("ownerToken") == owner:
                     return self._json({"error": "这是你自己发布的"}, 400)
                 if target.get("status") == "claimed":
+                    if target.get("type") == "help":
+                        return self._json({"error": "需要的帮忙人数已经够了"}, 400)
                     return self._json({"error": "这个物品已经被别人认领了"}, 400)
                 if target.get("status") != "approved":
                     return self._json({"error": "这条已经不在可认领状态"}, 400)
@@ -3870,6 +3879,8 @@ class Handler(BaseHTTPRequestHandler):
                     in_help = bool(claim)
                 if not claim:
                     return self._json({"error": "not found"}, 404)
+                if in_help:
+                    return self._json({"error": "帮忙申请补充请使用专用接口"}, 400)
                 if claim.get("from") != owner:
                     return self._json({"error": "只有申请人能补充"}, 403)
                 if claim.get("status") not in ("pending", "need_more", "rejected"):
@@ -3911,6 +3922,85 @@ class Handler(BaseHTTPRequestHandler):
                 save_notices(notices)
             return self._json({"ok": True})
 
+        if path.startswith("/api/help-claims/") and path.endswith("/supplement"):
+            owner = self._owner()
+            claim_id = path[len("/api/help-claims/"):-len("/supplement")]
+            body = self._read_body()
+            extra = str(body.get("message") or "").strip()[:200]
+            new_contact = str(body.get("contact") or "").strip()[:30]
+            if len(extra) < 2:
+                return self._json({"error": "请写一点补充说明"}, 400)
+            with LOCK:
+                tasks = load_help_tasks()
+                items = load_items()
+                claim = next((c for c in tasks if c.get("id") == claim_id), None)
+                if not claim:
+                    return self._json({"error": "帮忙申请不存在"}, 404)
+                if claim.get("from") != owner:
+                    return self._json({"error": "只有申请人能补充"}, 403)
+                if claim.get("status") not in ("pending", "need_more", "rejected"):
+                    return self._json({"error": "当前状态不能补充"}, 400)
+                if new_contact:
+                    _pchk = phone_check(new_contact)
+                    if _pchk.get("status") == "red":
+                        return self._json({"error": "手机号不正确：" + _pchk.get("reason", "")}, 400)
+                    claim["contact"] = _pchk.get("normalized") or new_contact
+                if claim.get("status") == "rejected":
+                    claim["message"] = extra[:400]
+                    claim["history"] = [{"message": extra, "at": now_ms()}]
+                else:
+                    claim["message"] = ((claim.get("message") or "") + "\n补充：" + extra)[:400]
+                    hist = claim.get("history") or []
+                    hist.append({"message": extra, "at": now_ms()})
+                    claim["history"] = hist[-10:]
+                claim["status"] = "pending"
+                claim["updatedAt"] = now_ms()
+                save_help_tasks(tasks)
+                item = next((x for x in items if x.get("id") == claim.get("itemId")), None)
+                if item:
+                    notices = load_notices()
+                    add_notice(notices, item.get("ownerToken"), "help_supplement",
+                               "帮忙人补充了《%s》的说明，请再核对一次" % (item.get("title") or ""),
+                               item.get("id"), claim.get("id"))
+                    save_notices(notices)
+            return self._json({"ok": True})
+
+        if path.startswith("/api/help-claims/") and path.endswith("/complete"):
+            owner = self._owner()
+            claim_id = path[len("/api/help-claims/"):-len("/complete")]
+            with LOCK:
+                tasks = load_help_tasks()
+                items = load_items()
+                claim = next((c for c in tasks if c.get("id") == claim_id), None)
+                if not claim:
+                    return self._json({"error": "帮忙申请不存在"}, 404)
+                item = next((x for x in items if x.get("id") == claim.get("itemId")), None)
+                if not item:
+                    return self._json({"error": "求助不存在"}, 404)
+                if item.get("ownerToken") != owner:
+                    return self._json({"error": "只有发布者能确认完成"}, 403)
+                if claim.get("status") != "accepted":
+                    return self._json({"error": "只有进行中的帮忙才能完成"}, 409)
+                claim["status"] = "completed"
+                claim["completedAt"] = now_ms()
+                claim["updatedAt"] = now_ms()
+                need = max(1, int(item.get("needCount") or 1))
+                joined = [c for c in tasks if c.get("itemId") == item.get("id")
+                          and c.get("status") in ("accepted", "completed")]
+                all_done = bool(joined) and all(c.get("status") == "completed" for c in joined)
+                item["status"] = ("closed" if all_done else "claimed") if len(joined) >= need else "approved"
+                if item["status"] == "closed":
+                    item["closedAt"] = now_ms()
+                item["updatedAt"] = now_ms()
+                save_help_tasks(tasks)
+                save_items(items)
+                notices = load_notices()
+                add_notice(notices, claim.get("from"), "help_done",
+                           "《%s》爱心帮助已完成，谢谢你" % (item.get("title") or ""),
+                           item.get("id"), claim.get("id"))
+                save_notices(notices)
+            return self._json({"ok": True})
+
         if path.startswith("/api/claims/") and path.endswith("/complete"):
             owner = self._owner()
             body = self._read_body()
@@ -3926,6 +4016,8 @@ class Handler(BaseHTTPRequestHandler):
                     in_help = bool(claim)
                 if not claim:
                     return self._json({"error": "not found"}, 404)
+                if in_help:
+                    return self._json({"error": "帮忙申请完成请使用专用接口"}, 400)
                 item = next((x for x in items if x.get("id") == claim.get("itemId")), None)
                 if not item:
                     return self._json({"error": "not found"}, 404)
@@ -4022,6 +4114,58 @@ class Handler(BaseHTTPRequestHandler):
                     save_notices(notices)
             return self._json({"ok": True})
 
+        if path.startswith("/api/help-claims/") and path.endswith("/block"):
+            owner = self._owner()
+            claim_id = path[len("/api/help-claims/"):-len("/block")]
+            with LOCK:
+                tasks = load_help_tasks()
+                items = load_items()
+                claim = next((c for c in tasks if c.get("id") == claim_id), None)
+                if not claim:
+                    return self._json({"error": "帮忙申请不存在"}, 404)
+                item = next((x for x in items if x.get("id") == claim.get("itemId")), None)
+                if not item or item.get("ownerToken") != owner:
+                    return self._json({"error": "只有发布者可以屏蔽对方"}, 403)
+                claim["blocked"] = True
+                claim["blockedBy"] = owner
+                claim["blockedAt"] = now_ms()
+                claim["updatedAt"] = now_ms()
+                save_help_tasks(tasks)
+            return self._json({"ok": True})
+
+        if path.startswith("/api/help-claims/") and path.endswith("/contact"):
+            owner = self._owner()
+            claim_id = path[len("/api/help-claims/"):-len("/contact")]
+            body = self._read_body()
+            raw_phone = str(body.get("phone") or "").strip()[:30]
+            chk = phone_check(raw_phone)
+            if not raw_phone or chk.get("status") == "red":
+                return self._json({"error": "请填写正确的手机号" + ("：" + chk.get("reason", "") if chk.get("reason") else "")}, 400)
+            phone = chk.get("normalized") or raw_phone
+            with LOCK:
+                tasks = load_help_tasks()
+                items = load_items()
+                claim = next((c for c in tasks if c.get("id") == claim_id), None)
+                if not claim:
+                    return self._json({"error": "帮忙申请不存在"}, 404)
+                item = next((x for x in items if x.get("id") == claim.get("itemId")), None)
+                if not item:
+                    return self._json({"error": "求助不存在"}, 404)
+                if item.get("ownerToken") == owner:
+                    item.setdefault("contact", {})["phone"] = phone
+                    save_items(items)
+                elif claim.get("from") == owner:
+                    claim["contact"] = phone
+                    claim["updatedAt"] = now_ms()
+                    save_help_tasks(tasks)
+                else:
+                    return self._json({"error": "无权修改这条帮忙申请的联系方式"}, 403)
+                accepted = claim.get("status") in ("accepted", "completed")
+                return self._json({"ok": True,
+                                   "ownerContact": (item.get("contact") or {}).get("phone") or "",
+                                   "claimContact": claim.get("contact") or "",
+                                   "accepted": accepted})
+
         if path.startswith("/api/claims/") and path.endswith("/contact"):
             owner = self._owner()
             claim_id = path[len("/api/claims/"):-len("/contact")]
@@ -4041,6 +4185,8 @@ class Handler(BaseHTTPRequestHandler):
                     help_mode = bool(claim)
                 if not claim:
                     return self._json({"error": "认领记录不存在"}, 404)
+                if help_mode:
+                    return self._json({"error": "帮忙申请联系方式请使用专用接口"}, 400)
                 items = load_items()
                 item = next((x for x in items if x.get("id") == claim.get("itemId")), None)
                 if not item:
@@ -4787,6 +4933,72 @@ class Handler(BaseHTTPRequestHandler):
         path = unquote(urlparse(self.path).path)
         patch = self._read_body()
 
+        if path.startswith("/api/help-claims/") and path.endswith("/action"):
+            owner = self._owner()
+            claim_id = path[len("/api/help-claims/"):-len("/action")]
+            body = patch
+            status = body.get("status")
+            need_image = bool(body.get("image"))
+            if status not in ("accepted", "rejected", "need_more"):
+                return self._json({"error": "bad status"}, 400)
+            with LOCK:
+                tasks = load_help_tasks()
+                items = load_items()
+                claim = next((c for c in tasks if c.get("id") == claim_id), None)
+                if not claim:
+                    return self._json({"error": "帮忙申请不存在"}, 404)
+                item = next((x for x in items if x.get("id") == claim.get("itemId")), None)
+                if not item:
+                    return self._json({"error": "求助不存在"}, 404)
+                if item.get("ownerToken") != owner:
+                    return self._json({"error": "只有发布者能处理这条帮忙申请"}, 403)
+                if claim.get("status") in ("completed", "closed", "withdrawn", "removed", "canceled"):
+                    return self._json({"error": "这条帮忙申请已经结束"}, 409)
+                if item.get("status") == "closed":
+                    return self._json({"error": "这条求助已经结束"}, 409)
+                if status == "accepted":
+                    if not (claim.get("contact") or "").strip():
+                        return self._json({"error": "帮忙人还没有预留手机号，请先请对方补充"}, 400)
+                    if not ((item.get("contact") or {}).get("phone") or "").strip():
+                        return self._json({"error": "请先补充你的手机号，再接受帮忙"}, 400)
+                    need = max(1, int(item.get("needCount") or 1))
+                    accepted_now = [c for c in tasks
+                                    if c.get("itemId") == item.get("id") and c.get("status") in ("accepted", "completed")]
+                    if len(accepted_now) >= need:
+                        return self._json({"error": "需要的帮忙人数已经够了"}, 400)
+                    claim["phoneRevealed"] = True
+                    claim["phoneRevealedBy"] = owner
+                    claim["phoneRevealedAt"] = now_ms()
+                    claim["status"] = "accepted"
+                    joined = len(accepted_now) + 1
+                    item["status"] = "claimed" if joined >= need else "approved"
+                elif status == "need_more":
+                    if claim.get("status") == "need_more" and bool(claim.get("needImage")) == need_image:
+                        return self._json({"ok": True, "status": status, "duplicate": True})
+                    claim["status"] = "need_more"
+                    claim["needImage"] = need_image
+                else:
+                    claim["status"] = "rejected"
+                claim["updatedAt"] = now_ms()
+                save_help_tasks(tasks)
+                save_items(items)
+                notices = load_notices()
+                if status == "accepted":
+                    add_notice(notices, claim.get("from"), "help_accepted",
+                               "求助者已接受你的帮忙《%s》，可以开始联系了" % (item.get("title") or ""),
+                               item.get("id"), claim.get("id"))
+                elif status == "need_more":
+                    add_notice(notices, claim.get("from"), "help_need_more",
+                               "发布者希望你再补充《%s》的%s" % (
+                                   item.get("title") or "", "图片" if need_image else "说明"),
+                               item.get("id"), claim.get("id"))
+                else:
+                    add_notice(notices, claim.get("from"), "help_rejected",
+                               "发布者婉拒了《%s》的帮忙申请" % (item.get("title") or ""),
+                               item.get("id"), claim.get("id"))
+                save_notices(notices)
+            return self._json({"ok": True, "status": status})
+
         if path.startswith("/api/help-claims/") and path.endswith("/withdraw"):
             owner = self._owner()
             claim_id = path[len("/api/help-claims/"):-len("/withdraw")]
@@ -4807,7 +5019,7 @@ class Handler(BaseHTTPRequestHandler):
                 claim["withdrawnAt"] = now_ms()
                 claim["updatedAt"] = now_ms()
                 need = max(1, int(item.get("needCount") or 1))
-                accepted_now = [c for c in tasks if c.get("itemId") == item.get("id") and c.get("status") == "accepted"]
+                accepted_now = [c for c in tasks if c.get("itemId") == item.get("id") and c.get("status") in ("accepted", "completed")]
                 item["status"] = "claimed" if len(accepted_now) >= need else "approved"
                 save_help_tasks(tasks)
                 save_items(items)
@@ -4839,7 +5051,7 @@ class Handler(BaseHTTPRequestHandler):
                 claim["removedBy"] = owner
                 claim["updatedAt"] = now_ms()
                 need = max(1, int(item.get("needCount") or 1))
-                accepted_now = [c for c in tasks if c.get("itemId") == item.get("id") and c.get("status") == "accepted"]
+                accepted_now = [c for c in tasks if c.get("itemId") == item.get("id") and c.get("status") in ("accepted", "completed")]
                 item["status"] = "claimed" if len(accepted_now) >= need else "approved"
                 save_help_tasks(tasks)
                 save_items(items)
@@ -4882,7 +5094,7 @@ class Handler(BaseHTTPRequestHandler):
                     need = max(1, int(item.get("needCount") or 1))
                     accepted_now = [c for c in tasks
                                     if c.get("itemId") == claim.get("itemId")
-                                    and c.get("status") == "accepted"]
+                                    and c.get("status") in ("accepted", "completed")]
                     item["status"] = "claimed" if len(accepted_now) >= need else "approved"
                     save_help_tasks(tasks)
                 else:
@@ -4923,6 +5135,8 @@ class Handler(BaseHTTPRequestHandler):
                     in_help = bool(claim)
                 if not claim:
                     return self._json({"error": "not found"}, 404)
+                if in_help:
+                    return self._json({"error": "帮忙申请请使用专用接口"}, 400)
                 item = next((x for x in items if x.get("id") == claim.get("itemId")), None)
                 if not item or item.get("ownerToken") != owner:
                     return self._json({"error": "只有发布者能处理"}, 403)
@@ -4948,7 +5162,7 @@ class Handler(BaseHTTPRequestHandler):
                         need = max(1, int(item.get("needCount") or 1))
                         accepted_now = [c for c in tasks
                                         if c.get("itemId") == claim.get("itemId")
-                                        and c.get("status") == "accepted"]
+                                        and c.get("status") in ("accepted", "completed")]
                         if len(accepted_now) >= need:
                             return self._json({"error": "需要的帮忙人数已经够了"}, 400)
                         item["status"] = "claimed" if len(accepted_now) >= need else "approved"

@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { api } from '../api'
 import { compressImage } from '../utils/image'
+import ImageViewer from '../components/ImageViewer.vue'
 
 const props = defineProps({
   code: { type: String, default: '' }
@@ -18,6 +19,7 @@ const sending = ref(false)
 const reportId = ref('')
 const photo = ref('')
 const photoMsg = ref('')
+const viewerUrl = ref('')
 const chat = ref([])
 const chatText = ref('')
 
@@ -47,7 +49,7 @@ async function onPhoto(e) {
   e.target.value = ''
 }
 function openPhoto() {
-  if (photo.value) window.open(photo.value, '_blank', 'noopener')
+  if (photo.value) viewerUrl.value = photo.value
 }
 async function send() {
   if (!contact.value.trim()) {
@@ -167,6 +169,7 @@ async function sendChat() {
       </template>
     </div>
   </section>
+  <ImageViewer :src="viewerUrl" @close="viewerUrl = ''" />
 </template>
 
 <style scoped>

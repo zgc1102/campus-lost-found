@@ -195,7 +195,12 @@ function typeLabel(t, itemType = '') {
       need_more: '📝 帮忙申请待补充',
       done: '🎉 爱心帮助已完成',
       help_withdraw: '↩️ 帮忙人已撤回申请',
-      help_removed: '🚪 发布者已结束沟通'
+      help_removed: '🚪 发布者已结束沟通',
+      help_accepted: '✅ 帮忙申请已通过',
+      help_rejected: '❌ 帮忙申请被婉拒',
+      help_need_more: '📝 帮忙申请待补充',
+      help_supplement: '💬 帮忙人补充了说明',
+      help_done: '🎉 爱心帮助已完成'
     })[t] || '爱心求助提醒'
   }
   return ({
@@ -513,7 +518,7 @@ async function supplementHelp(textInput) {
   helpSupplementing.value = true
   helpSupplementMsg.value = ''
   try {
-    await api.supplement(selected.value.claimId, { message: text, contact: selected.value.claimContact || '' })
+    await api.helpClaimSupplement(selected.value.claimId, { message: text, contact: selected.value.claimContact || '' })
     selected.value.claimMessage = (selected.value.claimMessage || '') + '\n补充：' + text
     selected.value.claimStatus = 'pending'
     helpSupplement.value = ''
@@ -533,7 +538,9 @@ async function saveClaimPhone(phoneInput) {
   claimPhoneSaving.value = true
   claimPhoneMsg.value = ''
   try {
-    const r = await api.claimContact(rid, phone)
+    const r = selected.value.itemType === 'help'
+      ? await api.helpClaimContact(rid, phone)
+      : await api.claimContact(rid, phone)
     selected.value.ownerContact = r.ownerContact || ''
     if (selected.value.item?.isMine) selected.value.claimContact = r.claimContact || selected.value.claimContact
     else selected.value.claimContact = r.claimContact || phone
@@ -566,7 +573,8 @@ async function blockClaim() {
   if (!rid) return
   if (!confirm('屏蔽对方？屏蔽后双方不能再互发消息，也不能再查看对方手机号。')) return
   try {
-    await api.claimBlock(rid)
+    if (selected.value.itemType === 'help') await api.helpClaimBlock(rid)
+    else await api.claimBlock(rid)
     selected.value.claimBlocked = true
     selected.value.claimStatus = 'closed'
     chatBlocked.value = true
@@ -580,7 +588,7 @@ async function blockClaim() {
 async function helpAction(status) {
   if (!selected.value?.claimId) return
   try {
-    await api.claimAction(selected.value.claimId, { status })
+    await api.helpClaimAction(selected.value.claimId, { status })
     selected.value.claimStatus = status
     actionMsg.value = status === 'accepted' ? '已接受帮忙，完成后记得点「完成帮助」'
       : status === 'need_more' ? '已请对方补充说明'
@@ -648,7 +656,7 @@ async function removeHelpClaim() {
 async function completeHelp() {
   if (!selected.value?.claimId) return
   try {
-    await api.claimComplete(selected.value.claimId, { code: '' })
+    await api.helpClaimComplete(selected.value.claimId)
     selected.value.claimStatus = 'completed'
     actionMsg.value = '已完成这次爱心帮助'
     await refreshSelected()

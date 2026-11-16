@@ -1,6 +1,9 @@
 <script setup>
+import { ref } from 'vue'
+import ImageViewer from './ImageViewer.vue'
 const props = defineProps({ notice: { type: Object, required: true } })
 defineEmits(['reveal', 'publish', 'block', 'close', 'ignore'])
+const viewerUrl = ref('')
 function time(ts) {
   if (!ts) return ''
   const d = new Date(Number(ts) || 0)
@@ -8,7 +11,7 @@ function time(ts) {
   return `${d.getMonth() + 1}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 function openPhoto() {
-  if (props.notice.report?.photo) window.open(props.notice.report.photo, '_blank', 'noopener')
+  if (props.notice.report?.photo) viewerUrl.value = props.notice.report.photo
 }
 function reviewText(r) {
   if (!r || !r.safe) return ''
@@ -40,6 +43,7 @@ function reviewText(r) {
     </template>
     <button type="button" class="btn ghost" @click="$emit('ignore')">忽略</button>
   </div>
+  <ImageViewer :src="viewerUrl" @close="viewerUrl = ''" />
 </template>
 
 <style src="../styles/notice-branch.css"></style>
