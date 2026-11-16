@@ -446,6 +446,21 @@ async function blockReport() {  const rid = selected.value.report?.id
   } catch (e) { actionMsg.value = e.message || '屏蔽失败' }
 }
 
+async function blockClaim() {
+  const rid = selected.value?.claimId
+  if (!rid) return
+  if (!confirm('屏蔽对方？屏蔽后双方不能再互发消息，也不能再查看对方手机号。')) return
+  try {
+    await api.claimBlock(rid)
+    selected.value.claimBlocked = true
+    selected.value.claimStatus = 'closed'
+    chatBlocked.value = true
+    blockedBy.value = 'owner'
+    chat.value = []
+    outbox.value = []
+    actionMsg.value = '已屏蔽对方，双方不能再互发消息'
+  } catch (e) { actionMsg.value = e.message || '屏蔽失败' }
+}
 async function helpAction(status) {
   if (!selected.value?.claimId) return
   try {
@@ -620,6 +635,10 @@ function fmt(ts) {
           </div>
         </div>
         <div v-if="selected.claimStatus" class="nd-state" style="margin-top:8px">{{ ({pending:'待处理', accepted:'进行中', completed:'已完成', rejected:'已婉拒', need_more:'待补充'})[selected.claimStatus] || selected.claimStatus }}</div>
+        <div v-if="selected.claimBlocked" class="nd-blocked">
+          <b>你已屏蔽对方</b>
+          <span>双方不能再互发消息，也不能再查看对方手机号。</span>
+        </div>
         <div v-if="selected.claimStatus === 'need_more' && selected.isClaimant" class="help-supplement">
           <p>发布者请你补充一点细节，补充后会自动回到待处理。</p>
           <textarea v-model="helpSupplement" maxlength="200" placeholder="补充你能提供的具体信息，例如时间、地点、物品特征"></textarea>
@@ -666,6 +685,7 @@ function fmt(ts) {
             <button type="button" class="btn" @click="helpAction('accepted')">接受并公布双方手机号</button>
             <button type="button" class="btn ghost" @click="helpAction('need_more')">请补充</button>
             <button type="button" class="btn ghost" @click="helpAction('rejected')">婉拒</button>
+            <button v-if="selected.canBlockClaim" type="button" class="btn ghost" @click="blockClaim">屏蔽对方</button>
           </template>
           <button v-if="(selected.isPublisher || selected.item?.isMine) && selected.claimId && selected.claimStatus === 'accepted'" type="button" class="btn" @click="completeHelp">完成帮助</button>
           <button v-if="selected.item" type="button" class="btn ghost" @click="compareOpen = true">查看匹配报告</button>
@@ -676,6 +696,7 @@ function fmt(ts) {
             <button type="button" class="btn" @click="claimAction('accepted')">通过认领</button>
             <button type="button" class="btn ghost" @click="claimAction('need_more')">请补充</button>
             <button type="button" class="btn ghost" @click="claimAction('rejected')">拒绝</button>
+            <button v-if="selected.canBlockClaim" type="button" class="btn ghost" @click="blockClaim">屏蔽对方</button>
           </template>
           <button v-if="selected.claimId && selected.canRevealPhone && !selected.claimPhoneRevealed && !['accepted','completed'].includes(selected.claimStatus)" type="button" class="btn ghost" @click="askRevealPhone('claim')">公布双方手机号</button>
           <button v-if="selected.item" type="button" class="btn ghost" @click="compareOpen = true">查看匹配报告</button>

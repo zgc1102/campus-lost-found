@@ -237,6 +237,9 @@ export const api = {
   claimRevealPhone(id) {
     return call('/claims/' + encodeURIComponent(id) + '/reveal-phone', { method: 'POST', body: '{}', skipCacheClear: true })
   },
+  claimBlock(id) {
+    return call('/claims/' + encodeURIComponent(id) + '/block', { method: 'POST', body: '{}', skipCacheClear: true })
+  },
   reportRevealPhone(id) {
     return call('/reports/' + encodeURIComponent(id) + '/reveal-phone', { method: 'POST', body: '{}', skipCacheClear: true })
   },

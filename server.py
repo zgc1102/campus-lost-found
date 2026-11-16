@@ -2763,6 +2763,8 @@ class Handler(BaseHTTPRequestHandler):
                                 (cl.get("contact") or "").strip() and ((it.get("contact") or {}).get("phone") or "").strip()):
                             _revealed = False
                     row["claimPhoneRevealed"] = bool(cl.get("phoneRevealed")) and _revealed
+                    row["claimBlocked"] = bool(cl.get("blocked"))
+                    row["canBlockClaim"] = bool(it and it.get("ownerToken") == owner and not cl.get("blocked"))
                     row["claimContact"] = (cl.get("contact") if _revealed
                                            else mask_contact(cl.get("contact")))
                     if _revealed and it:
@@ -3865,6 +3867,33 @@ class Handler(BaseHTTPRequestHandler):
                                    "accepted": accepted})
 
 
+        if path.startswith("/api/claims/") and path.endswith("/block"):
+            owner = self._owner()
+            claim_id = path[len("/api/claims/"):-len("/block")]
+            with LOCK:
+                claims = load_claims()
+                claim = next((c for c in claims if c.get("id") == claim_id), None)
+                help_mode = False
+                if not claim:
+                    tasks = load_help_tasks()
+                    claim = next((c for c in tasks if c.get("id") == claim_id), None)
+                    help_mode = bool(claim)
+                if not claim:
+                    return self._json({"error": "认领记录不存在"}, 404)
+                item = next((x for x in load_items() if x.get("id") == claim.get("itemId")), None)
+                if not item or item.get("ownerToken") != owner:
+                    return self._json({"error": "只有发布者可以屏蔽对方"}, 403)
+                claim["blocked"] = True
+                claim["blockedBy"] = owner
+                claim["blockedAt"] = now_ms()
+                claim["status"] = "closed"
+                claim["updatedAt"] = now_ms()
+                if help_mode:
+                    save_help_tasks(tasks)
+                else:
+                    save_claims(claims)
+            return self._json({"ok": True, "blocked": True})
+
         if path.startswith("/api/claims/") and path.endswith("/reveal-phone"):
             owner = self._owner()
             claim_id = path[len("/api/claims/"):-len("/reveal-phone")]
@@ -3920,6 +3949,10 @@ class Handler(BaseHTTPRequestHandler):
                 side = "owner" if item.get("ownerToken") == owner else "claimer" if claim.get("from") == owner else ""
                 if not side:
                     return self._json({"error": "无权查看这条沟通"}, 403)
+                if claim.get("blocked"):
+                    if not is_send:
+                        return self._json({"ok": True, "messages": [], "side": side, "blocked": True, "blockedBy": claim.get("blockedBy") or "owner"})
+                    return self._json({"error": "对方已屏蔽你，消息发送失败", "blocked": True}, 403)
                 if not is_send:
                     return self._json({"ok": True, "messages": claim.get("messages") or [], "side": side})
                 body = self._read_body()
