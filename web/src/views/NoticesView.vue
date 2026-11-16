@@ -41,6 +41,8 @@ const claimPhonePromptOpen = ref(false)
 const claimPhonePrompt = ref('')
 const claimPhonePromptError = ref('')
 const claimPhonePromptBusy = ref(false)
+const claimImageBusy = ref(false)
+const claimImageError = ref('')
 const compareOpen = ref(false)
 const targetOpen = ref(false)
 const myItems = ref([])
@@ -222,6 +224,7 @@ function openNotice(n) {
   claimPhonePromptOpen.value = false
   claimPhonePrompt.value = ''
   claimPhonePromptError.value = ''
+  claimImageError.value = ''
   compareOpen.value = false
   targetOpen.value = false
   const _reportId = n.reportId || n.report?.id
@@ -455,13 +458,18 @@ async function generatePickupCode() {
 }
 async function supplementClaimImage(image) {
   const rid = selected.value?.claimId
-  if (!rid || !image) return
+  if (!rid || !image || claimImageBusy.value) return
+  claimImageBusy.value = true
+  claimImageError.value = ''
   try {
     await api.claimSupplementImage(rid, image)
-    actionMsg.value = '图片已补充，等待发布者查看'
+    actionMsg.value = '图片已通过审核并上传，等待发布者查看'
     await refreshSelected()
   } catch (e) {
-    actionMsg.value = e.message || '图片上传失败'
+    claimImageError.value = e.message || '图片上传失败'
+    actionMsg.value = claimImageError.value
+  } finally {
+    claimImageBusy.value = false
   }
 }
 async function supplementClaim(textInput) {
@@ -686,7 +694,7 @@ function fmt(ts) {
         </template>
       </NoticePickup>
 
-      <NoticeClaim v-else-if="branch === 'claim'" :notice="selected" @claim-action="claimAction" @reveal="askRevealPhone('claim')" @block="blockClaim" @compare="compareOpen = true" @ignore="ignoreNotice" @supplement="supplementClaim" @supplement-image="supplementClaimImage" @pickup-code="generatePickupCode">
+      <NoticeClaim v-else-if="branch === 'claim'" :notice="selected" :image-busy="claimImageBusy" :image-error="claimImageError" @claim-action="claimAction" @reveal="askRevealPhone('claim')" @block="blockClaim" @compare="compareOpen = true" @ignore="ignoreNotice" @supplement="supplementClaim" @supplement-image="supplementClaimImage" @pickup-code="generatePickupCode">
         <template #chat>
           <NoticeChat :messages="chat" :outbox="outbox" :side="chatSide" :loading="chatLoading" :error="chatError" :blocked="chatBlocked" :blocked-by="blockedBy" :closed="chatClosed" placeholder="回复对方，不需要暴露手机号" @send="sendChat" @retry="retryOutbox" @refresh="refreshChat" />
         </template>

@@ -2238,7 +2238,7 @@ def vision_analyze(image_b64, mime="image/jpeg"):
     return last if last.get("ok") else {"ok": False, "reason": last.get("reason") or "AI 没看清，请手动填写"}
 
 
-def vision_moderate(image_b64):
+def vision_moderate(image_b64, mime="image/jpeg"):
     """外接视觉模型做图片安全初筛；失败时不阻塞，只返回 ok=False。"""
     cfg = vision_config()
     if not cfg.get("api_key"):
@@ -3275,7 +3275,9 @@ class Handler(BaseHTTPRequestHandler):
                 if len(photo) > 2_500_000:
                     return self._json({"error": "图片太大，请压缩后再上传"}, 400)
                 _mod = vision_moderate(photo)
-                if _mod.get("ok") and not _mod.get("safe", True) and float(_mod.get("confidence") or 0) >= 0.6:
+                if not _mod.get("ok"):
+                    return self._json({"error": "图片审核服务暂时不可用，请稍后再试"}, 503)
+                if not _mod.get("safe", True) and float(_mod.get("confidence") or 0) >= 0.6:
                     return self._json({"error": "图片未通过安全审核：" + (_mod.get("reason") or "请更换图片")}, 400)
             if not contact:
                 return self._json({"error": "请先留下手机号，方便失主联系你"}, 400)
@@ -3928,7 +3930,9 @@ class Handler(BaseHTTPRequestHandler):
             if len(image) > 2_500_000:
                 return self._json({"error": "图片太大，请压缩后再上传"}, 400)
             _mod = vision_moderate(image)
-            if _mod.get("ok") and not _mod.get("safe", True) and float(_mod.get("confidence") or 0) >= 0.6:
+            if not _mod.get("ok"):
+                return self._json({"error": "图片审核服务暂时不可用，请稍后再试"}, 503)
+            if not _mod.get("safe", True) and float(_mod.get("confidence") or 0) >= 0.6:
                 return self._json({"error": "图片未通过安全审核：" + (_mod.get("reason") or "请更换图片")}, 400)
             with LOCK:
                 claims = load_claims()

@@ -1,6 +1,10 @@
 <script setup>
 import { ref } from 'vue'
-const props = defineProps({ notice: { type: Object, required: true } })
+const props = defineProps({
+  notice: { type: Object, required: true },
+  imageBusy: { type: Boolean, default: false },
+  imageError: { type: String, default: '' }
+})
 const emit = defineEmits(['claim-action', 'reveal', 'block', 'compare', 'ignore', 'supplement', 'supplement-image', 'pickup-code'])
 const supp = ref('')
 const imageMsg = ref('')
@@ -20,12 +24,17 @@ function onImage(e) {
   const reader = new FileReader()
   reader.onload = () => {
     imagePreview.value = String(reader.result || '')
-    imageMsg.value = '正在上传，请稍候…'
-    uploading.value = true
-    emit('supplement-image', imagePreview.value)
+    imageMsg.value = '已选择照片，请点“确认上传”'
+    uploading.value = false
   }
   reader.readAsDataURL(file)
   e.target.value = ''
+}
+function submitImage() {
+  if (!imagePreview.value || uploading.value || props.imageBusy) return
+  uploading.value = true
+  imageMsg.value = '正在审核并上传，请稍候…'
+  emit('supplement-image', imagePreview.value)
 }
 function time(ts) {
   if (!ts) return ''
@@ -66,7 +75,9 @@ function statusText(s) {
       <div v-if="imagePreview && !notice.claimImage" style="margin-top:7px">
         <img :src="imagePreview" alt="预览" style="max-width:100%;max-height:160px;border-radius:8px;border:1px solid #EADFF5">
       </div>
+      <button v-if="imagePreview && !notice.claimImage" type="button" class="btn" style="margin-top:7px;width:100%" :disabled="imageBusy || uploading" @click="submitImage">{{ imageBusy || uploading ? '审核上传中…' : '确认上传' }}</button>
       <div v-if="imageMsg" class="nd-phone-msg">{{ imageMsg }}</div>
+      <div v-if="imageError" class="nd-send-error">{{ imageError }}</div>
     </div>
   <slot name="chat" />
   <div class="nd-actions">
