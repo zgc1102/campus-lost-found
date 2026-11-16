@@ -515,7 +515,7 @@ function fmt(ts) {
         </div>
         <div v-if="selected.claimStatus === 'accepted' || selected.claimStatus === 'completed'" class="nd-exchange-ok">双方手机号已交换，可以直接联系。</div>
         <div v-else class="nd-exchange-tip">发布者通过申请后，双方手机号自动交换；未通过前只显示打码号码。</div>
-        <button v-if="selected.canRevealPhone && !selected.claimPhoneRevealed" type="button" class="btn" style="margin-top:8px;width:100%" @click="askRevealPhone('claim')">公布双方手机号</button>
+        <button v-if="selected.canRevealPhone && !selected.claimPhoneRevealed && !['accepted','completed'].includes(selected.claimStatus)" type="button" class="btn" style="margin-top:8px;width:100%" @click="askRevealPhone('claim')">公布双方手机号</button>
         <div v-if="claimPhoneMsg" class="nd-phone-msg">{{ claimPhoneMsg }}</div>
       </div>
 
