@@ -422,6 +422,18 @@ async function doRevealPhone() {
     revealing.value = false
   }
 }
+async function supplementClaim(textInput) {
+  const rid = selected.value?.claimId
+  const text = String(textInput || '').trim()
+  if (!rid || text.length < 2) return
+  try {
+    await api.supplement(rid, { message: text, contact: '' })
+    actionMsg.value = '已补充，等待发布者再看'
+    await refreshSelected()
+  } catch (e) {
+    actionMsg.value = e.message || '补充失败'
+  }
+}
 async function supplementHelp(textInput) {
   if (!selected.value?.claimId || helpSupplementing.value) return
   const text = String(textInput || helpSupplement.value || '').trim()
@@ -632,7 +644,7 @@ function fmt(ts) {
         </template>
       </NoticePickup>
 
-      <NoticeClaim v-else-if="branch === 'claim'" :notice="selected" @claim-action="claimAction" @reveal="askRevealPhone('claim')" @block="blockClaim" @compare="compareOpen = true" @ignore="ignoreNotice">
+      <NoticeClaim v-else-if="branch === 'claim'" :notice="selected" @claim-action="claimAction" @reveal="askRevealPhone('claim')" @block="blockClaim" @compare="compareOpen = true" @ignore="ignoreNotice" @supplement="supplementClaim">
         <template #chat>
           <NoticeChat :messages="chat" :outbox="outbox" :side="chatSide" :loading="chatLoading" :error="chatError" :blocked="chatBlocked" :blocked-by="blockedBy" placeholder="回复对方，不需要暴露手机号" @send="sendChat" @retry="retryOutbox" @refresh="refreshChat" />
         </template>

@@ -1,6 +1,14 @@
 <script setup>
+import { ref } from 'vue'
 const props = defineProps({ notice: { type: Object, required: true } })
-defineEmits(['claim-action', 'reveal', 'block', 'compare', 'ignore'])
+const emit = defineEmits(['claim-action', 'reveal', 'block', 'compare', 'ignore', 'supplement'])
+const supp = ref('')
+function submitSupp() {
+  const text = supp.value.trim()
+  if (text.length < 2) return
+  emit('supplement', text)
+  supp.value = ''
+}
 function time(ts) {
   if (!ts) return ''
   const d = new Date(Number(ts) || 0)
@@ -26,6 +34,11 @@ function statusText(s) {
       <div v-if="notice.claimAi.points?.length" class="nd-ai-points"><i v-for="p in notice.claimAi.points" :key="p">{{ p }}</i></div>
     </div>
   </div>
+  <div v-if="notice.isClaimant && notice.claimStatus === 'need_more'" class="nd-phone-fill">
+    <p>发布者请你补充线索，补充后会自动回到待处理。</p>
+    <textarea v-model="supp" maxlength="200" placeholder="补充物品特征、时间、地点等具体线索"></textarea>
+    <button type="button" @click="submitSupp">提交补充</button>
+  </div>
   <slot name="chat" />
   <div class="nd-actions">
     <template v-if="(notice.isPublisher || notice.item?.isMine) && notice.claimId && (!notice.claimStatus || ['pending','need_more'].includes(notice.claimStatus))">
@@ -40,3 +53,7 @@ function statusText(s) {
 </template>
 
 <style src="../styles/notice-branch.css"></style>
+<style scoped>
+.nd-phone-fill textarea { width:100%; box-sizing:border-box; min-height:58px; background:#fff; border:1px solid #E4D6F2; border-radius:8px; padding:8px; font-family:inherit; font-size:9.5px; }
+.nd-phone-fill > button { margin-top:6px; width:100%; border:0; background:#5B2A91; color:#fff; border-radius:8px; padding:8px; font-family:inherit; font-size:9.5px; }
+</style>
