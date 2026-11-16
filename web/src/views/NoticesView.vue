@@ -176,11 +176,12 @@ function openNotice(n) {
   helpSupplementMsg.value = ''
   compareOpen.value = false
   targetOpen.value = false
-  const _ct = (n.type === 'pickup' && n.reportId)
-    ? { id: n.reportId, kind: 'report' }
+  const _reportId = n.reportId || n.report?.id
+  const _ct = (n.type === 'pickup' && _reportId)
+    ? { id: _reportId, kind: 'report' }
     : (n.claimId && n.itemType !== 'help')
       ? { id: n.claimId, kind: 'claim' }
-      : (n.reportId ? { id: n.reportId, kind: 'report' } : null)
+      : (_reportId ? { id: _reportId, kind: 'report' } : null)
   chatKind.value = _ct?.kind || 'report'
   chatTargetId.value = _ct?.id || ''
   if (_ct) openChatForNotice(n, _ct)
@@ -204,8 +205,8 @@ function currentChatTarget() {
 async function openChatForNotice(n, target) {
   await loadChat(target.id, target.kind)
   // 兼容旧数据：以前的聊天可能存在 report 里，claim 还没有 messages
-  if (target.kind === 'claim' && !chatError.value && !chat.length && n.reportId) {
-    await loadChat(n.reportId, 'report')
+  if (target.kind === 'claim' && !chatError.value && !chat.length && (n.reportId || n.report?.id)) {
+    await loadChat(n.reportId || n.report.id, 'report')
   }
 }
 async function loadChat(rid, kind = 'report') {
@@ -571,6 +572,7 @@ function fmt(ts) {
       <div v-if="selected.type === 'pickup' && selected.report" class="nd-card">
         <div class="nd-card-title">捡到上报</div>
         <div class="nd-kv"><span>捡到物品</span><b>{{ selected.report.itemName || '捡到物品' }}</b></div>
+        <div class="nd-kv"><span>拾光码物品</span><b>{{ selected.report.tagItem || '我的物品' }}</b></div>
         <div class="nd-kv"><span>上报时间</span><b>{{ fmt(selected.report.at) }}</b></div>
         <div class="nd-message">{{ selected.report.message }}</div>
         <div v-if="selected.report.phoneRevealed" class="nd-kv"><span>我的手机号</span><b>{{ selected.report.ownerContact || '未留手机号' }}</b></div>
