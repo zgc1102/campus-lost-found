@@ -806,8 +806,11 @@ function fmt(ts) {
           </template>
         </div>
         <div v-if="selected.claimId" class="score-explain">
-          <p><b>信息对比度</b>：AI 对申请说明和物品描述的语义核对，只作参考，不是证据，也不代表物品归属。</p>
-          <p><b>当前文本相似度</b>：只按字面重合计算；复述公开描述可能偏高，独立描述可能偏低。</p>
+          <p><b>一句话：分数越高只代表“越像”，不代表“越真”；分数低也不代表一定是假的。</b></p>
+          <p><b>信息对比度</b>：AI 对申请说明和物品描述的语义接近程度。高 = 意思更像，但可能只是同类物品；低 = 描述差异大或证据不足，需要补充。</p>
+          <p><b>当前文本相似度</b>：只按字面重合计算。很高（例如 80% 以上）要警惕直接复述公开描述、照抄线索；很低也不代表假，可能只是换了说法。</p>
+          <p class="score-warn" v-if="currentSimilarity() >= 80">这条字面相似度很高，可能复述了公开描述，不能当作独有证据。</p>
+          <p><b>真正要看</b>：颜色、型号、划痕、贴纸、挂件、丢失地点、时间、照片；最终由发布者判断。</p>
         </div>
         <div class="compare-note">
           {{ selected.type === 'match'
@@ -1032,4 +1035,7 @@ function fmt(ts) {
 .score-explain { margin-top:7px; padding:7px 9px; border-radius:8px; background:#FBF8FF; border:1px solid #EFE7F7; }
 .score-explain p { margin:3px 0; font-size:8.5px; line-height:1.6; color:#7C6A8E; }
 .score-explain b { color:#5B2A91; }
+</style>
+<style scoped>
+.score-warn { margin:4px 0; padding:5px 7px; border-radius:6px; background:#FFF8E8; border:1px solid #F0D9A8; color:#8A5A12 !important; }
 </style>
