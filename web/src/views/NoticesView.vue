@@ -27,6 +27,9 @@ const revealOpen = ref(false)
 const revealTarget = ref('')
 const revealing = ref(false)
 const revealMsg = ref('')
+const helpSupplement = ref('')
+const helpSupplementing = ref(false)
+const helpSupplementMsg = ref('')
 const compareOpen = ref(false)
 const targetOpen = ref(false)
 const myItems = ref([])
@@ -154,11 +157,15 @@ function openNotice(n) {
   revealOpen.value = false
   revealTarget.value = ''
   revealMsg.value = ''
+  helpSupplement.value = ''
+  helpSupplementMsg.value = ''
   compareOpen.value = false
   targetOpen.value = false
-  const _ct = (n.claimId && n.itemType !== 'help')
-    ? { id: n.claimId, kind: 'claim' }
-    : (n.reportId ? { id: n.reportId, kind: 'report' } : null)
+  const _ct = (n.type === 'pickup' && n.reportId)
+    ? { id: n.reportId, kind: 'report' }
+    : (n.claimId && n.itemType !== 'help')
+      ? { id: n.claimId, kind: 'claim' }
+      : (n.reportId ? { id: n.reportId, kind: 'report' } : null)
   chatKind.value = _ct?.kind || 'report'
   if (_ct) loadChat(_ct.id, _ct.kind)
   if (n.type === 'match') loadMyItems()
@@ -172,6 +179,8 @@ function openNotice(n) {
 function currentChatTarget() {
   const s = selected.value
   if (!s) return null
+  // 拾光码上报的聊天必须走 report，不能因为带 claimId 就串到认领聊天
+  if (s.type === 'pickup' && s.report?.id) return { id: s.report.id, kind: 'report' }
   if (s.claimId && s.itemType !== 'help') return { id: s.claimId, kind: 'claim' }
   if (s.report?.id) return { id: s.report.id, kind: 'report' }
   return null
@@ -360,6 +369,24 @@ async function doRevealPhone() {
     revealMsg.value = e.message || '公布失败'
   } finally {
     revealing.value = false
+  }
+}
+async function supplementHelp() {
+  if (!selected.value?.claimId || helpSupplementing.value) return
+  const text = helpSupplement.value.trim()
+  if (text.length < 2) { helpSupplementMsg.value = '请写一点补充说明'; return }
+  helpSupplementing.value = true
+  helpSupplementMsg.value = ''
+  try {
+    await api.supplement(selected.value.claimId, { message: text, contact: selected.value.claimContact || '' })
+    selected.value.claimMessage = (selected.value.claimMessage || '') + '\n补充：' + text
+    selected.value.claimStatus = 'pending'
+    helpSupplement.value = ''
+    helpSupplementMsg.value = '已补充，等待发布者再看'
+  } catch (e) {
+    helpSupplementMsg.value = e.message || '补充失败'
+  } finally {
+    helpSupplementing.value = false
   }
 }
 async function saveClaimPhone() {
@@ -561,6 +588,22 @@ function fmt(ts) {
           </div>
         </div>
         <div v-if="selected.claimStatus" class="nd-state" style="margin-top:8px">{{ ({pending:'待处理', accepted:'进行中', completed:'已完成', rejected:'已婉拒', need_more:'待补充'})[selected.claimStatus] || selected.claimStatus }}</div>
+        <div v-if="selected.claimStatus === 'need_more'" class="help-supplement">
+          <p>发布者请你补充一点细节，补充后会自动回到待处理。</p>
+          <textarea v-model="helpSupplement" maxlength="200" placeholder="补充你能提供的具体信息，例如时间、地点、物品特征"></textarea>
+          <button type="button" :disabled="helpSupplementing" @click="supplementHelp">{{ helpSupplementing ? '提交中…' : '提交补充' }}</button>
+          <div v-if="helpSupplementMsg" class="nd-phone-msg">{{ helpSupplementMsg }}</div>
+        </div>
+        <div class="nd-kv" style="margin-top:8px"><span>发布者手机号</span><b>{{ selected.ownerContact || (selected.item?.contact?.phone ? '已留手机号（通过后显示完整）' : '还没留手机号') }}</b></div>
+        <div class="nd-kv"><span>帮忙人手机号</span><b>{{ selected.item?.isMine ? (selected.claimContact || '还没留手机号') : (selected.claimContact ? '已留手机号' : '还没留手机号') }}</b></div>
+        <div v-if="selected.item?.isMine && !selected.ownerContact && !selected.item?.contact?.phone" class="nd-phone-fill">
+          <p>你是发布者。留手机号后，接受帮忙时双方才能互相联系。</p>
+          <div class="nd-phone-row">
+            <input v-model="claimPhoneInput" maxlength="20" placeholder="补充你的手机号">
+            <button type="button" :disabled="claimPhoneSaving" @click="saveClaimPhone">{{ claimPhoneSaving ? '保存中…' : '补充手机号' }}</button>
+          </div>
+        </div>
+        <div v-if="selected.claimStatus === 'accepted' || selected.claimStatus === 'completed'" class="nd-exchange-ok">双方手机号已交换，可以直接联系。</div>
       </div>
 
       <div v-if="contact" class="nd-contact">联系方式：{{ contact }}</div>
@@ -584,6 +627,7 @@ function fmt(ts) {
             <button type="button" class="btn ghost" @click="helpAction('rejected')">婉拒</button>
           </template>
           <button v-if="selected.claimId && selected.claimStatus === 'accepted'" type="button" class="btn" @click="completeHelp">完成帮助</button>
+          <button v-if="selected.claimId && selected.canRevealPhone && !selected.claimPhoneRevealed && !['accepted','completed'].includes(selected.claimStatus)" type="button" class="btn ghost" @click="askRevealPhone('claim')">公布双方手机号</button>
           <button v-if="selected.item" type="button" class="btn ghost" @click="compareOpen = true">查看匹配报告</button>
           <button type="button" class="btn ghost" @click="ignoreNotice">忽略</button>
         </template>
@@ -878,4 +922,11 @@ function fmt(ts) {
 <style scoped>
 .cc-claim-detail { margin:8px 0 10px; padding:9px; border:1px solid #E7DCF4; border-radius:10px; background:#FBF8FF; }
 .cc-claim-msg { margin:5px 0 7px; font-size:9.5px; line-height:1.7; color:#5F4E72; }
+</style>
+
+<style scoped>
+.help-supplement { margin-top:9px; padding:9px; border:1px solid #E7DCF4; border-radius:9px; background:#FBF8FF; }
+.help-supplement p { margin:0 0 6px; font-size:9px; line-height:1.6; color:#7C6A8E; }
+.help-supplement textarea { width:100%; box-sizing:border-box; min-height:60px; background:#fff; border:1px solid #E4D6F2; border-radius:8px; padding:8px; font-family:inherit; font-size:9.5px; }
+.help-supplement button { margin-top:6px; width:100%; border:0; background:#5B2A91; color:#fff; border-radius:8px; padding:8px; font-family:inherit; font-size:9.5px; }
 </style>

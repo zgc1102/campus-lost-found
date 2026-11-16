@@ -292,7 +292,7 @@ function onAiPhoto(e) {
 }
 async function submitClaim() {
   if (!selected.value) return
-  if (selected.value.type !== 'help' && !claimPhone.value.trim()) {
+  if (!claimPhone.value.trim()) {
     claimState.value = '请先留下手机号，方便发布者确认后联系你'
     return
   }

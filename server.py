@@ -533,6 +533,7 @@ AI_SYSTEM_PROMPT = (
     "招嫖或性暗示（找小妹妹、小姐姐、妹妹、包夜、上门、陪侍、服务）；"
     "招聘兼职、租房卖房、二手买卖、付费代购、商业跑腿、拼车、拉群、广告推广。"
     "注意：同学之间**无偿**借用、代办、捐赠、志愿帮忙属于允许范围，不要误判。"
+    "爱心求助中说明时间、地点、路线、取送物品、回宿舍等正常生活安排，不是交友，不要误判。"
     "但**借钱、垫付、转账、刷单、代考代写、投资理财**一律 reject。\n"
     "第二步：检查标题与正文是否一致。"
     "如果标题带有交友/招嫖暗示，而正文写的是正常寻物，"
@@ -3621,7 +3622,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"error": "电话号码不正确：" + _chk["reason"]}, 400)
             if _chk.get("normalized"):
                 contact = _chk["normalized"]
-            if _target0.get("type") in ("lost", "found") and not contact:
+            if not contact:
                 return self._json({"error": "请先留下手机号，方便对方确认后联系你"}, 400)
             if _target0.get("type") in ("lost", "found") and len(message) < 2:
                 return self._json({"error": "请补充一句物品特征或来源，不能只留手机号"}, 400)
@@ -3846,6 +3847,11 @@ class Handler(BaseHTTPRequestHandler):
             with LOCK:
                 claims = load_claims()
                 claim = next((c for c in claims if c.get("id") == claim_id), None)
+                help_mode = False
+                if not claim:
+                    tasks = load_help_tasks()
+                    claim = next((c for c in tasks if c.get("id") == claim_id), None)
+                    help_mode = bool(claim)
                 if not claim:
                     return self._json({"error": "认领记录不存在"}, 404)
                 items = load_items()
@@ -3864,7 +3870,10 @@ class Handler(BaseHTTPRequestHandler):
                 claim["phoneRevealedBy"] = owner
                 claim["phoneRevealedAt"] = now_ms()
                 claim["updatedAt"] = now_ms()
-                save_claims(claims)
+                if help_mode:
+                    save_help_tasks(tasks)
+                else:
+                    save_claims(claims)
                 return self._json({"ok": True, "ownerContact": owner_phone, "claimContact": claimer_phone})
 
         if path.startswith("/api/claims/") and (path.endswith("/messages/list") or path.endswith("/messages/send")):

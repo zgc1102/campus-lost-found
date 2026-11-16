@@ -230,6 +230,7 @@ async function submit() {
   error.value = ''
   if (form.title.trim().length < 2) { error.value = '标题至少写两个字'; return }
   if (form.desc.trim().length < 5) { error.value = '说明再具体一点，至少 5 个字'; return }
+  if (isHelp.value && !form.phone.trim()) { error.value = '爱心求助请先留下手机号，方便对方确认后联系你'; return }
   submitting.value = true
   try {
     const item = {
