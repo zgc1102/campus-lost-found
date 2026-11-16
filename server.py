@@ -2238,6 +2238,46 @@ def vision_analyze(image_b64, mime="image/jpeg"):
     return last if last.get("ok") else {"ok": False, "reason": last.get("reason") or "AI 没看清，请手动填写"}
 
 
+def vision_moderate(image_b64):
+    """外接视觉模型做图片安全初筛；失败时不阻塞，只返回 ok=False。"""
+    cfg = vision_config()
+    if not cfg.get("api_key"):
+        return {"ok": False, "reason": "未配置视觉审核模型"}
+    endpoint = cfg["base_url"].rstrip("/") + "/chat/completions"
+    prompt = (
+        "你是校园失物招领平台的图片安全审核器。只判断这张图片是否适合公开展示。"
+        "重点检查：色情裸露、性暗示、暴力血腥、毒品、赌博、武器、诈骗二维码/付款码、"
+        "身份证/银行卡等敏感证件、其他违法内容。正常失物照片、物品特写、宿舍/教室背景都算安全。"
+        "只输出 JSON，不要 markdown："
+        "{\"safe\":true或false,\"category\":\"无/色情/暴力/毒品/赌博/武器/诈骗/证件/其他\","
+        "\"confidence\":0到1,\"reason\":\"不超过30字\"}。"
+    )
+    payload = {
+        "model": cfg["model"],
+        "temperature": 0,
+        "messages": [{"role": "user", "content": [
+            {"type": "text", "text": prompt},
+            {"type": "image_url", "image_url": {"url": image_b64 if image_b64.startswith("data:") else "data:image/jpeg;base64," + image_b64}},
+        ]}],
+    }
+    try:
+        data = _post_chat(endpoint, payload, cfg["api_key"], timeout=35)
+        text = data["choices"][0]["message"]["content"] or ""
+        m = re.search(r"\{[\s\S]*\}", text)
+        obj = json.loads(m.group(0)) if m else {}
+        try:
+            conf = float(obj.get("confidence") or 0)
+        except Exception:
+            conf = 0
+        return {"ok": True, "safe": bool(obj.get("safe", True)),
+                "category": str(obj.get("category") or "无")[:20],
+                "confidence": max(0, min(1, conf)),
+                "reason": str(obj.get("reason") or "")[:60],
+                "model": cfg["model"]}
+    except Exception as e:
+        return {"ok": False, "reason": "图片审核服务暂时不可用：" + str(e)[:80]}
+
+
 
 
 # ================= 信息整理（AI 规范化） =================
@@ -3841,6 +3881,9 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"error": "只支持 JPG / PNG / WebP 图片"}, 400)
             if len(image) > 2_500_000:
                 return self._json({"error": "图片太大，请压缩后再上传"}, 400)
+            _mod = vision_moderate(image)
+            if _mod.get("ok") and not _mod.get("safe", True) and float(_mod.get("confidence") or 0) >= 0.6:
+                return self._json({"error": "图片未通过安全审核：" + (_mod.get("reason") or "请更换图片")}, 400)
             with LOCK:
                 claims = load_claims()
                 claim = next((c for c in claims if c.get("id") == claim_id), None)
@@ -3850,6 +3893,7 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json({"error": "只有申请人能补充图片"}, 403)
                 item = next((x for x in load_items() if x.get("id") == claim.get("itemId")), None)
                 claim["supplementImage"] = image
+                claim["imageModeration"] = {k: v for k, v in _mod.items() if k in ("ok", "safe", "category", "confidence", "reason")}
                 claim["needImage"] = False
                 claim["status"] = "pending"
                 claim["updatedAt"] = now_ms()
