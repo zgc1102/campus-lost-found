@@ -7,7 +7,7 @@ const props = defineProps({
   supplementMsg: { type: String, default: '' },
   phoneMsg: { type: String, default: '' }
 })
-const emit = defineEmits(['supplement', 'save-phone', 'help-action', 'block', 'compare', 'ignore'])
+const emit = defineEmits(['supplement', 'save-phone', 'help-action', 'complete', 'block', 'compare', 'ignore'])
 const supp = ref('')
 const phone = ref('')
 function statusText(s) {
@@ -69,7 +69,7 @@ function submitPhone() {
       <button type="button" class="btn ghost" @click="$emit('help-action', 'rejected')">婉拒</button>
       <button v-if="notice.canBlockClaim" type="button" class="btn ghost" @click="$emit('block')">屏蔽对方</button>
     </template>
-    <button v-if="(notice.isPublisher || notice.item?.isMine) && notice.claimId && notice.claimStatus === 'accepted'" type="button" class="btn" @click="$emit('help-action', 'completed')">完成帮助</button>
+    <button v-if="(notice.isPublisher || notice.item?.isMine) && notice.claimId && notice.claimStatus === 'accepted'" type="button" class="btn" @click="$emit('complete')">完成帮助</button>
     <button v-if="notice.item" type="button" class="btn ghost" @click="$emit('compare')">查看匹配报告</button>
     <button type="button" class="btn ghost" @click="$emit('ignore')">忽略</button>
   </div>
