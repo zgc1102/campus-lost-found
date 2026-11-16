@@ -4194,13 +4194,6 @@ class Handler(BaseHTTPRequestHandler):
                 report["status"] = "closed"
                 report["updatedAt"] = now_ms()
                 save_tag_reports(reports)
-                tags = load_tags()
-                for tag in tags:
-                    if tag.get("code") == report.get("tagCode"):
-                        tag["active"] = False
-                        tag["pausedAt"] = now_ms()
-                        save_tags(tags)
-                        break
                 if report.get("itemId"):
                     items = load_items()
                     for it in items:
