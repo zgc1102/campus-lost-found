@@ -16,8 +16,8 @@ const tagError = ref('')
 
 async function generate() {
   error.value = ''
-  if (mode.value === 'phone' && phone.value.trim().length < 6) {
-    error.value = '选择显示电话时，请填写手机号'
+  if (phone.value.trim().length < 6) {
+    error.value = '请先填写手机号，所有拾光码都必须留手机号'
     return
   }
   loading.value = true
@@ -111,8 +111,8 @@ function qrError() {
         <input v-model="item" maxlength="30" placeholder="例如：键盘 / 校园卡 / 充电器">
       </div>
       <div class="tag-sec">
-        <label>手机号</label>
-        <input v-model="phone" maxlength="20" inputmode="tel" placeholder="用于失主联系，可打码展示">
+        <label>手机号（必填）</label>
+        <input v-model="phone" maxlength="20" inputmode="tel" placeholder="用于失主联系，所有拾光码都必须填写">
       </div>
       <div class="tag-sec">
         <label>扫码后</label>

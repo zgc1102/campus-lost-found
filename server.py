@@ -3162,8 +3162,12 @@ class Handler(BaseHTTPRequestHandler):
             phone = str(body.get("phone") or "").strip()[:20]
             mode = "phone" if body.get("mode") == "phone" else "notify"
             note = str(body.get("note") or "").strip()[:80]
-            if mode == "phone" and not phone:
-                return self._json({"error": "选择展示电话时，需要填写手机号"}, 400)
+            if not phone:
+                return self._json({"error": "所有拾光码都必须填写手机号"}, 400)
+            _pchk = phone_check(phone)
+            if _pchk.get("status") == "red":
+                return self._json({"error": "手机号不正确：" + _pchk.get("reason", "")}, 400)
+            phone = _pchk.get("normalized") or phone
             _ok, _why = moderate_tag(item_name + " " + note)
             if not _ok:
                 return self._json({"error": "内容未通过审核：" + _why}, 400)
@@ -3210,6 +3214,12 @@ class Handler(BaseHTTPRequestHandler):
             message = str(body.get("message") or "").strip()[:160]
             contact = str(body.get("contact") or "").strip()[:40]
             found_item = str(body.get("itemName") or "").strip()[:40]
+            if not contact:
+                return self._json({"error": "请先留下手机号，方便失主联系你"}, 400)
+            _pchk = phone_check(contact)
+            if _pchk.get("status") == "red":
+                return self._json({"error": "手机号不正确：" + _pchk.get("reason", "")}, 400)
+            contact = _pchk.get("normalized") or contact
             with LOCK:
                 tags = load_tags()
                 tag = next((x for x in tags if x.get("code") == code), None)
@@ -3986,6 +3996,8 @@ class Handler(BaseHTTPRequestHandler):
         if path.startswith("/api/reports/") and path.endswith("/reveal-phone"):
             owner = self._owner()
             report_id = path[len("/api/reports/"):-len("/reveal-phone")]
+            body = self._read_body()
+            raw_phone = str(body.get("phone") or "").strip()[:20]
             with LOCK:
                 reports = load_tag_reports()
                 report = next((r for r in reports if r.get("id") == report_id), None)
@@ -3996,9 +4008,18 @@ class Handler(BaseHTTPRequestHandler):
                 tags = load_tags()
                 tag = next((t for t in tags if t.get("code") == report.get("tagCode")), None)
                 owner_phone = (tag or {}).get("phone") or ""
+                if not owner_phone and raw_phone:
+                    _pchk = phone_check(raw_phone)
+                    if _pchk.get("status") == "red":
+                        return self._json({"error": "手机号不正确：" + _pchk.get("reason", "")}, 400)
+                    owner_phone = _pchk.get("normalized") or raw_phone
+                    if tag:
+                        tag["phone"] = owner_phone
+                        tag["updatedAt"] = now_ms()
+                        save_tags(tags)
                 finder_phone = report.get("contact") or ""
                 if not owner_phone:
-                    return self._json({"error": "你还没有留手机号，请先补充"}, 400)
+                    return self._json({"error": "请先填写你的手机号"}, 400)
                 if not finder_phone:
                     return self._json({"error": "捡到者还没有留手机号"}, 400)
                 report["phoneRevealed"] = True

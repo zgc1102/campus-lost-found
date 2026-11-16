@@ -33,6 +33,7 @@ const revealOpen = ref(false)
 const revealTarget = ref('')
 const revealing = ref(false)
 const revealMsg = ref('')
+const revealPhoneInput = ref('')
 const helpSupplement = ref('')
 const helpSupplementing = ref(false)
 const helpSupplementMsg = ref('')
@@ -197,6 +198,7 @@ function openNotice(n) {
   revealOpen.value = false
   revealTarget.value = ''
   revealMsg.value = ''
+  revealPhoneInput.value = ''
   helpSupplement.value = ''
   helpSupplementMsg.value = ''
   claimPhonePromptOpen.value = false
@@ -409,7 +411,7 @@ async function doRevealPhone() {
       selected.value.ownerContact = r.ownerContact || ''
       selected.value.claimContact = r.claimContact || selected.value.claimContact
     } else {
-      const r = await api.reportRevealPhone(selected.value.report.id)
+      const r = await api.reportRevealPhone(selected.value.report.id, revealPhoneInput.value.trim())
       selected.value.report.phoneRevealed = true
       selected.value.report.ownerContact = r.ownerContact || ''
       selected.value.report.contact = r.finderContact || selected.value.report.contact
@@ -686,6 +688,9 @@ function fmt(ts) {
         <div v-else-if="revealTarget === 'report'" class="reveal-phones">
           <div><span>你的手机号</span><b>{{ selected.report?.ownerContact || '尚未留' }}</b></div>
           <div><span>捡到者手机号</span><b>{{ selected.report?.contact || '尚未留' }}</b></div>
+        </div>
+        <div v-if="revealTarget === 'report' && !selected.report?.ownerContact" class="nd-phone-row" style="margin-top:9px">
+          <input v-model="revealPhoneInput" maxlength="20" placeholder="你还没有留手机号，请先填写">
         </div>
         <div v-if="revealMsg" class="nd-send-error">{{ revealMsg }}</div>
         <div class="reveal-actions">

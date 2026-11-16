@@ -31,8 +31,12 @@ onMounted(async () => {
 })
 
 async function send() {
-  if (!message.value.trim() && !contact.value.trim()) {
-    error.value = '留一句「我捡到了」或联系方式，失主才能找到你'
+  if (!contact.value.trim()) {
+    error.value = '请先留下手机号，方便失主联系你'
+    return
+  }
+  if (!message.value.trim()) {
+    error.value = '留一句「我捡到了」，失主才能找到你'
     return
   }
   sending.value = true
@@ -128,8 +132,8 @@ async function sendChat() {
           <input v-model="itemName" maxlength="40" placeholder="例如：一把黑色雨伞">
           <label>给失主留言</label>
           <textarea v-model="message" maxlength="160" placeholder="例如：我在图书馆一楼服务台捡到了，可以来这里拿"></textarea>
-          <label>你的联系方式（选填）</label>
-          <input v-model="contact" maxlength="40" placeholder="手机号 / 微信，只有失主能看到">
+          <label>你的手机号（必填）</label>
+          <input v-model="contact" maxlength="20" inputmode="tel" placeholder="手机号，只有失主能看到">
           <div v-if="error" class="warn-box">{{ error }}</div>
           <button type="button" class="primary scan-submit" :disabled="sending" @click="send">{{ sending ? '发送中…' : '通知失主' }}</button>
         </div>

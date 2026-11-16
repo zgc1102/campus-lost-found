@@ -75,6 +75,7 @@ async function submit() {
   error.value = ''
   if (form.title.trim().length < 2) { error.value = '写一句标题'; return }
   if (form.desc.trim().length < 5) { error.value = '具体说明再写清楚一点'; return }
+  if (!form.phone.trim()) { error.value = '请先留下手机号，方便对方联系你'; return }
   submitting.value = true
   try {
     const payload = {
@@ -128,7 +129,7 @@ async function submit() {
         <label>地点与联系方式</label>
         <div class="hp-row">
           <input v-model="form.place" maxlength="40" placeholder="地点，例如：紫荆 15 号楼">
-          <input v-model="form.phone" maxlength="20" placeholder="手机 / 微信（会打码）">
+          <input v-model="form.phone" maxlength="20" inputmode="tel" placeholder="手机号（必填，会打码）">
         </div>
         <div class="tip-small">手机号会在列表里脱敏显示；对方确认后再给完整联系方式。</div>
       </div>

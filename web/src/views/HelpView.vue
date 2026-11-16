@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { computed, onMounted, ref } from 'vue'
 import { api } from '../api'
 
@@ -80,6 +80,7 @@ function aiLabel(d) {
 }
 async function submitHelp() {
   if (!selected.value) return
+  if (!goPhone.value.trim()) { goState.value = '请先留下手机号，方便对方联系你'; return }
   if (goMsg.value.trim().length < 2) { goState.value = '说一句你能怎么帮'; return }
   going.value = true
   goState.value = ''
@@ -172,7 +173,7 @@ async function submitHelp() {
       </div>
       <template v-else>
         <textarea v-model="goMsg" maxlength="120" placeholder="说一句你能怎么帮，例如：我明天上午可以带过去" style="width:100%;box-sizing:border-box;margin-top:10px;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:11px;padding:10px;font-family:inherit;font-size:11px;min-height:64px"></textarea>
-        <input v-model="goPhone" maxlength="20" placeholder="你的联系方式（对方确认后可见）" style="width:100%;box-sizing:border-box;margin-top:7px;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:11px;padding:10px;font-family:inherit;font-size:11px">
+        <input v-model="goPhone" maxlength="20" placeholder="你的手机号（必填，对方确认后可见）" style="width:100%;box-sizing:border-box;margin-top:7px;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:11px;padding:10px;font-family:inherit;font-size:11px">
         <div v-if="goState" class="sa" style="margin-top:6px">{{ goState }}</div>
         <button type="button" class="btn" style="width:100%;margin-top:12px" :disabled="going" @click="submitHelp">{{ going ? '发送中…' : '发送' }}</button>
       </template>
