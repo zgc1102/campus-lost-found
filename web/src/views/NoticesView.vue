@@ -134,9 +134,20 @@ async function load() {
     items.value = data.items || []
     unread.value = data.unread || 0
     lastNoticeLoad = Date.now()
+    applyMineFocus()
   } finally {
     loading.value = false
   }
+}
+function applyMineFocus() {
+  const nid = sessionStorage.getItem('sg:focusNotice')
+  const cid = sessionStorage.getItem('sg:focusClaim')
+  if (!nid && !cid) return
+  let target = nid ? items.value.find((n) => n.id === nid) : null
+  if (!target && cid) target = items.value.find((n) => n.claimId === cid)
+  sessionStorage.removeItem('sg:focusNotice')
+  sessionStorage.removeItem('sg:focusClaim')
+  if (target) openNotice(target)
 }
 function refreshWhenVisible() {
   if (document.hidden) return

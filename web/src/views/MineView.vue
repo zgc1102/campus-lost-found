@@ -7,6 +7,7 @@ const items = ref([])
 const claims = ref([])
 const claimsLoading = ref(false)
 const sentClaims = ref([])
+const noticeItems = ref([])
 const lostClaims = computed(() => claims.value.filter((c) => c.itemType !== 'help'))
 const helpClaims = computed(() => claims.value.filter((c) => c.itemType === 'help'))
 const tab = ref('mine')
@@ -38,7 +39,10 @@ async function load(silent = false) {
   const tagTask = api.myTags().then((tags) => {
     myTag.value = Array.isArray(tags) && tags.length ? tags[0] : null
   }).catch(() => {})
-  await Promise.allSettled([itemTask, claimTask, tagTask])
+  const noticeTask = api.notices().then((data) => {
+    noticeItems.value = (data.items || []).slice(0, 20)
+  }).catch(() => {})
+  await Promise.allSettled([itemTask, claimTask, tagTask, noticeTask])
 }
 async function login() {
   authMsg.value = ''
@@ -154,6 +158,29 @@ async function submitCode() {
 function claimStatus(s) {
   return ({ pending: '待确认', accepted: '已通过', completed: '已完成', rejected: '已拒绝', need_more: '待补充', closed: '已结束' })[s] || s
 }
+function claimLabel(c) {
+  if (c.itemType === 'help') return '爱心求助 · ' + (c.kind === 'help' ? '帮忙申请' : '求助')
+  if (c.kind === 'found') return '失物招领 · 捡到线索'
+  if (c.itemType === 'lost') return '失物招领 · 寻物启事'
+  return '失物招领 · 认领申请'
+}
+function noticeLabel(n) {
+  if (n.itemType === 'help') return '爱心求助 · 申请'
+  if (n.type === 'pickup' || n.reportId || n.report) return '拾光码 · 扫码上报'
+  if (n.type === 'match') return '失物招领 · 匹配提醒'
+  if (n.type === 'claim' || n.type === 'accepted' || n.type === 'rejected' || n.type === 'done' || n.type === 'need_more') {
+    return n.itemType === 'lost' ? '失物招领 · 寻物启事' : '失物招领 · 认领申请'
+  }
+  return '系统提醒'
+}
+function openNotice(n) {
+  if (n?.id) sessionStorage.setItem('sg:focusNotice', n.id)
+  emit('nav', 'notices')
+}
+function openClaim(c) {
+  if (c?.id) sessionStorage.setItem('sg:focusClaim', c.id)
+  emit('nav', 'notices')
+}
 function claimVerdict(c) {
   if (!c) return '暂无参考'
   if (c.verdict === 'mismatch') return '差异较大'
@@ -225,8 +252,9 @@ function fmt(ts) {
 
       <div v-if="lostClaims.length" style="margin:12px 0">
         <div class="sectitle">认领申请</div>
-        <div v-for="c in lostClaims" :key="c.id" class="mini">
+        <div v-for="c in lostClaims" :key="c.id" class="mini claim-click" @click="openClaim(c)">
           <div class="mh">{{ c.itemTitle }}<span class="st">{{ claimStatus(c.status) }}</span></div>
+          <div class="mtype">{{ claimLabel(c) }}</div>
           <div class="mmeta">{{ c.message }}</div>
           <div v-if="c.aiCheck" class="claim-ai-line">信息对比度 {{ claimConfidence(c.aiCheck) }}% · {{ claimVerdict(c.aiCheck) }}</div>
           <div v-if="c.aiCheck?.reason" class="tip-small">依据：{{ c.aiCheck.reason }}</div>
@@ -249,8 +277,9 @@ function fmt(ts) {
 
       <div v-if="helpClaims.length" style="margin:12px 0">
         <div class="sectitle">帮忙申请</div>
-        <div v-for="c in helpClaims" :key="c.id" class="mini">
+        <div v-for="c in helpClaims" :key="c.id" class="mini claim-click" @click="openClaim(c)">
           <div class="mh">{{ c.itemTitle }}<span class="st">{{ claimStatus(c.status) }}</span></div>
+          <div class="mtype">{{ claimLabel(c) }}</div>
           <div class="mmeta">{{ c.message }}</div>
           <div v-if="c.status === 'accepted'" class="mact">
             <button type="button" class="btn" @click="completeClaim(c)">完成帮助</button>
@@ -269,10 +298,20 @@ function fmt(ts) {
 
       <div v-if="sentClaims.length" style="margin:12px 0">
         <div class="sectitle">我发出的认领 / 帮忙</div>
-        <div v-for="c in sentClaims" :key="'s'+c.id" class="mini">
+        <div v-for="c in sentClaims" :key="'s'+c.id" class="mini claim-click" @click="openClaim(c)">
           <div class="mh">{{ c.itemTitle }}<span class="st">{{ claimStatus(c.status) }}</span></div>
+          <div class="mtype">{{ claimLabel(c) }}</div>
           <div class="mmeta">{{ c.message }}</div>
           <div v-if="c.aiCheck && c.itemType !== 'help'" class="claim-ai-line">信息对比度 {{ claimConfidence(c.aiCheck) }}% · {{ claimVerdict(c.aiCheck) }}</div>
+        </div>
+      </div>
+
+      <div v-if="noticeItems.length" style="margin:12px 0">
+        <div class="sectitle">最近动态</div>
+        <div v-for="n in noticeItems" :key="'n'+n.id" class="mini claim-click" @click="openNotice(n)">
+          <div class="mh">{{ n.itemTitle || n.report?.itemName || '通知' }}<span class="st">{{ n.read ? '已读' : '未读' }}</span></div>
+          <div class="mtype">{{ noticeLabel(n) }}</div>
+          <div class="mmeta">{{ n.text }}</div>
         </div>
       </div>
 
@@ -373,3 +412,9 @@ function fmt(ts) {
 
 
 
+
+<style scoped>
+.claim-click { cursor:pointer; transition:background .15s; }
+.claim-click:hover { background:#FBF8FF; }
+.mtype { display:inline-block; margin-top:4px; font-size:8px; color:#5B2A91; background:#F1E8FB; border-radius:4px; padding:1px 5px; }
+</style>
