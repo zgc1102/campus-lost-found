@@ -90,8 +90,9 @@ const groups = [
 ]
 function groupOf(n) {
   if (n.itemType === 'help') return 'help'
-  if (n.type === 'pickup' || n.report) return 'tag'
+  // 失物/招领优先归到“失物”，即使它来自拾光码或带有 report 字段
   if (n.itemType === 'lost' || n.itemType === 'found' || ['match', 'claim', 'accepted', 'rejected', 'done'].includes(n.type)) return 'lost'
+  if (n.type === 'pickup' || n.report) return 'tag'
   return 'system'
 }
 const visibleItems = computed(() => tab.value === 'all' ? items.value : items.value.filter((n) => groupOf(n) === tab.value))
@@ -155,9 +156,11 @@ function openNotice(n) {
   revealMsg.value = ''
   compareOpen.value = false
   targetOpen.value = false
-  chatKind.value = n.reportId ? 'report' : 'claim'
-  if (n.reportId) loadChat(n.reportId, 'report')
-  else if (n.claimId && n.itemType !== 'help') loadChat(n.claimId, 'claim')
+  const _ct = (n.claimId && n.itemType !== 'help')
+    ? { id: n.claimId, kind: 'claim' }
+    : (n.reportId ? { id: n.reportId, kind: 'report' } : null)
+  chatKind.value = _ct?.kind || 'report'
+  if (_ct) loadChat(_ct.id, _ct.kind)
   if (n.type === 'match') loadMyItems()
   if (!n.read) {
     n.read = true
@@ -166,6 +169,13 @@ function openNotice(n) {
   }
 }
 
+function currentChatTarget() {
+  const s = selected.value
+  if (!s) return null
+  if (s.claimId && s.itemType !== 'help') return { id: s.claimId, kind: 'claim' }
+  if (s.report?.id) return { id: s.report.id, kind: 'report' }
+  return null
+}
 async function loadChat(rid, kind = 'report') {
   chatLoading.value = true
   chatError.value = ''
@@ -222,8 +232,8 @@ function makeClientMsgId() {
 }
 function sendChat() {
   const text = chatText.value.trim()
-  const targetId = selected.value?.report?.id || selected.value?.claimId
-  if (!text || !targetId || chatBlocked.value) return
+  const target = currentChatTarget()
+  if (!text || !target || chatBlocked.value) return
   const item = {
     clientMsgId: makeClientMsgId(),
     text,
@@ -240,8 +250,9 @@ async function sendOutbox(item) {
   if (!item || item.status === 'sending') return
   item.status = 'sending'
   item.error = ''
-  const rid = selected.value?.report?.id || selected.value?.claimId
-  const kind = chatKind.value
+  const target = currentChatTarget()
+  const rid = target?.id
+  const kind = target?.kind || chatKind.value
   if (!rid) {
     item.status = 'failed'
     item.error = '聊天已关闭'
@@ -274,9 +285,9 @@ function retryOutbox(item) {
 }
 function refreshChat() {
   if (chatLoading.value) return
-  const rid = selected.value?.report?.id || selected.value?.claimId
-  if (!rid) return
-  loadChat(rid, selected.value?.report?.id ? 'report' : 'claim')
+  const target = currentChatTarget()
+  if (!target) return
+  loadChat(target.id, target.kind)
 }
 
 function goItem() {
@@ -483,40 +494,13 @@ function fmt(ts) {
         <div v-if="selected.report && selected.itemType !== 'help'" class="nd-state">{{ ({pending:'待确认', contacted:'已联系', published:'已公开', closed:'已找回'})[selected.report.status] || selected.report.status }}</div>
       </div>
 
-      <div v-if="selected.report && selected.itemType !== 'help'" class="nd-card">
+      <div v-if="selected.type === 'pickup' && selected.report" class="nd-card">
         <div class="nd-card-title">捡到上报</div>
         <div class="nd-kv"><span>捡到物品</span><b>{{ selected.report.itemName || '捡到物品' }}</b></div>
-        <div class="nd-kv"><span>拾光码物品</span><b>{{ selected.report.tagItem || '我的物品' }}</b></div>
         <div class="nd-kv"><span>上报时间</span><b>{{ fmt(selected.report.at) }}</b></div>
         <div class="nd-message">{{ selected.report.message }}</div>
         <div v-if="selected.report.phoneRevealed" class="nd-kv"><span>我的手机号</span><b>{{ selected.report.ownerContact || '未留手机号' }}</b></div>
         <div v-if="selected.report.phoneRevealed" class="nd-kv"><span>捡到者手机号</span><b>{{ selected.report.contact || '未留手机号' }}</b></div>
-        <button v-if="!selected.report.phoneRevealed" type="button" class="btn" style="margin-top:9px;width:100%" @click="askRevealPhone('report')">公布双方手机号</button>
-      </div>
-
-      <div v-if="selected.claimId && selected.itemType !== 'help'" class="nd-card">
-        <div class="nd-card-title">认领详情</div>
-        <div class="nd-message">{{ selected.claimMessage || selected.text }}</div>
-        <div class="nd-kv"><span>发布者手机号</span><b>{{ selected.ownerContact || (selected.item?.contact?.phone ? '已留手机号（通过后显示完整）' : '还没留手机号') }}</b></div>
-        <div class="nd-kv"><span>认领人手机号</span><b>{{ selected.item?.isMine ? (selected.claimContact || '还没留手机号') : (selected.claimContact ? '已留手机号' : '还没留手机号') }}</b></div>
-        <div v-if="selected.item?.isMine && !selected.ownerContact && !selected.item?.contact?.phone" class="nd-phone-fill">
-          <p>你是发布者。留手机号后，认领人通过申请时，双方才能互相联系。</p>
-          <div class="nd-phone-row">
-            <input v-model="claimPhoneInput" maxlength="20" placeholder="补充你的手机号">
-            <button type="button" :disabled="claimPhoneSaving" @click="saveClaimPhone">{{ claimPhoneSaving ? '保存中…' : '补充手机号' }}</button>
-          </div>
-        </div>
-        <div v-else-if="!selected.item?.isMine && !selected.claimContact" class="nd-phone-fill">
-          <p>你还没有留手机号。补充后，发布者通过申请时才能联系你。</p>
-          <div class="nd-phone-row">
-            <input v-model="claimPhoneInput" maxlength="20" placeholder="补充你的手机号">
-            <button type="button" :disabled="claimPhoneSaving" @click="saveClaimPhone">{{ claimPhoneSaving ? '保存中…' : '补充手机号' }}</button>
-          </div>
-        </div>
-        <div v-if="selected.claimStatus === 'accepted' || selected.claimStatus === 'completed'" class="nd-exchange-ok">双方手机号已交换，可以直接联系。</div>
-        <div v-else class="nd-exchange-tip">发布者通过申请后，双方手机号自动交换；未通过前只显示打码号码。</div>
-        <button v-if="selected.canRevealPhone && !selected.claimPhoneRevealed && !['accepted','completed'].includes(selected.claimStatus)" type="button" class="btn" style="margin-top:8px;width:100%" @click="askRevealPhone('claim')">公布双方手机号</button>
-        <div v-if="claimPhoneMsg" class="nd-phone-msg">{{ claimPhoneMsg }}</div>
       </div>
 
       <div v-if="(selected.report || (selected.claimId && selected.itemType !== 'help')) && selected.itemType !== 'help'" class="nd-card">
@@ -588,6 +572,7 @@ function fmt(ts) {
         <template v-if="selected.type === 'pickup' && selected.report">
           <button type="button" class="btn" @click="revealContact">联系捡到的人</button>
           <button v-if="selected.report.status !== 'published' && selected.report.status !== 'closed'" type="button" class="btn ghost" @click="publishReport">公开为招领</button>
+          <button v-if="!selected.report.phoneRevealed" type="button" class="btn ghost" @click="askRevealPhone('report')">公布双方手机号</button>
           <button v-if="selected.report.status !== 'closed'" type="button" class="btn ghost" @click="closeReport">已找回 / 关闭</button>
           <button type="button" class="btn ghost" @click="blockReport">屏蔽此人</button>
           <button type="button" class="btn ghost" @click="ignoreNotice">不是我的 / 忽略</button>
@@ -603,6 +588,7 @@ function fmt(ts) {
           <button type="button" class="btn ghost" @click="ignoreNotice">忽略</button>
         </template>
         <template v-else>
+          <button v-if="selected.claimId && selected.canRevealPhone && !selected.claimPhoneRevealed && !['accepted','completed'].includes(selected.claimStatus)" type="button" class="btn ghost" @click="askRevealPhone('claim')">公布双方手机号</button>
           <button v-if="selected.item" type="button" class="btn ghost" @click="compareOpen = true">查看匹配报告</button>
           <button type="button" class="btn ghost" @click="ignoreNotice">忽略</button>
         </template>
@@ -627,6 +613,29 @@ function fmt(ts) {
         <button type="button" class="compare-x" @click="compareOpen = false; targetOpen = false">✕</button>
         <div class="compare-kicker">匹配对比报告</div>
         <h2>{{ selected.item.title || '对应物品' }}</h2>
+        <div v-if="selected.claimId" class="cc-claim-detail">
+          <div class="cc-tag">认领详情</div>
+          <p class="cc-claim-msg">{{ selected.claimMessage || selected.text }}</p>
+          <div class="nd-kv"><span>发布者手机号</span><b>{{ selected.ownerContact || (selected.item?.contact?.phone ? '已留手机号（通过后显示完整）' : '还没留手机号') }}</b></div>
+          <div class="nd-kv"><span>认领人手机号</span><b>{{ selected.item?.isMine ? (selected.claimContact || '还没留手机号') : (selected.claimContact ? '已留手机号' : '还没留手机号') }}</b></div>
+          <div v-if="selected.item?.isMine && !selected.ownerContact && !selected.item?.contact?.phone" class="nd-phone-fill">
+            <p>你是发布者。留手机号后，认领人通过申请时，双方才能互相联系。</p>
+            <div class="nd-phone-row">
+              <input v-model="claimPhoneInput" maxlength="20" placeholder="补充你的手机号">
+              <button type="button" :disabled="claimPhoneSaving" @click="saveClaimPhone">{{ claimPhoneSaving ? '保存中…' : '补充手机号' }}</button>
+            </div>
+          </div>
+          <div v-else-if="!selected.item?.isMine && !selected.claimContact" class="nd-phone-fill">
+            <p>你还没有留手机号。补充后，发布者通过申请时才能联系你。</p>
+            <div class="nd-phone-row">
+              <input v-model="claimPhoneInput" maxlength="20" placeholder="补充你的手机号">
+              <button type="button" :disabled="claimPhoneSaving" @click="saveClaimPhone">{{ claimPhoneSaving ? '保存中…' : '补充手机号' }}</button>
+            </div>
+          </div>
+          <div v-if="selected.claimStatus === 'accepted' || selected.claimStatus === 'completed'" class="nd-exchange-ok">双方手机号已交换，可以直接联系。</div>
+          <div v-else class="nd-exchange-tip">发布者通过申请后，双方手机号自动交换；未通过前只显示打码号码。</div>
+          <div v-if="claimPhoneMsg" class="nd-phone-msg">{{ claimPhoneMsg }}</div>
+        </div>
         <div v-if="matchBothMine" class="compare-note" style="background:#FFF4E5;border-color:#F0D6A8">
           这两条都是你自己发布的，不需要再和“自己”对比。你可以直接查看原通知，或等另一位同学发布相关内容。
         </div>
@@ -864,4 +873,9 @@ function fmt(ts) {
 .reveal-card p { margin:0; font-size:10px; line-height:1.7; color:#6F607F; }
 .reveal-actions { display:flex; flex-direction:column; gap:7px; margin-top:12px; }
 .reveal-actions .btn { width:100%; }
+</style>
+
+<style scoped>
+.cc-claim-detail { margin:8px 0 10px; padding:9px; border:1px solid #E7DCF4; border-radius:10px; background:#FBF8FF; }
+.cc-claim-msg { margin:5px 0 7px; font-size:9.5px; line-height:1.7; color:#5F4E72; }
 </style>
