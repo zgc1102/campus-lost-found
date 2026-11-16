@@ -621,6 +621,17 @@ async function submitClaimPhonePrompt() {
   }
 }
 
+async function cancelHelp() {
+  const rid = selected.value?.claimId
+  if (!rid) return
+  try {
+    await api.claimCancel(rid)
+    actionMsg.value = '这条申请已取消，名额已经空出'
+    await refreshSelected()
+  } catch (e) {
+    actionMsg.value = e.message || '取消失败'
+  }
+}
 async function completeHelp() {
   if (!selected.value?.claimId) return
   try {
@@ -720,7 +731,7 @@ function fmt(ts) {
         </template>
       </NoticeClaim>
 
-      <NoticeHelp v-else-if="branch === 'help'" :notice="selected" :supplementing="helpSupplementing" :phone-saving="claimPhoneSaving" :supplement-msg="helpSupplementMsg" :phone-msg="claimPhoneMsg" @supplement="supplementHelp" @save-phone="saveClaimPhone" @help-action="helpAction" @complete="completeHelp" @block="blockClaim" @compare="compareOpen = true" @ignore="ignoreNotice" />
+      <NoticeHelp v-else-if="branch === 'help'" :notice="selected" :supplementing="helpSupplementing" :phone-saving="claimPhoneSaving" :supplement-msg="helpSupplementMsg" :phone-msg="claimPhoneMsg" @supplement="supplementHelp" @save-phone="saveClaimPhone" @help-action="helpAction" @complete="completeHelp" @block="blockClaim" @compare="compareOpen = true" @ignore="ignoreNotice" @cancel="cancelHelp" />
 
       <NoticeSystem v-else :notice="selected" @compare="compareOpen = true" @ignore="ignoreNotice" />
 

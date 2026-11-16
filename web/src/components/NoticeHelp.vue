@@ -7,11 +7,11 @@ const props = defineProps({
   supplementMsg: { type: String, default: '' },
   phoneMsg: { type: String, default: '' }
 })
-const emit = defineEmits(['supplement', 'save-phone', 'help-action', 'complete', 'block', 'compare', 'ignore'])
+const emit = defineEmits(['supplement', 'save-phone', 'help-action', 'complete', 'block', 'compare', 'ignore', 'cancel'])
 const supp = ref('')
 const phone = ref('')
 function statusText(s) {
-  return ({ pending: '待处理', accepted: '进行中', completed: '已完成', rejected: '已婉拒', need_more: '待补充' })[s] || s || ''
+  return ({ pending: '待处理', accepted: '进行中', completed: '已完成', rejected: '已婉拒', need_more: '待补充', canceled: '已取消' })[s] || s || ''
 }
 function submitSupp() {
   const text = supp.value.trim()
@@ -38,6 +38,7 @@ function submitPhone() {
       <div v-if="notice.claimAi.points?.length" class="nd-ai-points"><i v-for="p in notice.claimAi.points" :key="p">{{ p }}</i></div>
     </div>
     <div v-if="notice.claimStatus" class="nd-state" style="margin-top:8px">{{ statusText(notice.claimStatus) }}</div>
+    <div v-if="notice.helpNeedCount" class="nd-kv"><span>需要人数</span><b>{{ notice.helpNeedCount }} 人 · 已接受 {{ notice.helpAcceptedCount || 0 }} 人</b></div>
     <div v-if="notice.claimBlocked" class="nd-blocked">
       <b>你已屏蔽对方</b><span>双方不能再互发消息，也不能再查看对方手机号。</span>
     </div>
@@ -70,6 +71,8 @@ function submitPhone() {
       <button v-if="notice.canBlockClaim" type="button" class="btn ghost" @click="$emit('block')">屏蔽对方</button>
     </template>
     <button v-if="(notice.isPublisher || notice.item?.isMine) && notice.claimId && notice.claimStatus === 'accepted'" type="button" class="btn" @click="$emit('complete')">完成帮助</button>
+    <button v-if="(notice.isPublisher || notice.item?.isMine) && notice.claimId && notice.claimStatus === 'accepted'" type="button" class="btn ghost" @click="$emit('cancel')">结束与 TA 的沟通</button>
+    <button v-if="notice.isClaimant && notice.claimId && ['pending','accepted'].includes(notice.claimStatus)" type="button" class="btn ghost" @click="$emit('cancel')">取消申请</button>
     <button v-if="notice.item" type="button" class="btn ghost" @click="$emit('compare')">查看匹配报告</button>
     <button type="button" class="btn ghost" @click="$emit('ignore')">忽略</button>
   </div>

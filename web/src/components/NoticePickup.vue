@@ -10,6 +10,11 @@ function time(ts) {
 function openPhoto() {
   if (props.notice.report?.photo) window.open(props.notice.report.photo, '_blank', 'noopener')
 }
+function reviewText(r) {
+  if (!r || !r.safe) return ''
+  const pct = Math.round(Number(r.confidence || 0) * 100)
+  return `图片审核：通过 · ${r.category || '无'} · ${pct}%${r.reason ? ' · ' + r.reason : ''}`
+}
 </script>
 
 <template>
@@ -21,6 +26,7 @@ function openPhoto() {
     <div class="nd-message">{{ notice.report?.message }}</div>
     <div v-if="notice.report?.photo" style="margin-top:8px">
       <img :src="notice.report.photo" alt="物品照片" title="双击查看大图" style="max-width:100%;max-height:220px;border-radius:9px;border:1px solid #EADFF5;cursor:zoom-in" @dblclick="openPhoto">
+      <div v-if="reviewText(notice.report.photoReview)" class="nd-review">{{ reviewText(notice.report.photoReview) }}</div>
     </div>
     <div v-if="notice.report?.phoneRevealed" class="nd-kv"><span>我的手机号</span><b>{{ notice.report?.ownerContact || '未留手机号' }}</b></div>
     <div v-if="notice.report?.phoneRevealed" class="nd-kv"><span>捡到者手机号</span><b>{{ notice.report?.contact || '未留手机号' }}</b></div>

@@ -51,6 +51,11 @@ function time(ts) {
 function statusText(s) {
   return ({ pending: '待处理', accepted: '已通过', completed: '已完成', rejected: '已拒绝', need_more: '待补充' })[s] || s || ''
 }
+function reviewText(r) {
+  if (!r || !r.safe) return ''
+  const pct = Math.round(Number(r.confidence || 0) * 100)
+  return `图片审核：通过 · ${r.category || '无'} · ${pct}%${r.reason ? ' · ' + r.reason : ''}`
+}
 </script>
 
 <template>
@@ -71,6 +76,7 @@ function statusText(s) {
     <button v-if="notice.canGeneratePickupCode" type="button" class="btn ghost" style="margin-top:8px" @click="$emit('pickup-code')">生成取件码</button>
     <div v-if="notice.claimImage" style="margin-top:8px">
       <img :src="notice.claimImage" alt="补充图片" title="双击查看大图" style="max-width:100%;max-height:220px;border-radius:9px;border:1px solid #EADFF5;cursor:zoom-in" @dblclick="openImage">
+      <div v-if="reviewText(notice.claimImageReview)" class="nd-review">{{ reviewText(notice.claimImageReview) }}</div>
     </div>
     <div v-if="notice.isClaimant && notice.claimStatus === 'need_more'" class="nd-phone-fill upload-box">
       <p>辛苦你上传一张物品照片，方便发布者核对，谢谢配合。</p>

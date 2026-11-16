@@ -2830,6 +2830,7 @@ class Handler(BaseHTTPRequestHandler):
                     row["report"] = {
                         "id": rp.get("id"), "itemName": rp.get("itemName"),
                         "message": rp.get("message"), "contact": rp.get("contact"),
+                        "photoReview": rp.get("photoModeration") or {},
                         "tagCode": rp.get("tagCode"), "tagItem": rp.get("tagItem"),
                         "status": rp.get("status") or "pending",
                         "at": rp.get("createdAt"),
@@ -2851,6 +2852,8 @@ class Handler(BaseHTTPRequestHandler):
                     row["claimMessage"] = cl.get("message") or ""
                     row["claimNeedImage"] = bool(cl.get("needImage"))
                     row["hasClaimImage"] = bool(cl.get("supplementImage"))
+                    if cl.get("imageModeration"):
+                        row["claimImageReview"] = cl.get("imageModeration")
                     _revealed = bool(cl.get("phoneRevealed")) or cl.get("status") in ("accepted", "completed")
                     if cl.get("status") in ("accepted", "completed"):
                         if not ((cl.get("contact") or "").strip() and ((it.get("contact") or {}).get("phone") or "").strip() if it else False):
@@ -2861,6 +2864,11 @@ class Handler(BaseHTTPRequestHandler):
                     row["claimBlocked"] = bool(cl.get("blocked"))
                     row["canBlockClaim"] = bool(it and it.get("ownerToken") == owner and not cl.get("blocked"))
                     row["claimPickupCode"] = cl.get("pickupCode") or ""
+                    if it and it.get("type") == "help":
+                        row["helpNeedCount"] = max(1, int(it.get("needCount") or 1))
+                        row["helpAcceptedCount"] = sum(
+                            1 for c in claim_map.values()
+                            if c.get("itemId") == it.get("id") and c.get("status") == "accepted")
                     _finder = (it.get("ownerToken") if it and it.get("type") == "found" else cl.get("from")) if it else ""
                     row["canGeneratePickupCode"] = bool(cl.get("status") == "accepted" and _finder == owner and not cl.get("pickupCode"))
                     row["claimContact"] = (cl.get("contact") if _revealed
@@ -3367,6 +3375,7 @@ class Handler(BaseHTTPRequestHandler):
                     "message": message or "我捡到了，请联系我",
                     "contact": contact,
                     "photo": photo,
+                    "photoModeration": {k: v for k, v in _mod.items() if k in ("ok", "safe", "category", "confidence", "reason")} if photo else {},
                     "status": "pending",
                     "createdAt": now_ms(),
                     "updatedAt": now_ms(),
@@ -3926,8 +3935,18 @@ class Handler(BaseHTTPRequestHandler):
                 claim["status"] = "completed"
                 claim["updatedAt"] = now_ms()
                 claim["completedAt"] = now_ms()
-                item["status"] = "closed"
-                item["closedAt"] = now_ms()
+                if in_help:
+                    need = max(1, int(item.get("needCount") or 1))
+                    joined = [c for c in tasks
+                              if c.get("itemId") == claim.get("itemId")
+                              and c.get("status") in ("accepted", "completed")]
+                    all_done = bool(joined) and all(c.get("status") == "completed" for c in joined)
+                    item["status"] = ("closed" if all_done else "claimed") if len(joined) >= need else "approved"
+                    if item["status"] == "closed":
+                        item["closedAt"] = now_ms()
+                else:
+                    item["status"] = "closed"
+                    item["closedAt"] = now_ms()
                 item["updatedAt"] = now_ms()
                 if in_help:
                     save_help_tasks(tasks)
@@ -4768,6 +4787,53 @@ class Handler(BaseHTTPRequestHandler):
         path = unquote(urlparse(self.path).path)
         patch = self._read_body()
 
+        if path.startswith("/api/claims/") and path.endswith("/cancel"):
+            owner = self._owner()
+            claim_id = path[len("/api/claims/"):-len("/cancel")]
+            with LOCK:
+                claims = load_claims()
+                tasks = load_help_tasks()
+                items = load_items()
+                claim = next((c for c in claims if c.get("id") == claim_id), None)
+                in_help = False
+                if not claim:
+                    claim = next((c for c in tasks if c.get("id") == claim_id), None)
+                    in_help = bool(claim)
+                if not claim:
+                    return self._json({"error": "not found"}, 404)
+                item = next((x for x in items if x.get("id") == claim.get("itemId")), None)
+                if not item:
+                    return self._json({"error": "not found"}, 404)
+                if owner not in (claim.get("from"), item.get("ownerToken")):
+                    return self._json({"error": "无权取消这条申请"}, 403)
+                if claim.get("status") in ("completed", "closed", "canceled", "rejected"):
+                    return self._json({"error": "这条申请已经结束"}, 409)
+                was_accepted = claim.get("status") == "accepted"
+                claim["status"] = "canceled"
+                claim["canceledBy"] = owner
+                claim["canceledAt"] = now_ms()
+                claim["updatedAt"] = now_ms()
+                if in_help:
+                    need = max(1, int(item.get("needCount") or 1))
+                    accepted_now = [c for c in tasks
+                                    if c.get("itemId") == claim.get("itemId")
+                                    and c.get("status") == "accepted"]
+                    item["status"] = "claimed" if len(accepted_now) >= need else "approved"
+                    save_help_tasks(tasks)
+                else:
+                    if was_accepted:
+                        item["status"] = "approved"
+                    save_claims(claims)
+                save_items(items)
+                notices = load_notices()
+                other = item.get("ownerToken") if owner == claim.get("from") else claim.get("from")
+                add_notice(notices, other, "rejected",
+                           ("有一位帮忙人取消了《%s》的申请，名额已空出" % (item.get("title") or ""))
+                           if in_help else ("《%s》的申请已取消" % (item.get("title") or "")),
+                           item.get("id"), claim.get("id"))
+                save_notices(notices)
+            return self._json({"ok": True, "status": "canceled"})
+
         if path.startswith("/api/claims/") and not path.endswith("/complete"):
             owner = self._owner()
             claim_id = path[len("/api/claims/"):]
@@ -4808,16 +4874,25 @@ class Handler(BaseHTTPRequestHandler):
                 claim["updatedAt"] = now_ms()
                 others = []
                 if status == "accepted":
-                    item["status"] = "claimed"
-                    # 同一个物品的其他待处理申请自动关闭，不能让它们一直挂着
-                    for c2 in claims:
-                        if (c2.get("itemId") == claim.get("itemId")
-                                and c2.get("id") != claim.get("id")
-                                and c2.get("status") == "pending"):
-                            c2["status"] = "rejected"
-                            c2["rejectReason"] = "物品已被其他人认领"
-                            c2["updatedAt"] = now_ms()
-                            others.append(c2)
+                    if in_help:
+                        need = max(1, int(item.get("needCount") or 1))
+                        accepted_now = [c for c in tasks
+                                        if c.get("itemId") == claim.get("itemId")
+                                        and c.get("status") == "accepted"]
+                        if len(accepted_now) >= need:
+                            return self._json({"error": "需要的帮忙人数已经够了"}, 400)
+                        item["status"] = "claimed" if len(accepted_now) >= need else "approved"
+                    else:
+                        item["status"] = "claimed"
+                        # 同一个物品的其他待处理申请自动关闭，不能让它们一直挂着
+                        for c2 in claims:
+                            if (c2.get("itemId") == claim.get("itemId")
+                                    and c2.get("id") != claim.get("id")
+                                    and c2.get("status") == "pending"):
+                                c2["status"] = "rejected"
+                                c2["rejectReason"] = "物品已被其他人认领"
+                                c2["updatedAt"] = now_ms()
+                                others.append(c2)
                 if in_help:
                     save_help_tasks(tasks)
                 else:
@@ -5040,6 +5115,7 @@ class Handler(BaseHTTPRequestHandler):
             if isinstance(body.get("fields"), dict) else None,
             "summary": str(body.get("summary") or "").strip()[:40],
             "helpCat": str(body.get("helpCat") or "")[:20],
+            "needCount": max(1, min(20, int(body.get("needCount") or 1))) if body.get("type") == "help" else 1,
             "contact": {"phone": str((body.get("contact") or {}).get("phone") or "")[:20]}
             if isinstance(body.get("contact"), dict) else {"phone": ""},
         }

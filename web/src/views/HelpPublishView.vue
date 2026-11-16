@@ -33,7 +33,7 @@ const meta = {
   help_volunteer: { lead: '志愿帮忙：写清需要什么帮助、什么时候。', title: '例如：想找人帮忙搬行李', desc: '需要几个人、大概多久、在哪里集合。' }
 }
 const active = ref(props.helpCat || 'help_borrow')
-const form = reactive({ title: '', desc: '', place: '', phone: '' })
+const form = reactive({ title: '', desc: '', place: '', phone: '', needCount: 1 })
 const photo = ref('')
 const photoOpen = ref(false)
 const submitting = ref(false)
@@ -46,6 +46,7 @@ if (props.editItem) {
   form.desc = e.desc || ''
   form.place = e.place || ''
   form.phone = (e.contact && e.contact.phone) || ''
+  form.needCount = Number(e.needCount || 1)
   photo.value = e.photoUrl || e.photo || ''
 }
 const current = computed(() => cats.find((c) => c.id === active.value) || cats[0])
@@ -86,6 +87,7 @@ async function submit() {
       desc: form.desc.trim(),
       place: form.place.trim() || '未填写地点',
       contact: { phone: form.phone.trim() },
+      needCount: Number(form.needCount) || 1,
       photo: photo.value || null
     }
     const saved = props.editItem
@@ -132,6 +134,13 @@ async function submit() {
           <input v-model="form.phone" maxlength="20" inputmode="tel" placeholder="手机号（必填，会打码）">
         </div>
         <div class="tip-small">手机号会在列表里脱敏显示；对方确认后再给完整联系方式。</div>
+      </div>
+      <div class="hp-sec">
+        <label>需要几位同学帮忙</label>
+        <select v-model.number="form.needCount">
+          <option v-for="n in 10" :key="n" :value="n">{{ n }} 人</option>
+        </select>
+        <div class="tip-small">例如需要 3 人，就允许 3 位同学分别申请；有人退出后名额会空出来。</div>
       </div>
       <div class="hp-sec">
         <label>照片（选填）</label>
