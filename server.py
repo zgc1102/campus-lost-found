@@ -2624,7 +2624,7 @@ class Handler(BaseHTTPRequestHandler):
                     out["itemCat"] = it.get("cat") or ""
                     out["itemPhoto"] = it.get("photo") or ""
                     # 只提示事实，不自动通过/拒绝
-                    if it.get("type") == "found":
+                    if c.get("status") in ("pending", "need_more") and it.get("type") == "found":
                         own_lost = [x for x in items.values()
                                     if x.get("ownerToken") == c.get("from")
                                     and x.get("type") == "lost"
@@ -2641,7 +2641,7 @@ class Handler(BaseHTTPRequestHandler):
                                 "score": int(round(best_score * 100)),
                                 "text": "对方也发布过一条寻物，地点和描述与你这件物品高度相近。"
                             }
-                    if "hint" not in out and c.get("message"):
+                    if c.get("status") in ("pending", "need_more") and "hint" not in out and c.get("message"):
                         copy = _cosine(_bigrams(it.get("desc") or ""), _bigrams(c.get("message") or ""))
                         if copy >= 0.60:
                             out["hint"] = {
@@ -3779,6 +3779,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"ok": True, "messages": report.get("messages") or [], "side": side})
             body = self._read_body()
             text = str(body.get("text") or "").strip()[:200]
+            client_msg_id = str(body.get("clientMsgId") or "").strip()[:80]
             if len(text) < 1:
                 return self._json({"error": "请输入消息"}, 400)
             _ok, _why = moderate_tag(text)
@@ -3787,7 +3788,20 @@ class Handler(BaseHTTPRequestHandler):
             with LOCK:
                 reports = load_tag_reports()
                 report = next((r for r in reports if r.get("id") == report_id), None)
-                msg = {"from": side, "text": text, "at": now_ms()}
+                if not report:
+                    return self._json({"error": "上报不存在"}, 404)
+                if client_msg_id:
+                    for old in (report.get("messages") or []):
+                        if (old.get("from") == side
+                                and old.get("clientMsgId") == client_msg_id):
+                            return self._json({"ok": True, "message": old, "duplicate": True})
+                msg = {
+                    "id": "m_" + uuid.uuid4().hex[:12],
+                    "from": side,
+                    "text": text,
+                    "at": now_ms(),
+                    "clientMsgId": client_msg_id
+                }
                 report.setdefault("messages", []).append(msg)
                 report["messages"] = report["messages"][-50:]
                 if report.get("status") == "pending":
@@ -3802,7 +3816,7 @@ class Handler(BaseHTTPRequestHandler):
                     if notices:
                         notices[-1]["reportId"] = report_id
                 save_notices(notices)
-            return self._json({"ok": True})
+            return self._json({"ok": True, "message": msg, "duplicate": False})
 
         if path.startswith("/api/reports/") and path.endswith("/contact"):
             owner = self._owner()

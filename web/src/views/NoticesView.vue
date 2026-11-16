@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { computed, onMounted, ref } from 'vue'
 import { api } from '../api'
 import CountUp from '../components/CountUp.vue'
@@ -13,6 +13,13 @@ const contact = ref('')
 const actionMsg = ref('')
 const chat = ref([])
 const chatText = ref('')
+const chatLoading = ref(false)
+const chatError = ref('')
+const chatSending = ref(false)
+const sendError = ref('')
+const pendingChat = ref(null)
+const chatSide = ref('owner')
+let sendClientId = ''
 const compareOpen = ref(false)
 const myItems = ref([])
 
@@ -128,6 +135,10 @@ function openNotice(n) {
   actionMsg.value = ''
   chat.value = []
   chatText.value = ''
+  chatError.value = ''
+  sendError.value = ''
+  pendingChat.value = null
+  sendClientId = ''
   compareOpen.value = false
   if (n.reportId) loadChat(n.reportId)
   if (n.type === 'match') loadMyItems()
@@ -139,18 +150,72 @@ function openNotice(n) {
 }
 
 async function loadChat(rid) {
+  chatLoading.value = true
+  chatError.value = ''
   try {
     const r = await api.reportMessages(rid)
-    chat.value = r.messages || []
+    chat.value = Array.isArray(r.messages) ? r.messages : []
+    chatSide.value = r.side || 'owner'
+  } catch (e) {
+    chatError.value = e.message || '聊天记录加载失败'
+  } finally {
+    chatLoading.value = false
+  }
+}
+function chatKey(m) {
+  if (!m) return ''
+  return m.id || `${m.from || ''}|${m.at || ''}|${m.text || ''}`
+}
+function appendChat(m) {
+  if (!m) return
+  const k = chatKey(m)
+  if (k && chat.value.some((x) => chatKey(x) === k)) return
+  chat.value.push(m)
+}
+function chatTime(at) {
+  const d = new Date(Number(at) || 0)
+  if (!Number.isFinite(d.getTime())) return ''
+  const now = new Date()
+  const y = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const target = new Date(d.getFullYear(), d.getMonth(), d.getDate())
+  const hm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  if (target.getTime() === y.getTime()) return hm
+  const yesterday = new Date(y.getTime() - 86400000)
+  if (target.getTime() === yesterday.getTime()) return `昨天 ${hm}`
+  return `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${hm}`
+}
+function makeClientMsgId() {
+  try {
+    if (globalThis.crypto?.randomUUID) return `c_${globalThis.crypto.randomUUID()}`
   } catch (_) {}
+  return `c_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
+}
+function onChatInput() {
+  if (sendError.value) {
+    sendError.value = ''
+    sendClientId = ''
+  }
 }
 async function sendChat() {
-  if (!chatText.value.trim() || !selected.value?.report?.id) return
+  const text = chatText.value.trim()
+  if (!text || !selected.value?.report?.id || chatSending.value) return
+  if (!sendClientId) sendClientId = makeClientMsgId()
+  chatSending.value = true
+  sendError.value = ''
+  pendingChat.value = { text, from: chatSide.value, at: Date.now() }
   try {
-    await api.reportSend(selected.value.report.id, chatText.value.trim())
+    const r = await api.reportSend(selected.value.report.id, text, sendClientId)
+    if (r?.message) appendChat(r.message)
+    else await loadChat(selected.value.report.id)
     chatText.value = ''
-    await loadChat(selected.value.report.id)
-  } catch (e) { actionMsg.value = e.message || '发送失败' }
+    sendClientId = ''
+    pendingChat.value = null
+  } catch (e) {
+    sendError.value = e.message || '发送失败，请重试'
+    pendingChat.value = null
+  } finally {
+    chatSending.value = false
+  }
 }
 
 function goItem() {
@@ -314,13 +379,28 @@ function fmt(ts) {
 
       <div v-if="selected.report && selected.itemType !== 'help'" class="nd-card">
         <div class="nd-card-title">匿名沟通</div>
-        <div v-if="!chat.length" class="nd-message" style="color:#8E7FA3">还没有消息，可以先回复捡到者。</div>
-        <div v-for="(m, i) in chat" :key="i" class="nd-chat" :class="m.from === 'owner' ? 'mine' : 'other'">
-          <span>{{ m.text }}</span>
+        <div class="nd-safety">
+          <b>安全提示</b>
+          <span>平台不会索要验证码、支付密码，也不会要求转账、扫码付款或代付。对方若主动索要二维码、付款码、验证码，或让你先转账，请立即停止并举报。官方拾光码只用于物品留言，不会要求付款；陌生人私发的二维码，一律不要扫。</span>
         </div>
+        <div v-if="chatLoading" class="nd-message" style="color:#8E7FA3">正在加载聊天记录…</div>
+        <div v-else-if="chatError" class="nd-chat-error">
+          <span>聊天记录加载失败：{{ chatError }}</span>
+          <button type="button" @click="loadChat(selected.report.id)">重试</button>
+        </div>
+        <template v-else>
+          <div v-if="!chat.length && !pendingChat" class="nd-message" style="color:#8E7FA3">还没有消息，可以先回复捡到者。</div>
+          <div v-for="m in chat" :key="chatKey(m)" class="nd-chat" :class="m.from === chatSide ? 'mine' : 'other'">
+            <span>{{ m.text }}<em class="nd-chat-time">{{ chatTime(m.at) }}</em></span>
+          </div>
+          <div v-if="pendingChat" class="nd-chat" :class="pendingChat.from === chatSide ? 'mine' : 'other'">
+            <span class="pending">{{ pendingChat.text }}<em class="nd-chat-time">发送中…</em></span>
+          </div>
+        </template>
+        <div v-if="sendError" class="nd-send-error">{{ sendError }}，内容已保留，可再次点击发送。</div>
         <div class="nd-chat-input">
-          <input v-model="chatText" maxlength="200" placeholder="回复捡到者，不需要暴露手机号">
-          <button type="button" @click="sendChat">发送</button>
+          <input v-model="chatText" maxlength="200" :disabled="chatSending" placeholder="回复捡到者，不需要暴露手机号" @input="onChatInput">
+          <button type="button" :disabled="chatSending || !chatText.trim()" @click="sendChat">{{ chatSending ? '发送中…' : '发送' }}</button>
         </div>
       </div>
 
@@ -548,3 +628,15 @@ function fmt(ts) {
 
 
 
+
+<style scoped>
+.nd-safety { margin:7px 0 9px; padding:8px 9px; border-radius:9px; background:#FFF8E8; border:1px solid #F0D9A8; display:flex; flex-direction:column; gap:3px; }
+.nd-safety b { font-size:9px; color:#9A6414; }
+.nd-safety span { font-size:8.5px; line-height:1.6; color:#806A45; }
+.nd-chat-time { display:block; margin-top:3px; font-style:normal; font-size:7.5px; opacity:.62; text-align:right; }
+.nd-chat .pending { opacity:.62; }
+.nd-chat-error { display:flex; align-items:center; justify-content:space-between; gap:6px; padding:7px 0; font-size:9px; color:#A23B2A; }
+.nd-chat-error button { border:1px solid #E7B9AE; background:#fff; color:#A23B2A; border-radius:7px; padding:3px 8px; font-family:inherit; font-size:9px; }
+.nd-send-error { margin-top:5px; font-size:8.5px; color:#A23B2A; }
+.nd-chat-input button:disabled, .nd-chat-input input:disabled { opacity:.55; }
+</style>

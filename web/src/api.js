@@ -228,8 +228,8 @@ export const api = {
   reportMessages(id) {
     return call('/reports/' + encodeURIComponent(id) + '/messages/list', { method: 'POST', skipCacheClear: true })
   },
-  reportSend(id, text) {
-    return call('/reports/' + encodeURIComponent(id) + '/messages/send', { method: 'POST', body: JSON.stringify({ text }) })
+  reportSend(id, text, clientMsgId) {
+    return call('/reports/' + encodeURIComponent(id) + '/messages/send', { method: 'POST', body: JSON.stringify({ text, clientMsgId }), skipCacheClear: true })
   },
   adminLogin(password) {
     return call('/login', { method: 'POST', body: JSON.stringify({ password }) })
