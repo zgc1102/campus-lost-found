@@ -2238,6 +2238,25 @@ def vision_analyze(image_b64, mime="image/jpeg"):
     return last if last.get("ok") else {"ok": False, "reason": last.get("reason") or "AI 没看清，请手动填写"}
 
 
+def compress_image_data(image_b64, max_side=1280, quality=80):
+    """把上传图片统一压缩成 JPEG，去掉 EXIF，减少存储和外部审核体积。"""
+    try:
+        import base64 as _b64
+        import io as _io
+        from PIL import Image, ImageOps
+        if not image_b64:
+            return ""
+        raw = image_b64.split(",", 1)[1] if "," in image_b64 else image_b64
+        im = Image.open(_io.BytesIO(_b64.b64decode(raw, validate=False)))
+        im = ImageOps.exif_transpose(im).convert("RGB")
+        im.thumbnail((max_side, max_side), Image.LANCZOS)
+        out = _io.BytesIO()
+        im.save(out, format="JPEG", quality=quality, optimize=True)
+        return "data:image/jpeg;base64," + _b64.b64encode(out.getvalue()).decode("ascii")
+    except Exception:
+        return image_b64
+
+
 def vision_moderate(image_b64, mime="image/jpeg"):
     """外接视觉模型做图片安全初筛；失败时不阻塞，只返回 ok=False。"""
     cfg = vision_config()
@@ -3298,6 +3317,7 @@ class Handler(BaseHTTPRequestHandler):
             if photo:
                 if not re.match(r"^data:image/(jpeg|jpg|png|webp);base64,", photo):
                     return self._json({"error": "只支持 JPG / PNG / WebP 图片"}, 400)
+                photo = compress_image_data(photo)
                 if len(photo) > 2_500_000:
                     return self._json({"error": "图片太大，请压缩后再上传"}, 400)
                 _mod = vision_moderate(photo)
@@ -3953,6 +3973,7 @@ class Handler(BaseHTTPRequestHandler):
             image = str(body.get("image") or "")
             if not re.match(r"^data:image/(jpeg|jpg|png|webp);base64,", image):
                 return self._json({"error": "只支持 JPG / PNG / WebP 图片"}, 400)
+            image = compress_image_data(image)
             if len(image) > 2_500_000:
                 return self._json({"error": "图片太大，请压缩后再上传"}, 400)
             _mod = vision_moderate(image)

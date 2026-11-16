@@ -1,5 +1,6 @@
 <script setup>
 import { ref } from 'vue'
+import { compressImage } from '../utils/image'
 const props = defineProps({
   notice: { type: Object, required: true },
   imageBusy: { type: Boolean, default: false },
@@ -20,18 +21,19 @@ function openImage() {
   const url = imagePreview.value || props.notice.claimImage
   if (url) window.open(url, '_blank', 'noopener')
 }
-function onImage(e) {
+async function onImage(e) {
   const file = e.target.files && e.target.files[0]
   if (!file) return
   if (!/^image\//.test(file.type)) { imageMsg.value = '请选择图片文件'; return }
-  if (file.size > 2 * 1024 * 1024) { imageMsg.value = '图片太大，请压缩后再上传'; return }
-  const reader = new FileReader()
-  reader.onload = () => {
-    imagePreview.value = String(reader.result || '')
-    imageMsg.value = '已选择照片，请点“确认上传”'
+  try {
+    imageMsg.value = '正在压缩图片…'
+    const compressed = await compressImage(file)
+    imagePreview.value = compressed
+    imageMsg.value = '已压缩，请点“确认上传”'
     uploading.value = false
+  } catch (err) {
+    imageMsg.value = err.message || '图片读取失败'
   }
-  reader.readAsDataURL(file)
   e.target.value = ''
 }
 function submitImage() {

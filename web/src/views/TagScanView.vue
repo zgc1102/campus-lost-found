@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { api } from '../api'
+import { compressImage } from '../utils/image'
 
 const props = defineProps({
   code: { type: String, default: '' }
@@ -36,10 +37,13 @@ async function onPhoto(e) {
   const file = e.target.files && e.target.files[0]
   if (!file) return
   if (!/^image\//.test(file.type)) { photoMsg.value = '请选择图片文件'; return }
-  if (file.size > 2 * 1024 * 1024) { photoMsg.value = '图片太大，请压缩后再上传'; return }
-  const reader = new FileReader()
-  reader.onload = () => { photo.value = String(reader.result || ''); photoMsg.value = '' }
-  reader.readAsDataURL(file)
+  try {
+    photoMsg.value = '正在压缩图片…'
+    photo.value = await compressImage(file)
+    photoMsg.value = ''
+  } catch (err) {
+    photoMsg.value = err.message || '图片读取失败'
+  }
   e.target.value = ''
 }
 function openPhoto() {
