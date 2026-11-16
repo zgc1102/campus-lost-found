@@ -21,10 +21,11 @@ function time(ts) {
   </div>
   <slot name="chat" />
   <div class="nd-actions">
-    <button v-if="!notice.report?.phoneRevealed" type="button" class="btn" @click="$emit('reveal')">公布双方手机号并联系</button>
-    <button v-if="notice.report?.status !== 'published' && notice.report?.status !== 'closed'" type="button" class="btn ghost" @click="$emit('publish')">公开为招领</button>
-    <button type="button" class="btn ghost" @click="$emit('block')">屏蔽</button>
-    <button v-if="notice.report?.status !== 'closed'" type="button" class="btn ghost" @click="$emit('close')">关闭</button>
+    <template v-if="notice.isReportOwner">
+      <button v-if="!notice.report?.phoneRevealed" type="button" class="btn" @click="$emit('reveal')">公布双方手机号并联系</button>
+      <button type="button" class="btn ghost" @click="$emit('block')">屏蔽</button>
+      <button v-if="notice.report?.status !== 'closed'" type="button" class="btn ghost" @click="$emit('close')">关闭</button>
+    </template>
     <button type="button" class="btn ghost" @click="$emit('ignore')">忽略</button>
   </div>
 </template>

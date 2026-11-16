@@ -435,6 +435,17 @@ async function doRevealPhone() {
     revealing.value = false
   }
 }
+async function supplementClaimImage(image) {
+  const rid = selected.value?.claimId
+  if (!rid || !image) return
+  try {
+    await api.claimSupplementImage(rid, image)
+    actionMsg.value = '图片已补充，等待发布者查看'
+    await refreshSelected()
+  } catch (e) {
+    actionMsg.value = e.message || '图片上传失败'
+  }
+}
 async function supplementClaim(textInput) {
   const rid = selected.value?.claimId
   const text = String(textInput || '').trim()
@@ -529,10 +540,10 @@ async function helpAction(status) {
     await refreshSelected()
   } catch (e) { actionMsg.value = e.message || '操作失败' }
 }
-async function claimAction(status) {
+async function claimAction(status, needImage = false) {
   if (!selected.value?.claimId) return
   try {
-    await api.claimAction(selected.value.claimId, { status })
+    await api.claimAction(selected.value.claimId, { status, image: !!needImage })
     selected.value.claimStatus = status
     actionMsg.value = status === 'accepted' ? '已通过认领，双方手机号可以交换'
       : status === 'need_more' ? '已请对方补充线索'
@@ -657,7 +668,7 @@ function fmt(ts) {
         </template>
       </NoticePickup>
 
-      <NoticeClaim v-else-if="branch === 'claim'" :notice="selected" @claim-action="claimAction" @reveal="askRevealPhone('claim')" @block="blockClaim" @compare="compareOpen = true" @ignore="ignoreNotice" @supplement="supplementClaim">
+      <NoticeClaim v-else-if="branch === 'claim'" :notice="selected" @claim-action="claimAction" @reveal="askRevealPhone('claim')" @block="blockClaim" @compare="compareOpen = true" @ignore="ignoreNotice" @supplement="supplementClaim" @supplement-image="supplementClaimImage">
         <template #chat>
           <NoticeChat :messages="chat" :outbox="outbox" :side="chatSide" :loading="chatLoading" :error="chatError" :blocked="chatBlocked" :blocked-by="blockedBy" placeholder="回复对方，不需要暴露手机号" @send="sendChat" @retry="retryOutbox" @refresh="refreshChat" />
         </template>

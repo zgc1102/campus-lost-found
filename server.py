@@ -2733,6 +2733,7 @@ class Handler(BaseHTTPRequestHandler):
                 rp = report_map.get(n.get("reportId"))
                 if rp:
                     _tag = tags_by_code.get(rp.get("tagCode")) or {}
+                    row["isReportOwner"] = bool(rp.get("owner") == owner)
                     row["report"] = {
                         "id": rp.get("id"), "itemName": rp.get("itemName"),
                         "message": rp.get("message"), "contact": rp.get("contact"),
@@ -2755,6 +2756,8 @@ class Handler(BaseHTTPRequestHandler):
                     row["isClaimant"] = bool(cl.get("from") == owner)
                     row["claimStatus"] = cl.get("status") or "pending"
                     row["claimMessage"] = cl.get("message") or ""
+                    row["claimNeedImage"] = bool(cl.get("needImage"))
+                    row["claimImage"] = cl.get("supplementImage") or ""
                     _revealed = bool(cl.get("phoneRevealed")) or cl.get("status") in ("accepted", "completed")
                     if cl.get("status") in ("accepted", "completed"):
                         if not ((cl.get("contact") or "").strip() and ((it.get("contact") or {}).get("phone") or "").strip() if it else False):
@@ -3694,9 +3697,10 @@ class Handler(BaseHTTPRequestHandler):
                     "updatedAt": now_ms(),
                 }
                 try:
-                    _chk0 = claim_ai_check(target, claim)
-                    if _chk0:
-                        claim["aiCheck"] = _chk0
+                    if target.get("type") != "help":
+                        _chk0 = claim_ai_check(target, claim)
+                        if _chk0:
+                            claim["aiCheck"] = _chk0
                 except Exception:
                     pass
                 if kind == "help":
@@ -3826,6 +3830,36 @@ class Handler(BaseHTTPRequestHandler):
                            ("《%s》爱心帮助已完成，谢谢你" if in_help else "《%s》已标记完成归还，谢谢你")
                            % (item.get("title") or ""), item.get("id"))
                 save_notices(notices)
+            return self._json({"ok": True})
+
+        if path.startswith("/api/claims/") and path.endswith("/supplement-image"):
+            owner = self._owner()
+            claim_id = path[len("/api/claims/"):-len("/supplement-image")]
+            body = self._read_body()
+            image = str(body.get("image") or "")
+            if not re.match(r"^data:image/(jpeg|jpg|png|webp);base64,", image):
+                return self._json({"error": "只支持 JPG / PNG / WebP 图片"}, 400)
+            if len(image) > 2_500_000:
+                return self._json({"error": "图片太大，请压缩后再上传"}, 400)
+            with LOCK:
+                claims = load_claims()
+                claim = next((c for c in claims if c.get("id") == claim_id), None)
+                if not claim:
+                    return self._json({"error": "认领记录不存在"}, 404)
+                if claim.get("from") != owner:
+                    return self._json({"error": "只有申请人能补充图片"}, 403)
+                item = next((x for x in load_items() if x.get("id") == claim.get("itemId")), None)
+                claim["supplementImage"] = image
+                claim["needImage"] = False
+                claim["status"] = "pending"
+                claim["updatedAt"] = now_ms()
+                save_claims(claims)
+                if item:
+                    notices = load_notices()
+                    add_notice(notices, item.get("ownerToken"), "claim",
+                               "对方补充了《%s》的图片，请查看" % (item.get("title") or ""),
+                               item.get("id"), claim.get("id"))
+                    save_notices(notices)
             return self._json({"ok": True})
 
         if path.startswith("/api/claims/") and path.endswith("/contact"):
@@ -4594,6 +4628,7 @@ class Handler(BaseHTTPRequestHandler):
             claim_id = path[len("/api/claims/"):]
             body = patch
             status = body.get("status")
+            need_image = bool(body.get("image"))
             if status not in ("accepted", "rejected", "need_more"):
                 return self._json({"error": "bad status"}, 400)
             with LOCK:
@@ -4658,8 +4693,11 @@ class Handler(BaseHTTPRequestHandler):
                                    "《%s》已被其他同学认领，感谢你的申请" % (item.get("title") or ""),
                                    item.get("id"))
                 elif status == "need_more":
+                    claim["needImage"] = need_image
                     add_notice(notices, claim.get("from"), "need_more",
-                               "发布者希望你再补充一点《%s》的细节（颜色/标记/划痕）" % (item.get("title") or ""),
+                               "发布者希望你再补充一点《%s》的%s" % (
+                                   item.get("title") or "",
+                                   "图片" if need_image else "细节（颜色/标记/划痕）"),
                                item.get("id"), claim.get("id"))
                 else:
                     add_notice(notices, claim.get("from"), "rejected",
