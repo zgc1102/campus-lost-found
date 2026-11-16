@@ -136,8 +136,8 @@ function groupCount(id) {
 
 onMounted(load)
 let lastNoticeLoad = 0
-async function load() {
-  loading.value = true
+async function load(silent = false) {
+  if (!silent) loading.value = true
   try {
     const data = await api.notices()
     items.value = data.items || []
@@ -145,7 +145,7 @@ async function load() {
     lastNoticeLoad = Date.now()
     applyMineFocus()
   } finally {
-    loading.value = false
+    if (!silent) loading.value = false
   }
 }
 function applyMineFocus() {
@@ -160,17 +160,17 @@ function applyMineFocus() {
 }
 function refreshWhenVisible() {
   if (document.hidden) return
-  if (Date.now() - lastNoticeLoad > 15000) load()
+  if (Date.now() - lastNoticeLoad > 15000) load(true)
 }
 async function refreshSelected() {
   const id = selected.value?.id
   if (!id) return
   clearApiCache()
-  await load()
+  await load(true)
   const fresh = items.value.find((x) => x.id === id)
-  if (fresh) {
-    selected.value = fresh
-    hydrateNoticeImages(fresh)
+  if (fresh && selected.value) {
+    Object.assign(selected.value, fresh)
+    hydrateNoticeImages(selected.value)
   }
 }
 onMounted(() => {
@@ -216,6 +216,7 @@ function typeLabel(t, itemType = '') {
     done: '🎉 已完成归还',
     claim_restored: '↩️ 认领申请已拉回',
     pickup: '🔖 拾光码提醒',
+    pickup_code: '🔢 取件码已生成',
     pickup_photo_request: '📷 失主请你补充照片',
     pickup_photo_supplement: '📷 捡到者补充了照片',
     pickup_reopen: '🔓 拾光码上报已重新打开'

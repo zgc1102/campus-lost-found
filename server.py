@@ -4078,6 +4078,13 @@ class Handler(BaseHTTPRequestHandler):
                 claim["pickupCodeAt"] = now_ms()
                 claim["updatedAt"] = now_ms()
                 save_claims(claims)
+                notices = load_notices()
+                text = "取件码已生成：%s，双方核对后再交接" % claim["pickupCode"]
+                for target in {item.get("ownerToken"), claim.get("from")}:
+                    if target:
+                        add_notice(notices, target, "pickup_code", text,
+                                   item.get("id"), claim.get("id"))
+                save_notices(notices)
                 return self._json({"ok": True, "pickupCode": claim["pickupCode"]})
 
         if path.startswith("/api/claims/") and path.endswith("/supplement-image"):
