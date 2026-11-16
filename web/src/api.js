@@ -32,7 +32,7 @@ function readLocal(path) {
 function writeLocal(path, data) {
   try { localStorage.setItem(lsKey(path), JSON.stringify({ at: Date.now(), data })) } catch (_) {}
 }
-function clearApiCache() {
+export function clearApiCache() {
   GET_CACHE.clear()
   INFLIGHT.clear()
   try {

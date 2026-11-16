@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { api } from '../api'
+import { api, clearApiCache } from '../api'
 import CountUp from '../components/CountUp.vue'
 import NoticeChat from '../components/NoticeChat.vue'
 import NoticePickup from '../components/NoticePickup.vue'
@@ -136,6 +136,14 @@ async function load() {
 function refreshWhenVisible() {
   if (document.hidden) return
   if (Date.now() - lastNoticeLoad > 15000) load()
+}
+async function refreshSelected() {
+  const id = selected.value?.id
+  if (!id) return
+  clearApiCache()
+  await load()
+  const fresh = items.value.find((x) => x.id === id)
+  if (fresh) selected.value = fresh
 }
 onMounted(() => {
   document.addEventListener('visibilitychange', refreshWhenVisible)
@@ -419,6 +427,7 @@ async function supplementHelp(textInput) {
     selected.value.claimStatus = 'pending'
     helpSupplement.value = ''
     helpSupplementMsg.value = '已补充，等待发布者再看'
+    await refreshSelected()
   } catch (e) {
     helpSupplementMsg.value = e.message || '补充失败'
   } finally {
@@ -439,6 +448,7 @@ async function saveClaimPhone(phoneInput) {
     else selected.value.claimContact = r.claimContact || phone
     claimPhoneInput.value = ''
     claimPhoneMsg.value = r.accepted ? '手机号已补充，双方已可互相联系' : '手机号已补充，对方通过后自动交换'
+    await refreshSelected()
   } catch (e) {
     claimPhoneMsg.value = e.message || '手机号保存失败'
   } finally {
@@ -473,6 +483,7 @@ async function blockClaim() {
     chat.value = []
     outbox.value = []
     actionMsg.value = '已屏蔽对方，双方不能再互发消息'
+    await refreshSelected()
   } catch (e) { actionMsg.value = e.message || '屏蔽失败' }
 }
 async function helpAction(status) {
@@ -483,6 +494,7 @@ async function helpAction(status) {
     actionMsg.value = status === 'accepted' ? '已接受帮忙，完成后记得点「完成帮助」'
       : status === 'need_more' ? '已请对方补充说明'
       : '已婉拒这次帮忙'
+    await refreshSelected()
   } catch (e) { actionMsg.value = e.message || '操作失败' }
 }
 async function claimAction(status) {
@@ -493,6 +505,7 @@ async function claimAction(status) {
     actionMsg.value = status === 'accepted' ? '已通过认领，双方手机号可以交换'
       : status === 'need_more' ? '已请对方补充线索'
       : '已拒绝这次认领'
+    await refreshSelected()
   } catch (e) { actionMsg.value = e.message || '操作失败' }
 }
 
@@ -502,6 +515,7 @@ async function completeHelp() {
     await api.claimComplete(selected.value.claimId, { code: '' })
     selected.value.claimStatus = 'completed'
     actionMsg.value = '已完成这次爱心帮助'
+    await refreshSelected()
   } catch (e) { actionMsg.value = e.message || '确认失败' }
 }
 

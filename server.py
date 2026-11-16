@@ -4022,9 +4022,9 @@ class Handler(BaseHTTPRequestHandler):
                 if report.get("blocked"):
                     return self._json({"ok": True, "messages": [], "side": side,
                                        "blocked": True, "blockedBy": report.get("blockedBy") or "owner"})
-            elif report.get("blocked"):
-                return self._json({"error": "对方已屏蔽你，消息发送失败", "blocked": True}, 403)
                 return self._json({"ok": True, "messages": report.get("messages") or [], "side": side})
+            if report.get("blocked"):
+                return self._json({"error": "对方已屏蔽你，消息发送失败", "blocked": True}, 403)
             body = self._read_body()
             text = str(body.get("text") or "").strip()[:200]
             client_msg_id = str(body.get("clientMsgId") or "").strip()[:80]
