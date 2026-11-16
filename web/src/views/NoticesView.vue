@@ -170,7 +170,7 @@ async function refreshSelected() {
   const fresh = items.value.find((x) => x.id === id)
   if (fresh && selected.value) {
     Object.assign(selected.value, fresh)
-    hydrateNoticeImages(selected.value)
+    await hydrateNoticeImages(selected.value)
   }
 }
 onMounted(() => {
@@ -402,9 +402,10 @@ function retryOutbox(item) {
   if (!item || item.status === 'sending') return
   sendOutbox(item)
 }
-function refreshChat() {
+async function refreshChat() {
   if (chatLoading.value || !chatTargetId.value) return
-  loadChat(chatTargetId.value, chatKind.value)
+  await refreshSelected()
+  await loadChat(chatTargetId.value, chatKind.value)
 }
 
 function goItem() {
