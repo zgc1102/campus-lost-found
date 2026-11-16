@@ -149,7 +149,11 @@ async function loadChat(rid) {
   chatError.value = ''
   try {
     const r = await api.reportMessages(rid)
-    chat.value = Array.isArray(r.messages) ? r.messages : []
+    const incoming = Array.isArray(r.messages) ? r.messages : []
+    const merged = new Map()
+    for (const m of chat.value) merged.set(chatKey(m), m)
+    for (const m of incoming) merged.set(chatKey(m), m)
+    chat.value = [...merged.values()].sort((a, b) => Number(a.at || 0) - Number(b.at || 0))
     chatSide.value = r.side || 'owner'
   } catch (e) {
     chatError.value = e.message || '聊天记录加载失败'
