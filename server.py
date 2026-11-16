@@ -2745,6 +2745,8 @@ class Handler(BaseHTTPRequestHandler):
                     row["item"] = public_item(it, owner)
                 cl = claim_map.get(n.get("claimId"))
                 if cl:
+                    row["isPublisher"] = bool(it and it.get("ownerToken") == owner)
+                    row["isClaimant"] = bool(cl.get("from") == owner)
                     row["claimStatus"] = cl.get("status") or "pending"
                     row["claimMessage"] = cl.get("message") or ""
                     _revealed = bool(cl.get("phoneRevealed")) or cl.get("status") in ("accepted", "completed")

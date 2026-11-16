@@ -629,13 +629,13 @@ function fmt(ts) {
           <button type="button" class="btn ghost" @click="ignoreNotice">不是我的 / 忽略</button>
         </template>
         <template v-else-if="selected.itemType === 'help'">
-          <template v-if="selected.claimId && selected.claimStatus === 'pending'">
+          <template v-if="selected.isPublisher && selected.claimId && selected.claimStatus === 'pending'">
             <button type="button" class="btn" @click="helpAction('accepted')">接受帮忙</button>
             <button type="button" class="btn ghost" @click="helpAction('need_more')">请补充</button>
             <button type="button" class="btn ghost" @click="helpAction('rejected')">婉拒</button>
           </template>
-          <button v-if="selected.claimId && selected.claimStatus === 'accepted'" type="button" class="btn" @click="completeHelp">完成帮助</button>
-          <button v-if="selected.claimId && selected.canRevealPhone && !selected.claimPhoneRevealed && !['accepted','completed'].includes(selected.claimStatus)" type="button" class="btn ghost" @click="askRevealPhone('claim')">公布双方手机号</button>
+          <button v-if="selected.isPublisher && selected.claimId && selected.claimStatus === 'accepted'" type="button" class="btn" @click="completeHelp">完成帮助</button>
+          <button v-if="selected.isPublisher && selected.claimId && selected.canRevealPhone && !selected.claimPhoneRevealed && !['accepted','completed'].includes(selected.claimStatus)" type="button" class="btn ghost" @click="askRevealPhone('claim')">公布双方手机号</button>
           <button v-if="selected.item" type="button" class="btn ghost" @click="compareOpen = true">查看匹配报告</button>
           <button type="button" class="btn ghost" @click="ignoreNotice">忽略</button>
         </template>
