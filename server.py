@@ -1277,6 +1277,8 @@ def _can_reveal_phone(item, claim, owner, all_items):
     is_claimer = claim.get("from") == owner
     if not (is_owner or is_claimer):
         return False
+    if item.get("type") == "help":
+        return is_owner
     claimer = claim.get("from")
     both_posted = any(
         x.get("ownerToken") == claimer

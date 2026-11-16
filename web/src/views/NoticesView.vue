@@ -18,6 +18,7 @@ const chatError = ref('')
 const outbox = ref([])
 const chatSide = ref('owner')
 const chatKind = ref('report')
+const chatTargetId = ref('')
 const chatBlocked = ref(false)
 const blockedBy = ref('')
 const claimPhoneInput = ref('')
@@ -167,7 +168,8 @@ function openNotice(n) {
       ? { id: n.claimId, kind: 'claim' }
       : (n.reportId ? { id: n.reportId, kind: 'report' } : null)
   chatKind.value = _ct?.kind || 'report'
-  if (_ct) loadChat(_ct.id, _ct.kind)
+  chatTargetId.value = _ct?.id || ''
+  if (_ct) openChatForNotice(n, _ct)
   if (n.type === 'match') loadMyItems()
   if (!n.read) {
     n.read = true
@@ -185,10 +187,18 @@ function currentChatTarget() {
   if (s.report?.id) return { id: s.report.id, kind: 'report' }
   return null
 }
+async function openChatForNotice(n, target) {
+  await loadChat(target.id, target.kind)
+  // 兼容旧数据：以前的聊天可能存在 report 里，claim 还没有 messages
+  if (target.kind === 'claim' && !chatError.value && !chat.length && n.reportId) {
+    await loadChat(n.reportId, 'report')
+  }
+}
 async function loadChat(rid, kind = 'report') {
   chatLoading.value = true
   chatError.value = ''
   chatKind.value = kind
+  chatTargetId.value = rid
   try {
     const r = kind === 'claim' ? await api.claimMessages(rid) : await api.reportMessages(rid)
     chatSide.value = r.side || 'owner'
@@ -241,7 +251,7 @@ function makeClientMsgId() {
 }
 function sendChat() {
   const text = chatText.value.trim()
-  const target = currentChatTarget()
+  const target = chatTargetId.value ? { id: chatTargetId.value, kind: chatKind.value } : null
   if (!text || !target || chatBlocked.value) return
   const item = {
     clientMsgId: makeClientMsgId(),
@@ -259,7 +269,7 @@ async function sendOutbox(item) {
   if (!item || item.status === 'sending') return
   item.status = 'sending'
   item.error = ''
-  const target = currentChatTarget()
+  const target = chatTargetId.value ? { id: chatTargetId.value, kind: chatKind.value } : null
   const rid = target?.id
   const kind = target?.kind || chatKind.value
   if (!rid) {
@@ -293,10 +303,8 @@ function retryOutbox(item) {
   sendOutbox(item)
 }
 function refreshChat() {
-  if (chatLoading.value) return
-  const target = currentChatTarget()
-  if (!target) return
-  loadChat(target.id, target.kind)
+  if (chatLoading.value || !chatTargetId.value) return
+  loadChat(chatTargetId.value, chatKind.value)
 }
 
 function goItem() {
