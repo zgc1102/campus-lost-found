@@ -3798,13 +3798,7 @@ class Handler(BaseHTTPRequestHandler):
                 if not item:
                     return self._json({"error": "not found"}, 404)
                 code = str((body or {}).get("code") or "").strip()
-                if claim.get("returnCode"):
-                    holder = claim.get("holder")
-                    if holder and holder != owner:
-                        return self._json({"error": "只有持有物品的一方才能确认归还"}, 403)
-                    if code != claim.get("returnCode"):
-                        return self._json({"error": "取件码不对，让对方再看一眼"}, 400)
-                elif item.get("ownerToken") != owner:
+                if item.get("ownerToken") != owner:
                     return self._json({"error": "只有发布者能确认完成"}, 403)
                 claim["status"] = "completed"
                 claim["updatedAt"] = now_ms()
@@ -3980,6 +3974,13 @@ class Handler(BaseHTTPRequestHandler):
                     save_help_tasks(tasks)
                 else:
                     save_claims(claims)
+                    other = item.get("ownerToken") if side == "claimer" else claim.get("from")
+                    if other:
+                        notices = load_notices()
+                        add_notice(notices, other, "claim",
+                                   "对方在匿名沟通里回复了你：" + text[:40],
+                                   item.get("id"), claim.get("id"))
+                        save_notices(notices)
                 return self._json({"ok": True, "message": msg, "duplicate": False})
 
         if path.startswith("/api/reports/") and path.endswith("/reveal-phone"):
@@ -4612,12 +4613,6 @@ class Handler(BaseHTTPRequestHandler):
                 others = []
                 if status == "accepted":
                     item["status"] = "claimed"
-                    if not claim.get("returnCode") and item.get("type") in ("found", "lost"):
-                        claim["returnCode"] = "%06d" % random.randint(0, 999999)
-                        claim["returnCodeFor"] = (claim.get("from") if item.get("type") == "found"
-                                                  else item.get("ownerToken"))
-                        claim["holder"] = (item.get("ownerToken") if item.get("type") == "found"
-                                           else claim.get("from"))
                     # 同一个物品的其他待处理申请自动关闭，不能让它们一直挂着
                     for c2 in claims:
                         if (c2.get("itemId") == claim.get("itemId")

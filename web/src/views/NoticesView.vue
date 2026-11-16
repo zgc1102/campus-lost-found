@@ -36,6 +36,10 @@ const revealMsg = ref('')
 const helpSupplement = ref('')
 const helpSupplementing = ref(false)
 const helpSupplementMsg = ref('')
+const claimPhonePromptOpen = ref(false)
+const claimPhonePrompt = ref('')
+const claimPhonePromptError = ref('')
+const claimPhonePromptBusy = ref(false)
 const compareOpen = ref(false)
 const targetOpen = ref(false)
 const myItems = ref([])
@@ -195,6 +199,9 @@ function openNotice(n) {
   revealMsg.value = ''
   helpSupplement.value = ''
   helpSupplementMsg.value = ''
+  claimPhonePromptOpen.value = false
+  claimPhonePrompt.value = ''
+  claimPhonePromptError.value = ''
   compareOpen.value = false
   targetOpen.value = false
   const _reportId = n.reportId || n.report?.id
@@ -506,7 +513,30 @@ async function claimAction(status) {
       : status === 'need_more' ? '已请对方补充线索'
       : '已拒绝这次认领'
     await refreshSelected()
-  } catch (e) { actionMsg.value = e.message || '操作失败' }
+  } catch (e) {
+    actionMsg.value = e.message || '操作失败'
+    if (status === 'accepted' && selected.value?.item?.isMine && String(e.message || '').includes('请先补充你的手机号')) {
+      claimPhonePrompt.value = ''
+      claimPhonePromptError.value = e.message || ''
+      claimPhonePromptOpen.value = true
+    }
+  }
+}
+async function submitClaimPhonePrompt() {
+  const phone = claimPhonePrompt.value.trim()
+  if (!phone) { claimPhonePromptError.value = '请输入你的手机号'; return }
+  if (claimPhonePromptBusy.value) return
+  claimPhonePromptBusy.value = true
+  claimPhonePromptError.value = ''
+  try {
+    await api.claimContact(selected.value.claimId, phone)
+    claimPhonePromptOpen.value = false
+    await claimAction('accepted')
+  } catch (e) {
+    claimPhonePromptError.value = e.message || '手机号保存失败'
+  } finally {
+    claimPhonePromptBusy.value = false
+  }
 }
 
 async function completeHelp() {
@@ -614,6 +644,22 @@ function fmt(ts) {
 
       <div v-if="contact" class="nd-contact">联系方式：{{ contact }}</div>
       <div v-if="actionMsg" class="nd-msg">{{ actionMsg }}</div>
+    </div>
+
+    <div v-if="claimPhonePromptOpen" class="reveal-overlay" @click.self="claimPhonePromptOpen = false">
+      <div class="reveal-card">
+        <div class="compare-kicker">通过认领前确认</div>
+        <h3>请先补充你的手机号</h3>
+        <p>通过认领后，双方手机号会同时公布。你还没有留手机号，请先填写。</p>
+        <div class="nd-phone-row" style="margin-top:10px">
+          <input v-model="claimPhonePrompt" maxlength="20" placeholder="输入你的手机号">
+        </div>
+        <div v-if="claimPhonePromptError" class="nd-send-error">{{ claimPhonePromptError }}</div>
+        <div class="reveal-actions">
+          <button type="button" class="btn" :disabled="claimPhonePromptBusy" @click="submitClaimPhonePrompt">{{ claimPhonePromptBusy ? '保存中…' : '保存并公布' }}</button>
+          <button type="button" class="btn ghost" :disabled="claimPhonePromptBusy" @click="claimPhonePromptOpen = false">取消</button>
+        </div>
+      </div>
     </div>
 
     <div v-if="revealOpen" class="reveal-overlay" @click.self="revealOpen = false">
