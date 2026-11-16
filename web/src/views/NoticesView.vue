@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { api } from '../api'
 import CountUp from '../components/CountUp.vue'
 
@@ -108,16 +108,30 @@ function groupCount(id) {
 }
 
 onMounted(load)
+let lastNoticeLoad = 0
 async function load() {
   loading.value = true
   try {
     const data = await api.notices()
     items.value = data.items || []
     unread.value = data.unread || 0
+    lastNoticeLoad = Date.now()
   } finally {
     loading.value = false
   }
 }
+function refreshWhenVisible() {
+  if (document.hidden) return
+  if (Date.now() - lastNoticeLoad > 15000) load()
+}
+onMounted(() => {
+  document.addEventListener('visibilitychange', refreshWhenVisible)
+  window.addEventListener('focus', refreshWhenVisible)
+})
+onUnmounted(() => {
+  document.removeEventListener('visibilitychange', refreshWhenVisible)
+  window.removeEventListener('focus', refreshWhenVisible)
+})
 async function readAll() {
   await api.readNotices()
   items.value = items.value.map((x) => ({ ...x, read: true }))

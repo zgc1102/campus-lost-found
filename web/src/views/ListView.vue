@@ -606,7 +606,7 @@ function openOldHelp() {
         <div v-if="claimOpen" class="claimbox">
         <div class="tip-small" style="margin:0 0 8px">补充一句你知道的信息，不能只留手机号。</div>
         <textarea v-model="claimMsg" maxlength="200" :placeholder="selected.type === 'lost' ? '例如：我昨天在图书馆一层捡到，伞柄有白色划痕。' : '例如：我昨天在图书馆一层丢了，伞柄有白色划痕。'" style="width:100%;box-sizing:border-box;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:11px;padding:10px;font-family:inherit;font-size:11px;min-height:70px"></textarea>
-        <input v-model="claimPhone" maxlength="30" :placeholder="selected.type === 'lost' ? '你的手机号（必填，方便失主联系你）' : '你的手机号（必填，方便发布者联系你）'" style="width:100%;box-sizing:border-box;margin-top:7px;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:11px;padding:10px;font-family:inherit;font-size:11px">
+        <input v-model="claimPhone" maxlength="30" placeholder="你的手机号（必填，方便对方联系你）" style="width:100%;box-sizing:border-box;margin-top:7px;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:11px;padding:10px;font-family:inherit;font-size:11px">
         <div v-if="claimState" class="sa" style="margin-top:6px">{{ claimState }}</div>
         <button type="button" class="btn" style="width:100%;margin-top:10px" :disabled="claiming" @click="submitClaim">{{ claiming ? '发送中…' : (selected.type === 'lost' ? '发送线索' : '发送认领申请') }}</button>
         <div class="close" @click="claimOpen = false">取消</div>
