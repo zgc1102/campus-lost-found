@@ -383,12 +383,12 @@ function fmt(ts) {
           <b>安全提示</b>
           <span>平台不会索要验证码、支付密码，也不会要求转账、扫码付款或代付。对方若主动索要二维码、付款码、验证码，或让你先转账，请立即停止并举报。官方拾光码只用于物品留言，不会要求付款；陌生人私发的二维码，一律不要扫。</span>
         </div>
-        <div v-if="chatLoading" class="nd-message" style="color:#8E7FA3">正在加载聊天记录…</div>
-        <div v-else-if="chatError" class="nd-chat-error">
+        <div v-if="chatError" class="nd-chat-error">
           <span>聊天记录加载失败：{{ chatError }}</span>
           <button type="button" @click="loadChat(selected.report.id)">重试</button>
         </div>
-        <template v-else>
+        <div v-if="chatLoading && !chat.length" class="nd-message" style="color:#8E7FA3">正在加载聊天记录…</div>
+        <template v-if="!chatLoading || chat.length">
           <div v-if="!chat.length && !pendingChat" class="nd-message" style="color:#8E7FA3">还没有消息，可以先回复捡到者。</div>
           <div v-for="m in chat" :key="chatKey(m)" class="nd-chat" :class="m.from === chatSide ? 'mine' : 'other'">
             <span>{{ m.text }}<em class="nd-chat-time">{{ chatTime(m.at) }}</em></span>
