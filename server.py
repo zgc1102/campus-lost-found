@@ -331,8 +331,8 @@ def match_score(lost, found):
     return min(1.0, round(score, 3))
 
 
-def run_matching(threshold=0.42):
-    """把「寻物」和「招领」两两比对，命中就互相通知（少量数据下很快）"""
+def run_matching(threshold=0.80):
+    """把「寻物」和「招领」两两比对，只推荐相似度达到 80% 的匹配。"""
     with LOCK:
         items = load_items()
         notices = load_notices()
@@ -2769,6 +2769,13 @@ class Handler(BaseHTTPRequestHandler):
             for n in notices:
                 if n.get("owner") != owner:
                     continue
+                if n.get("type") == "match":
+                    try:
+                        _ms = int(n.get("matchScore") or 0)
+                    except Exception:
+                        _ms = 0
+                    if _ms < 80:
+                        continue
                 row = dict(n)
                 rp = report_map.get(n.get("reportId"))
                 if rp:
