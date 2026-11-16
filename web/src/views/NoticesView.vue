@@ -456,6 +456,16 @@ async function helpAction(status) {
       : '已婉拒这次帮忙'
   } catch (e) { actionMsg.value = e.message || '操作失败' }
 }
+async function claimAction(status) {
+  if (!selected.value?.claimId) return
+  try {
+    await api.claimAction(selected.value.claimId, { status })
+    selected.value.claimStatus = status
+    actionMsg.value = status === 'accepted' ? '已通过认领，双方手机号可以交换'
+      : status === 'need_more' ? '已请对方补充线索'
+      : '已拒绝这次认领'
+  } catch (e) { actionMsg.value = e.message || '操作失败' }
+}
 
 async function completeHelp() {
   if (!selected.value?.claimId) return
@@ -661,6 +671,11 @@ function fmt(ts) {
           <button type="button" class="btn ghost" @click="ignoreNotice">忽略</button>
         </template>
         <template v-else>
+          <template v-if="selected.claimId && selected.isPublisher && ['pending','need_more'].includes(selected.claimStatus)">
+            <button type="button" class="btn" @click="claimAction('accepted')">通过认领</button>
+            <button type="button" class="btn ghost" @click="claimAction('need_more')">请补充</button>
+            <button type="button" class="btn ghost" @click="claimAction('rejected')">拒绝</button>
+          </template>
           <button v-if="selected.claimId && selected.canRevealPhone && !selected.claimPhoneRevealed && !['accepted','completed'].includes(selected.claimStatus)" type="button" class="btn ghost" @click="askRevealPhone('claim')">公布双方手机号</button>
           <button v-if="selected.item" type="button" class="btn ghost" @click="compareOpen = true">查看匹配报告</button>
           <button type="button" class="btn ghost" @click="ignoreNotice">忽略</button>
