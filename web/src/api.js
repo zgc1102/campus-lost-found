@@ -231,6 +231,19 @@ export const api = {
   reportSend(id, text, clientMsgId) {
     return call('/reports/' + encodeURIComponent(id) + '/messages/send', { method: 'POST', body: JSON.stringify({ text, clientMsgId }), skipCacheClear: true })
   },
+  claimContact(id, phone) {
+    return call('/claims/' + encodeURIComponent(id) + '/contact', { method: 'POST', body: JSON.stringify({ phone }), skipCacheClear: true })
+  },
+  claimMessages(id, after, afterAt) {
+    return call('/claims/' + encodeURIComponent(id) + '/messages/list', {
+      method: 'POST',
+      body: JSON.stringify({ after: after || '', afterAt: afterAt || 0 }),
+      skipCacheClear: true
+    })
+  },
+  claimSend(id, text, clientMsgId) {
+    return call('/claims/' + encodeURIComponent(id) + '/messages/send', { method: 'POST', body: JSON.stringify({ text, clientMsgId }), skipCacheClear: true })
+  },
   adminLogin(password) {
     return call('/login', { method: 'POST', body: JSON.stringify({ password }) })
   },

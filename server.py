@@ -3590,6 +3590,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"error": "电话号码不正确：" + _chk["reason"]}, 400)
             if _chk.get("normalized"):
                 contact = _chk["normalized"]
+            if _target0.get("type") in ("lost", "found") and not contact:
+                return self._json({"error": "请先留下手机号，方便对方确认后联系你"}, 400)
             if _target0.get("type") == "help" and len(message) < 2:
                 return self._json({"error": "请说明一下你的申请理由"}, 400)
             with LOCK:
@@ -3762,6 +3764,108 @@ class Handler(BaseHTTPRequestHandler):
                            % (item.get("title") or ""), item.get("id"))
                 save_notices(notices)
             return self._json({"ok": True})
+
+        if path.startswith("/api/claims/") and path.endswith("/contact"):
+            owner = self._owner()
+            claim_id = path[len("/api/claims/"):-len("/contact")]
+            body = self._read_body()
+            raw_phone = str(body.get("phone") or "").strip()[:30]
+            chk = phone_check(raw_phone)
+            if not raw_phone or chk.get("status") == "red":
+                return self._json({"error": "请填写正确的手机号" + ("：" + chk.get("reason", "") if chk.get("reason") else "")}, 400)
+            phone = chk.get("normalized") or raw_phone
+            with LOCK:
+                claims = load_claims()
+                claim = next((c for c in claims if c.get("id") == claim_id), None)
+                help_mode = False
+                if not claim:
+                    tasks = load_help_tasks()
+                    claim = next((c for c in tasks if c.get("id") == claim_id), None)
+                    help_mode = bool(claim)
+                if not claim:
+                    return self._json({"error": "认领记录不存在"}, 404)
+                items = load_items()
+                item = next((x for x in items if x.get("id") == claim.get("itemId")), None)
+                if not item:
+                    return self._json({"error": "物品不存在"}, 404)
+                if item.get("ownerToken") == owner:
+                    item.setdefault("contact", {})["phone"] = phone
+                    save_items(items)
+                elif claim.get("from") == owner:
+                    claim["contact"] = phone
+                    claim["updatedAt"] = now_ms()
+                    if help_mode:
+                        save_help_tasks(tasks)
+                    else:
+                        save_claims(claims)
+                else:
+                    return self._json({"error": "无权修改这条认领的联系方式"}, 403)
+                accepted = claim.get("status") in ("accepted", "completed")
+                return self._json({"ok": True,
+                                   "ownerContact": (item.get("contact") or {}).get("phone") or "",
+                                   "claimContact": claim.get("contact") or "",
+                                   "accepted": accepted})
+
+
+        if path.startswith("/api/claims/") and (path.endswith("/messages/list") or path.endswith("/messages/send")):
+            owner = self._owner()
+            is_send = path.endswith("/messages/send")
+            claim_id = path[len("/api/claims/"):].replace("/messages/send", "").replace("/messages/list", "")
+            with LOCK:
+                claims = load_claims()
+                claim = next((c for c in claims if c.get("id") == claim_id), None)
+                help_mode = False
+                if not claim:
+                    tasks = load_help_tasks()
+                    claim = next((c for c in tasks if c.get("id") == claim_id), None)
+                    help_mode = bool(claim)
+                if not claim:
+                    return self._json({"error": "认领记录不存在"}, 404)
+                item = next((x for x in load_items() if x.get("id") == claim.get("itemId")), None)
+                if not item:
+                    return self._json({"error": "物品不存在"}, 404)
+                side = "owner" if item.get("ownerToken") == owner else "claimer" if claim.get("from") == owner else ""
+                if not side:
+                    return self._json({"error": "无权查看这条沟通"}, 403)
+                if not is_send:
+                    return self._json({"ok": True, "messages": claim.get("messages") or [], "side": side})
+                body = self._read_body()
+                text = str(body.get("text") or "").strip()[:200]
+                client_msg_id = str(body.get("clientMsgId") or "").strip()[:80]
+                if not text:
+                    return self._json({"error": "请输入消息"}, 400)
+                _ok, _why = moderate_tag(text)
+                if not _ok:
+                    return self._json({"error": "消息未通过审核：" + _why}, 400)
+                with LOCK:
+                    claims = load_claims()
+                    claim = next((c for c in claims if c.get("id") == claim_id), None)
+                    help_mode = False
+                    if not claim:
+                        tasks = load_help_tasks()
+                        claim = next((c for c in tasks if c.get("id") == claim_id), None)
+                        help_mode = bool(claim)
+                    if not claim:
+                        return self._json({"error": "认领记录不存在"}, 404)
+                    if client_msg_id:
+                        for old in (claim.get("messages") or []):
+                            if old.get("from") == side and old.get("clientMsgId") == client_msg_id:
+                                return self._json({"ok": True, "message": old, "duplicate": True})
+                    msg = {
+                        "id": "cm_" + uuid.uuid4().hex[:12],
+                        "from": side,
+                        "text": text,
+                        "at": now_ms(),
+                        "clientMsgId": client_msg_id
+                    }
+                    claim.setdefault("messages", []).append(msg)
+                    claim["messages"] = claim["messages"][-50:]
+                    claim["updatedAt"] = now_ms()
+                    if help_mode:
+                        save_help_tasks(tasks)
+                    else:
+                        save_claims(claims)
+                return self._json({"ok": True, "message": msg, "duplicate": False})
 
         if path.startswith("/api/reports/") and (path.endswith("/messages/list") or path.endswith("/messages/send")):
             owner = self._owner()

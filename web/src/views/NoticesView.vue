@@ -17,9 +17,14 @@ const chatLoading = ref(false)
 const chatError = ref('')
 const outbox = ref([])
 const chatSide = ref('owner')
+const chatKind = ref('report')
 const chatBlocked = ref(false)
 const blockedBy = ref('')
+const claimPhoneInput = ref('')
+const claimPhoneSaving = ref(false)
+const claimPhoneMsg = ref('')
 const compareOpen = ref(false)
+const targetOpen = ref(false)
 const myItems = ref([])
 
 function grams(s) {
@@ -56,6 +61,7 @@ const matchLocalScore = computed(() => {
   if (!matchSource.value || !matchTarget.value) return null
   return pairScore(matchSource.value, matchTarget.value)
 })
+const matchBothMine = computed(() => !!(matchSource.value?.isMine && matchTarget.value?.isMine))
 async function loadMyItems() {
   try {
     const list = await api.mine()
@@ -138,8 +144,13 @@ function openNotice(n) {
   outbox.value = []
   chatBlocked.value = false
   blockedBy.value = ''
+  claimPhoneInput.value = ''
+  claimPhoneMsg.value = ''
   compareOpen.value = false
-  if (n.reportId) loadChat(n.reportId)
+  targetOpen.value = false
+  chatKind.value = n.reportId ? 'report' : 'claim'
+  if (n.reportId) loadChat(n.reportId, 'report')
+  else if (n.claimId && n.itemType !== 'help') loadChat(n.claimId, 'claim')
   if (n.type === 'match') loadMyItems()
   if (!n.read) {
     n.read = true
@@ -148,11 +159,12 @@ function openNotice(n) {
   }
 }
 
-async function loadChat(rid) {
+async function loadChat(rid, kind = 'report') {
   chatLoading.value = true
   chatError.value = ''
+  chatKind.value = kind
   try {
-    const r = await api.reportMessages(rid)
+    const r = kind === 'claim' ? await api.claimMessages(rid) : await api.reportMessages(rid)
     chatSide.value = r.side || 'owner'
     if (r.blocked) {
       chatBlocked.value = true
@@ -227,7 +239,9 @@ async function sendOutbox(item) {
     return
   }
   try {
-    const r = await api.reportSend(rid, item.text, item.clientMsgId)
+    const r = chatKind.value === 'claim'
+      ? await api.claimSend(rid, item.text, item.clientMsgId)
+      : await api.reportSend(rid, item.text, item.clientMsgId)
     if (r?.message) {
       if (selected.value?.report?.id === rid) appendChat(r.message)
       outbox.value = outbox.value.filter((x) => x.clientMsgId !== item.clientMsgId)
@@ -250,8 +264,10 @@ function retryOutbox(item) {
   sendOutbox(item)
 }
 function refreshChat() {
-  if (chatLoading.value || !selected.value?.report?.id) return
-  loadChat(selected.value.report.id)
+  if (chatLoading.value) return
+  const rid = selected.value?.report?.id || selected.value?.claimId
+  if (!rid) return
+  loadChat(rid, selected.value?.report?.id ? 'report' : 'claim')
 }
 
 function goItem() {
@@ -297,8 +313,27 @@ async function closeReport() {
   } catch (e) { actionMsg.value = e.message || '关闭失败' }
 }
 
-async function blockReport() {
-  const rid = selected.value.report?.id
+async function saveClaimPhone() {
+  const rid = selected.value?.claimId
+  if (!rid || claimPhoneSaving.value) return
+  const phone = claimPhoneInput.value.trim()
+  if (!phone) { claimPhoneMsg.value = '请先填写手机号'; return }
+  claimPhoneSaving.value = true
+  claimPhoneMsg.value = ''
+  try {
+    const r = await api.claimContact(rid, phone)
+    selected.value.ownerContact = r.ownerContact || ''
+    if (selected.value.item?.isMine) selected.value.claimContact = r.claimContact || selected.value.claimContact
+    else selected.value.claimContact = r.claimContact || phone
+    claimPhoneInput.value = ''
+    claimPhoneMsg.value = r.accepted ? '手机号已补充，双方已可互相联系' : '手机号已补充，对方通过后自动交换'
+  } catch (e) {
+    claimPhoneMsg.value = e.message || '手机号保存失败'
+  } finally {
+    claimPhoneSaving.value = false
+  }
+}
+async function blockReport() {  const rid = selected.value.report?.id
   if (!rid) return
   if (!confirm('屏蔽这个人？屏蔽后双方都看不到对方的新消息，也不能再互发。')) return
   try {
@@ -418,7 +453,31 @@ function fmt(ts) {
         <div class="nd-message">{{ selected.report.message }}</div>
       </div>
 
-      <div v-if="selected.report && selected.itemType !== 'help'" class="nd-card">
+      <div v-if="selected.claimId && selected.itemType !== 'help'" class="nd-card">
+        <div class="nd-card-title">认领详情</div>
+        <div class="nd-message">{{ selected.claimMessage || selected.text }}</div>
+        <div class="nd-kv"><span>发布者手机号</span><b>{{ selected.ownerContact || (selected.item?.contact?.phone ? '已留手机号（通过后显示完整）' : '还没留手机号') }}</b></div>
+        <div class="nd-kv"><span>认领人手机号</span><b>{{ selected.item?.isMine ? (selected.claimContact || '还没留手机号') : (selected.claimContact ? '已留手机号' : '还没留手机号') }}</b></div>
+        <div v-if="selected.item?.isMine && !selected.ownerContact && !selected.item?.contact?.phone" class="nd-phone-fill">
+          <p>你是发布者。留手机号后，认领人通过申请时，双方才能互相联系。</p>
+          <div class="nd-phone-row">
+            <input v-model="claimPhoneInput" maxlength="20" placeholder="补充你的手机号">
+            <button type="button" :disabled="claimPhoneSaving" @click="saveClaimPhone">{{ claimPhoneSaving ? '保存中…' : '补充手机号' }}</button>
+          </div>
+        </div>
+        <div v-else-if="!selected.item?.isMine && !selected.claimContact" class="nd-phone-fill">
+          <p>你还没有留手机号。补充后，发布者通过申请时才能联系你。</p>
+          <div class="nd-phone-row">
+            <input v-model="claimPhoneInput" maxlength="20" placeholder="补充你的手机号">
+            <button type="button" :disabled="claimPhoneSaving" @click="saveClaimPhone">{{ claimPhoneSaving ? '保存中…' : '补充手机号' }}</button>
+          </div>
+        </div>
+        <div v-if="selected.claimStatus === 'accepted' || selected.claimStatus === 'completed'" class="nd-exchange-ok">双方手机号已交换，可以直接联系。</div>
+        <div v-else class="nd-exchange-tip">发布者通过申请后，双方手机号自动交换；未通过前只显示打码号码。</div>
+        <div v-if="claimPhoneMsg" class="nd-phone-msg">{{ claimPhoneMsg }}</div>
+      </div>
+
+      <div v-if="(selected.report || (selected.claimId && selected.itemType !== 'help')) && selected.itemType !== 'help'" class="nd-card">
         <div class="nd-card-title">匿名沟通</div>
         <div class="nd-safety">
           <b>安全提示</b>
@@ -430,11 +489,11 @@ function fmt(ts) {
         </div>
         <div v-if="!chatBlocked && chatError" class="nd-chat-error">
           <span>聊天记录加载失败：{{ chatError }}</span>
-          <button type="button" @click="loadChat(selected.report.id)">重试</button>
+          <button type="button" @click="refreshChat">重试</button>
         </div>
         <div v-if="!chatBlocked && chatLoading && !chat.length" class="nd-message" style="color:#8E7FA3">正在加载聊天记录…</div>
         <template v-if="!chatBlocked && (!chatLoading || chat.length)">
-          <div v-if="!chat.length && !outbox.length" class="nd-message" style="color:#8E7FA3">还没有消息，可以先回复捡到者。</div>
+          <div v-if="!chat.length && !outbox.length" class="nd-message" style="color:#8E7FA3">还没有消息，可以先回复对方。</div>
           <div v-for="m in chat" :key="chatKey(m)" class="nd-chat" :class="m.from === chatSide ? 'mine' : 'other'">
             <span>{{ m.text }}<em class="nd-chat-time">{{ chatTime(m.at) }}</em></span>
           </div>
@@ -448,7 +507,7 @@ function fmt(ts) {
           </div>
         </template>
         <div v-if="!chatBlocked" class="nd-chat-input">
-          <input v-model="chatText" maxlength="200" placeholder="回复捡到者，不需要暴露手机号">
+          <input v-model="chatText" maxlength="200" :placeholder="selected.report ? '回复捡到者，不需要暴露手机号' : '回复对方，不需要暴露手机号'">
           <button type="button" :disabled="!chatText.trim()" @click="sendChat">发送</button>
         </div>
         <div v-if="!chatBlocked" class="nd-chat-foot">
@@ -510,9 +569,12 @@ function fmt(ts) {
 
     <div v-if="compareOpen && selected.item" class="compare-overlay" @click.self="compareOpen = false">
       <div class="compare-card">
-        <button type="button" class="compare-x" @click="compareOpen = false">✕</button>
+        <button type="button" class="compare-x" @click="compareOpen = false; targetOpen = false">✕</button>
         <div class="compare-kicker">匹配对比报告</div>
         <h2>{{ selected.item.title || '对应物品' }}</h2>
+        <div v-if="matchBothMine" class="compare-note" style="background:#FFF4E5;border-color:#F0D6A8">
+          这两条都是你自己发布的，不需要再和“自己”对比。你可以直接查看原通知，或等另一位同学发布相关内容。
+        </div>
         <div class="compare-grid">
           <div class="compare-col">
             <div class="cc-tag">{{ selected.type === 'match' ? '系统匹配' : '发布物品' }}</div>
@@ -524,10 +586,10 @@ function fmt(ts) {
           <div class="compare-col">
             <template v-if="selected.type === 'match'">
               <div class="cc-tag other">对方发布</div>
-              <div class="cc-title">{{ matchTarget ? matchTarget.title : '没有找到对应条目' }}</div>
-              <div class="cc-meta">{{ matchTarget ? (matchTarget.place || '未填写地点') + ' · ' + fmt(matchTarget.createdAt) : '这是一条旧的系统提醒' }}</div>
-              <p>{{ matchTarget ? matchTarget.desc : '这条旧通知没有保存完整的匹配对，无法还原另一条物品。' }}</p>
-              <div class="cc-score other-score">当前重算 <CountUp v-if="matchLocalScore !== null" :value="matchLocalScore" suffix="%" /><template v-else>—</template></div>
+              <div class="cc-title">{{ matchTarget ? matchTarget.title : '对方没有发布内容' }}</div>
+              <div class="cc-meta">{{ matchTarget ? (matchTarget.place || '未填写地点') + ' · ' + fmt(matchTarget.createdAt) : '这条提醒只有你这一侧的内容' }}</div>
+              <p>{{ matchTarget ? matchTarget.desc : '对方可能只是刷到了相似物品，并没有单独发布内容，无法展示对方详情。' }}</p>
+              <div v-if="matchTarget" class="cc-score other-score">当前重算 <CountUp v-if="matchLocalScore !== null" :value="matchLocalScore" suffix="%" /><template v-else>—</template></div>
             </template>
             <template v-else>
               <div class="cc-tag other">{{ selected.itemType === 'help' ? '帮忙申请' : (selected.item.type === 'lost' ? '提供线索' : '认领留言') }}</div>
@@ -554,9 +616,15 @@ function fmt(ts) {
         </div>
         <div class="compare-actions">
           <button type="button" class="btn ghost" @click="copyCompare">复制结论</button>
-          <button type="button" class="btn ghost" :disabled="!selected.item || ['removed','hidden'].includes(selected.item.status)" @click="compareOpen = false; goItem()">
-            {{ !selected.item || ['removed','hidden'].includes(selected.item.status) ? '此物品已下架' : '查看对方发布的内容' }}
+          <button type="button" class="btn ghost" :disabled="!matchTarget || matchBothMine" @click="targetOpen = !targetOpen">
+            {{ !matchTarget ? '对方没有发布内容' : (matchBothMine ? '两条都是你的发布' : (targetOpen ? '收起对方内容' : '查看对方发布的内容')) }}
           </button>
+        </div>
+        <div v-if="targetOpen && matchTarget" class="cc-target">
+          <div class="cc-tag">对方发布的完整内容</div>
+          <div class="cc-title">{{ matchTarget.title }}</div>
+          <div class="cc-meta">{{ matchTarget.place || '未填写地点' }} · {{ fmt(matchTarget.createdAt) }}</div>
+          <p>{{ matchTarget.desc || '对方没有写详细描述' }}</p>
         </div>
       </div>
     </div>
@@ -713,4 +781,23 @@ function fmt(ts) {
 .nd-blocked { margin:8px 0; padding:9px 10px; border-radius:9px; background:#F3F0F7; border:1px solid #DED4EA; display:flex; flex-direction:column; gap:3px; }
 .nd-blocked b { font-size:10px; color:#5B2A91; }
 .nd-blocked span { font-size:8.5px; line-height:1.6; color:#7E6E92; }
+</style>
+
+<style scoped>
+.cc-target { margin-top:10px; padding:10px; border:1px solid #E7DCF4; border-radius:10px; background:#FBF8FF; }
+.cc-target .cc-title { margin-top:5px; }
+.cc-target p { margin:4px 0 0; font-size:9.5px; line-height:1.7; color:#6F607F; }
+</style>
+
+
+
+<style scoped>
+.nd-phone-fill { margin-top:7px; padding:8px; border-radius:9px; background:#FBF7FF; border:1px solid #EADFF5; }
+.nd-phone-fill p { margin:0 0 6px; font-size:9px; line-height:1.6; color:#7C6A8E; }
+.nd-phone-row { display:flex; gap:6px; }
+.nd-phone-row input { flex:1; min-width:0; background:#fff; border:1px solid #E4D6F2; border-radius:8px; padding:7px; font-family:inherit; font-size:9.5px; }
+.nd-phone-row button { border:0; background:#5B2A91; color:#fff; border-radius:8px; padding:0 9px; font-family:inherit; font-size:9px; }
+.nd-exchange-ok { margin-top:7px; font-size:9px; color:#2F7D46; }
+.nd-exchange-tip { margin-top:7px; font-size:8.5px; line-height:1.6; color:#8E7FA3; }
+.nd-phone-msg { margin-top:5px; font-size:8.5px; color:#5B2A91; }
 </style>
