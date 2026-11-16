@@ -29,12 +29,11 @@ function statusText(s) {
   <slot name="chat" />
   <div class="nd-actions">
     <template v-if="(notice.isPublisher || notice.item?.isMine) && notice.claimId && (!notice.claimStatus || ['pending','need_more'].includes(notice.claimStatus))">
-      <button type="button" class="btn" @click="$emit('claim-action', 'accepted')">通过认领</button>
+      <button type="button" class="btn" @click="$emit('claim-action', 'accepted')">通过认领并公布双方手机号</button>
       <button type="button" class="btn ghost" @click="$emit('claim-action', 'need_more')">请补充</button>
       <button type="button" class="btn ghost" @click="$emit('claim-action', 'rejected')">拒绝</button>
       <button v-if="notice.canBlockClaim" type="button" class="btn ghost" @click="$emit('block')">屏蔽对方</button>
     </template>
-    <button v-if="notice.claimId && notice.canRevealPhone && !notice.claimPhoneRevealed && !['accepted','completed'].includes(notice.claimStatus)" type="button" class="btn ghost" @click="$emit('reveal')">公布双方手机号</button>
     <button v-if="notice.item" type="button" class="btn ghost" @click="$emit('compare')">查看匹配报告</button>
     <button type="button" class="btn ghost" @click="$emit('ignore')">忽略</button>
   </div>

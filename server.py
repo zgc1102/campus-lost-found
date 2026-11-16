@@ -2677,7 +2677,7 @@ class Handler(BaseHTTPRequestHandler):
                     if c.get("contact"):
                         _claim_revealed = c.get("phoneRevealed") and not (
                             it.get("type") == "help" and c.get("phoneRevealedBy") != it.get("ownerToken"))
-                        if (it.get("type") == "help" and c.get("status") in ("accepted", "completed")
+                        if (c.get("status") in ("accepted", "completed")
                                 and not ((c.get("contact") or "").strip() and ((it.get("contact") or {}).get("phone") or "").strip())):
                             _claim_revealed = False
                         out["claimContact"] = (
@@ -2756,12 +2756,11 @@ class Handler(BaseHTTPRequestHandler):
                     row["claimStatus"] = cl.get("status") or "pending"
                     row["claimMessage"] = cl.get("message") or ""
                     _revealed = bool(cl.get("phoneRevealed")) or cl.get("status") in ("accepted", "completed")
-                    if it and it.get("type") == "help":
-                        if cl.get("phoneRevealed") and cl.get("phoneRevealedBy") != it.get("ownerToken"):
+                    if cl.get("status") in ("accepted", "completed"):
+                        if not ((cl.get("contact") or "").strip() and ((it.get("contact") or {}).get("phone") or "").strip() if it else False):
                             _revealed = False
-                        if cl.get("status") in ("accepted", "completed") and not (
-                                (cl.get("contact") or "").strip() and ((it.get("contact") or {}).get("phone") or "").strip()):
-                            _revealed = False
+                    if it and it.get("type") == "help" and cl.get("phoneRevealed") and cl.get("phoneRevealedBy") != it.get("ownerToken"):
+                        _revealed = False
                     row["claimPhoneRevealed"] = bool(cl.get("phoneRevealed")) and _revealed
                     row["claimBlocked"] = bool(cl.get("blocked"))
                     row["canBlockClaim"] = bool(it and it.get("ownerToken") == owner and not cl.get("blocked"))
@@ -4600,11 +4599,11 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json({"error": "这件事已经结束，不能再操作"}, 409)
                 if item.get("status") == "closed":
                     return self._json({"error": "这条发布已经结束，不能再操作"}, 409)
-                if status == "accepted" and in_help:
+                if status == "accepted":
                     if not (claim.get("contact") or "").strip():
-                        return self._json({"error": "帮忙人还没有预留手机号，请先请对方补充"}, 400)
+                        return self._json({"error": "认领人还没有预留手机号，请先请对方补充"}, 400)
                     if not ((item.get("contact") or {}).get("phone") or "").strip():
-                        return self._json({"error": "请先补充你的手机号，再接受并公布双方手机号"}, 400)
+                        return self._json({"error": "请先补充你的手机号，再通过认领并公布双方手机号"}, 400)
                     claim["phoneRevealed"] = True
                     claim["phoneRevealedBy"] = owner
                     claim["phoneRevealedAt"] = now_ms()
