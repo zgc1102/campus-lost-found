@@ -17,6 +17,8 @@ const chatLoading = ref(false)
 const chatError = ref('')
 const outbox = ref([])
 const chatSide = ref('owner')
+const chatBlocked = ref(false)
+const blockedBy = ref('')
 const compareOpen = ref(false)
 const myItems = ref([])
 
@@ -134,6 +136,8 @@ function openNotice(n) {
   chatText.value = ''
   chatError.value = ''
   outbox.value = []
+  chatBlocked.value = false
+  blockedBy.value = ''
   compareOpen.value = false
   if (n.reportId) loadChat(n.reportId)
   if (n.type === 'match') loadMyItems()
@@ -149,12 +153,20 @@ async function loadChat(rid) {
   chatError.value = ''
   try {
     const r = await api.reportMessages(rid)
+    chatSide.value = r.side || 'owner'
+    if (r.blocked) {
+      chatBlocked.value = true
+      blockedBy.value = r.blockedBy || 'owner'
+      chat.value = []
+      outbox.value = []
+      return
+    }
+    chatBlocked.value = false
     const incoming = Array.isArray(r.messages) ? r.messages : []
     const merged = new Map()
     for (const m of chat.value) merged.set(chatKey(m), m)
     for (const m of incoming) merged.set(chatKey(m), m)
     chat.value = [...merged.values()].sort((a, b) => Number(a.at || 0) - Number(b.at || 0))
-    chatSide.value = r.side || 'owner'
   } catch (e) {
     chatError.value = e.message || '聊天记录加载失败'
   } finally {
@@ -191,7 +203,7 @@ function makeClientMsgId() {
 }
 function sendChat() {
   const text = chatText.value.trim()
-  if (!text || !selected.value?.report?.id) return
+  if (!text || !selected.value?.report?.id || chatBlocked.value) return
   const item = {
     clientMsgId: makeClientMsgId(),
     text,
@@ -226,6 +238,11 @@ async function sendOutbox(item) {
   } catch (e) {
     item.status = 'failed'
     item.error = e.message || '发送失败'
+    if (e.body?.blocked) {
+      chatBlocked.value = true
+      blockedBy.value = chatSide.value === 'owner' ? 'owner' : 'finder'
+      item.error = '对方已屏蔽你，消息发送失败'
+    }
   }
 }
 function retryOutbox(item) {
@@ -283,11 +300,16 @@ async function closeReport() {
 async function blockReport() {
   const rid = selected.value.report?.id
   if (!rid) return
-  if (!confirm('屏蔽这个上报设备？之后它不能再通过此码骚扰你。')) return
+  if (!confirm('屏蔽这个人？屏蔽后双方都看不到对方的新消息，也不能再互发。')) return
   try {
     await api.reportBlock(rid)
     selected.value.report.status = 'closed'
-    actionMsg.value = '已屏蔽该设备，并关闭这条上报'
+    selected.value.report.blocked = true
+    chatBlocked.value = true
+    blockedBy.value = 'owner'
+    chat.value = []
+    outbox.value = []
+    actionMsg.value = '已屏蔽对方，双方都不能再发送消息'
   } catch (e) { actionMsg.value = e.message || '屏蔽失败' }
 }
 
@@ -402,12 +424,16 @@ function fmt(ts) {
           <b>安全提示</b>
           <span>平台不会索要验证码、支付密码，也不会要求转账、扫码付款或代付。对方若主动索要二维码、付款码、验证码，或让你先转账，请立即停止并举报。官方拾光码只用于物品留言，不会要求付款；陌生人私发的二维码，一律不要扫。</span>
         </div>
-        <div v-if="chatError" class="nd-chat-error">
+        <div v-if="chatBlocked" class="nd-blocked">
+          <b>{{ blockedBy === chatSide ? '你已屏蔽对方' : '对方已屏蔽你' }}</b>
+          <span>双方都不能再看到对方的新消息，也不能再发送消息。</span>
+        </div>
+        <div v-if="!chatBlocked && chatError" class="nd-chat-error">
           <span>聊天记录加载失败：{{ chatError }}</span>
           <button type="button" @click="loadChat(selected.report.id)">重试</button>
         </div>
-        <div v-if="chatLoading && !chat.length" class="nd-message" style="color:#8E7FA3">正在加载聊天记录…</div>
-        <template v-if="!chatLoading || chat.length">
+        <div v-if="!chatBlocked && chatLoading && !chat.length" class="nd-message" style="color:#8E7FA3">正在加载聊天记录…</div>
+        <template v-if="!chatBlocked && (!chatLoading || chat.length)">
           <div v-if="!chat.length && !outbox.length" class="nd-message" style="color:#8E7FA3">还没有消息，可以先回复捡到者。</div>
           <div v-for="m in chat" :key="chatKey(m)" class="nd-chat" :class="m.from === chatSide ? 'mine' : 'other'">
             <span>{{ m.text }}<em class="nd-chat-time">{{ chatTime(m.at) }}</em></span>
@@ -421,11 +447,11 @@ function fmt(ts) {
             <button v-if="m.status === 'failed'" type="button" class="nd-retry" @click="retryOutbox(m)">重试</button>
           </div>
         </template>
-        <div class="nd-chat-input">
+        <div v-if="!chatBlocked" class="nd-chat-input">
           <input v-model="chatText" maxlength="200" placeholder="回复捡到者，不需要暴露手机号">
           <button type="button" :disabled="!chatText.trim()" @click="sendChat">发送</button>
         </div>
-        <div class="nd-chat-foot">
+        <div v-if="!chatBlocked" class="nd-chat-foot">
           <button type="button" class="nd-chat-refresh" :disabled="chatLoading" @click="refreshChat">{{ chatLoading ? '刷新中…' : '刷新消息' }}</button>
           <span class="nd-chat-help">对方新消息不会自动弹出，点“刷新消息”获取最新回复；发送失败的消息可点“重试”。</span>
         </div>
@@ -681,4 +707,10 @@ function fmt(ts) {
 .nd-chat-foot { display:flex; align-items:center; gap:8px; margin-top:7px; flex-wrap:wrap; }
 .nd-chat-foot .nd-chat-help { margin:0; flex:1; min-width:150px; }
 .nd-chat-foot .nd-chat-refresh { flex:0 0 auto; }
+</style>
+
+<style scoped>
+.nd-blocked { margin:8px 0; padding:9px 10px; border-radius:9px; background:#F3F0F7; border:1px solid #DED4EA; display:flex; flex-direction:column; gap:3px; }
+.nd-blocked b { font-size:10px; color:#5B2A91; }
+.nd-blocked span { font-size:8.5px; line-height:1.6; color:#7E6E92; }
 </style>

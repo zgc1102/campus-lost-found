@@ -3776,6 +3776,11 @@ class Handler(BaseHTTPRequestHandler):
             if not side:
                 return self._json({"error": "无权查看这条对话"}, 403)
             if not is_send:
+                if report.get("blocked"):
+                    return self._json({"ok": True, "messages": [], "side": side,
+                                       "blocked": True, "blockedBy": report.get("blockedBy") or "owner"})
+            elif report.get("blocked"):
+                return self._json({"error": "对方已屏蔽你，消息发送失败", "blocked": True}, 403)
                 return self._json({"ok": True, "messages": report.get("messages") or [], "side": side})
             body = self._read_body()
             text = str(body.get("text") or "").strip()[:200]
@@ -3904,9 +3909,12 @@ class Handler(BaseHTTPRequestHandler):
                         save_tags(tags)
                         break
                 report["status"] = "closed"
+                report["blocked"] = True
+                report["blockedBy"] = "owner"
+                report["blockedAt"] = now_ms()
                 report["updatedAt"] = now_ms()
                 save_tag_reports(reports)
-            return self._json({"ok": True})
+            return self._json({"ok": True, "blocked": True})
 
         if path.startswith("/api/reports/") and path.endswith("/close"):
             owner = self._owner()
