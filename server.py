@@ -2677,11 +2677,17 @@ class Handler(BaseHTTPRequestHandler):
                     if c.get("contact"):
                         _claim_revealed = c.get("phoneRevealed") and not (
                             it.get("type") == "help" and c.get("phoneRevealedBy") != it.get("ownerToken"))
+                        if (it.get("type") == "help" and c.get("status") in ("accepted", "completed")
+                                and not ((c.get("contact") or "").strip() and ((it.get("contact") or {}).get("phone") or "").strip())):
+                            _claim_revealed = False
                         out["claimContact"] = (
                             c.get("contact") if (c.get("status") in ("accepted", "completed") or _claim_revealed)
                             else mask_contact(c.get("contact"))
                         )
-                if c.get("status") in ("accepted", "completed") or c.get("phoneRevealed"):
+                if (c.get("status") in ("accepted", "completed") or c.get("phoneRevealed")):
+                    _phones_ready = bool((c.get("contact") or "").strip() and ((it.get("contact") or {}).get("phone") or "").strip())
+                    if it.get("type") == "help" and not _phones_ready:
+                        return out
                     out["ownerContact"] = (it.get("contact") or {}).get("phone") or ""
                     out["claimContact"] = c.get("contact") or ""
                     out["phoneRevealed"] = bool(c.get("phoneRevealed"))
@@ -2750,8 +2756,12 @@ class Handler(BaseHTTPRequestHandler):
                     row["claimStatus"] = cl.get("status") or "pending"
                     row["claimMessage"] = cl.get("message") or ""
                     _revealed = bool(cl.get("phoneRevealed")) or cl.get("status") in ("accepted", "completed")
-                    if it and it.get("type") == "help" and cl.get("phoneRevealed") and cl.get("phoneRevealedBy") != it.get("ownerToken"):
-                        _revealed = False
+                    if it and it.get("type") == "help":
+                        if cl.get("phoneRevealed") and cl.get("phoneRevealedBy") != it.get("ownerToken"):
+                            _revealed = False
+                        if cl.get("status") in ("accepted", "completed") and not (
+                                (cl.get("contact") or "").strip() and ((it.get("contact") or {}).get("phone") or "").strip()):
+                            _revealed = False
                     row["claimPhoneRevealed"] = bool(cl.get("phoneRevealed")) and _revealed
                     row["claimContact"] = (cl.get("contact") if _revealed
                                            else mask_contact(cl.get("contact")))
@@ -3710,6 +3720,7 @@ class Handler(BaseHTTPRequestHandler):
             claim_id = path[len("/api/claims/"):-len("/supplement")]
             body = self._read_body()
             extra = str(body.get("message") or "").strip()[:200]
+            new_contact = str(body.get("contact") or "").strip()[:30]
             if len(extra) < 2:
                 return self._json({"error": "请写一点补充说明"}, 400)
             _ok, _why = moderate_text(extra, "认领补充", allow_help=True)
@@ -3730,6 +3741,11 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json({"error": "只有申请人能补充"}, 403)
                 if claim.get("status") not in ("pending", "need_more", "rejected"):
                     return self._json({"error": "当前状态不能补充"}, 400)
+                if new_contact:
+                    _pchk = phone_check(new_contact)
+                    if _pchk.get("status") == "red":
+                        return self._json({"error": "手机号不正确：" + _pchk.get("reason", "")}, 400)
+                    claim["contact"] = _pchk.get("normalized") or new_contact
                 if claim.get("status") == "rejected":
                     # 被拒后重新申请：用新写的内容整体替换，而不是追加
                     claim["message"] = extra[:400]
@@ -4551,6 +4567,14 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json({"error": "这件事已经结束，不能再操作"}, 409)
                 if item.get("status") == "closed":
                     return self._json({"error": "这条发布已经结束，不能再操作"}, 409)
+                if status == "accepted" and in_help:
+                    if not (claim.get("contact") or "").strip():
+                        return self._json({"error": "帮忙人还没有预留手机号，请先请对方补充"}, 400)
+                    if not ((item.get("contact") or {}).get("phone") or "").strip():
+                        return self._json({"error": "请先补充你的手机号，再接受并公布双方手机号"}, 400)
+                    claim["phoneRevealed"] = True
+                    claim["phoneRevealedBy"] = owner
+                    claim["phoneRevealedAt"] = now_ms()
                 claim["status"] = status
                 claim["updatedAt"] = now_ms()
                 others = []
