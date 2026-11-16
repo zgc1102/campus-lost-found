@@ -74,6 +74,7 @@ function statusText(s) {
     </div>
     <div v-if="notice.isClaimant && notice.claimStatus === 'need_more'" class="nd-phone-fill upload-box">
       <p>辛苦你上传一张物品照片，方便发布者核对，谢谢配合。</p>
+      <p class="upload-tip">建议选择 2MB 以内的 JPG / PNG 照片，系统会自动压缩，不用手动处理。</p>
       <label class="upload-pick">
         <input type="file" accept="image/*" @change="onImage">
         <span>{{ uploading ? '正在上传…' : '选择照片' }}</span>
@@ -107,4 +108,7 @@ function statusText(s) {
 .upload-box { text-align:center; }
 .upload-pick { display:inline-flex; align-items:center; justify-content:center; min-width:130px; padding:9px 14px; border-radius:9px; background:#5B2A91; color:#fff; font-size:10px; cursor:pointer; }
 .upload-pick input { display:none; }
+</style>
+<style scoped>
+.upload-tip { font-size:8px; color:#8E7FA3; margin:2px 0 7px; line-height:1.6; }
 </style>

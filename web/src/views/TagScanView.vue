@@ -157,6 +157,7 @@ async function sendChat() {
           <input v-model="contact" maxlength="20" inputmode="tel" placeholder="手机号，只有失主能看到">
           <label>辛苦上传一张物品照片（可选）</label>
           <input type="file" accept="image/*" @change="onPhoto">
+          <div class="tip-small">建议选择 2MB 以内的 JPG / PNG，系统会自动压缩。</div>
           <div v-if="photo" style="margin-top:6px"><img :src="photo" alt="物品照片" title="双击查看大图" style="max-width:100%;max-height:180px;border-radius:9px;border:1px solid #EADFF5;cursor:zoom-in" @dblclick="openPhoto"></div>
           <div v-if="photoMsg" class="tip-small">{{ photoMsg }}</div>
           <div v-if="error" class="warn-box">{{ error }}</div>

@@ -1,5 +1,6 @@
 export async function compressImage(file, maxSide = 1400, quality = 0.78) {
   if (!file || !/^image\//.test(file.type)) throw new Error('请选择图片文件')
+  if (file.size > 15 * 1024 * 1024) throw new Error('图片太大，请选择 15MB 以内的照片')
   let bitmap = null
   try {
     if (typeof createImageBitmap === 'function') {
