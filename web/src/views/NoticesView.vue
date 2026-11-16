@@ -397,11 +397,7 @@ function fmt(ts) {
       </div>
 
       <div v-if="selected.report && selected.itemType !== 'help'" class="nd-card">
-        <div class="nd-chat-head">
-          <div class="nd-card-title">匿名沟通</div>
-          <button type="button" class="nd-chat-refresh" :disabled="chatLoading" @click="refreshChat">{{ chatLoading ? '刷新中…' : '刷新消息' }}</button>
-        </div>
-        <div class="nd-chat-help">对方新消息不会自动弹出。点“刷新消息”获取最新回复；发送失败的消息可点“重试”。</div>
+        <div class="nd-card-title">匿名沟通</div>
         <div class="nd-safety">
           <b>安全提示</b>
           <span>平台不会索要验证码、支付密码，也不会要求转账、扫码付款或代付。对方若主动索要二维码、付款码、验证码，或让你先转账，请立即停止并举报。官方拾光码只用于物品留言，不会要求付款；陌生人私发的二维码，一律不要扫。</span>
@@ -428,6 +424,10 @@ function fmt(ts) {
         <div class="nd-chat-input">
           <input v-model="chatText" maxlength="200" placeholder="回复捡到者，不需要暴露手机号">
           <button type="button" :disabled="!chatText.trim()" @click="sendChat">发送</button>
+        </div>
+        <div class="nd-chat-foot">
+          <button type="button" class="nd-chat-refresh" :disabled="chatLoading" @click="refreshChat">{{ chatLoading ? '刷新中…' : '刷新消息' }}</button>
+          <span class="nd-chat-help">对方新消息不会自动弹出，点“刷新消息”获取最新回复；发送失败的消息可点“重试”。</span>
         </div>
       </div>
 
@@ -675,4 +675,10 @@ function fmt(ts) {
 .nd-chat-help { margin:5px 0 7px; font-size:8px; line-height:1.5; color:#8E7FA3; }
 .nd-chat .failed { background:#FFF1EE !important; color:#A23B2A !important; border:1px solid #F0C4B8; }
 .nd-retry { margin-left:5px; align-self:center; border:1px solid #E7B9AE; background:#fff; color:#A23B2A; border-radius:7px; padding:3px 7px; font-family:inherit; font-size:8px; }
+</style>
+
+<style scoped>
+.nd-chat-foot { display:flex; align-items:center; gap:8px; margin-top:7px; flex-wrap:wrap; }
+.nd-chat-foot .nd-chat-help { margin:0; flex:1; min-width:150px; }
+.nd-chat-foot .nd-chat-refresh { flex:0 0 auto; }
 </style>
