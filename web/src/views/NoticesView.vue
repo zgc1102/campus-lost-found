@@ -52,6 +52,13 @@ const branch = computed(() => {
   if (s.claimId && (s.itemType === 'lost' || s.itemType === 'found')) return 'claim'
   return 'system'
 })
+const chatClosed = computed(() => {
+  const s = selected.value
+  if (!s) return false
+  if (s.type === 'pickup') return s.report?.status === 'closed'
+  if (s.claimId) return ['completed', 'closed', 'rejected'].includes(s.claimStatus)
+  return false
+})
 
 function grams(s) {
   const x = String(s || '').replace(/\s+/g, '')
@@ -435,6 +442,17 @@ async function doRevealPhone() {
     revealing.value = false
   }
 }
+async function generatePickupCode() {
+  const rid = selected.value?.claimId
+  if (!rid) return
+  try {
+    const r = await api.claimPickupCode(rid)
+    actionMsg.value = r.already ? '取件码已存在' : '取件码已生成，请双方核对'
+    await refreshSelected()
+  } catch (e) {
+    actionMsg.value = e.message || '取件码生成失败'
+  }
+}
 async function supplementClaimImage(image) {
   const rid = selected.value?.claimId
   if (!rid || !image) return
@@ -664,13 +682,13 @@ function fmt(ts) {
 
       <NoticePickup v-if="branch === 'pickup'" :notice="selected" @reveal="askRevealPhone('report')" @publish="publishReport" @block="blockReport" @close="closeReport" @ignore="ignoreNotice">
         <template #chat>
-          <NoticeChat :messages="chat" :outbox="outbox" :side="chatSide" :loading="chatLoading" :error="chatError" :blocked="chatBlocked" :blocked-by="blockedBy" placeholder="回复捡到者，不需要暴露手机号" @send="sendChat" @retry="retryOutbox" @refresh="refreshChat" />
+          <NoticeChat :messages="chat" :outbox="outbox" :side="chatSide" :loading="chatLoading" :error="chatError" :blocked="chatBlocked" :blocked-by="blockedBy" :closed="chatClosed" placeholder="回复捡到者，不需要暴露手机号" @send="sendChat" @retry="retryOutbox" @refresh="refreshChat" />
         </template>
       </NoticePickup>
 
-      <NoticeClaim v-else-if="branch === 'claim'" :notice="selected" @claim-action="claimAction" @reveal="askRevealPhone('claim')" @block="blockClaim" @compare="compareOpen = true" @ignore="ignoreNotice" @supplement="supplementClaim" @supplement-image="supplementClaimImage">
+      <NoticeClaim v-else-if="branch === 'claim'" :notice="selected" @claim-action="claimAction" @reveal="askRevealPhone('claim')" @block="blockClaim" @compare="compareOpen = true" @ignore="ignoreNotice" @supplement="supplementClaim" @supplement-image="supplementClaimImage" @pickup-code="generatePickupCode">
         <template #chat>
-          <NoticeChat :messages="chat" :outbox="outbox" :side="chatSide" :loading="chatLoading" :error="chatError" :blocked="chatBlocked" :blocked-by="blockedBy" placeholder="回复对方，不需要暴露手机号" @send="sendChat" @retry="retryOutbox" @refresh="refreshChat" />
+          <NoticeChat :messages="chat" :outbox="outbox" :side="chatSide" :loading="chatLoading" :error="chatError" :blocked="chatBlocked" :blocked-by="blockedBy" :closed="chatClosed" placeholder="回复对方，不需要暴露手机号" @send="sendChat" @retry="retryOutbox" @refresh="refreshChat" />
         </template>
       </NoticeClaim>
 
@@ -786,6 +804,10 @@ function fmt(ts) {
             <div><b>{{ selected.claimAi ? selected.claimAi.confidence + '%' : '—' }}</b><span>信息对比度</span></div>
             <div><b>{{ currentSimilarity() }}%</b><span>当前文本相似度</span></div>
           </template>
+        </div>
+        <div v-if="selected.claimId" class="score-explain">
+          <p><b>信息对比度</b>：AI 对申请说明和物品描述的语义核对，只作参考，不是证据，也不代表物品归属。</p>
+          <p><b>当前文本相似度</b>：只按字面重合计算；复述公开描述可能偏高，独立描述可能偏低。</p>
         </div>
         <div class="compare-note">
           {{ selected.type === 'match'
@@ -1005,4 +1027,9 @@ function fmt(ts) {
 .reveal-phones { margin-top:9px; border:1px solid #E7DCF4; border-radius:9px; background:#FBF8FF; padding:7px 9px; }
 .reveal-phones > div { display:flex; justify-content:space-between; gap:12px; padding:4px 0; font-size:9px; color:#7C6A8E; }
 .reveal-phones b { color:#3B1D63; font-weight:600; text-align:right; }
+</style>
+<style scoped>
+.score-explain { margin-top:7px; padding:7px 9px; border-radius:8px; background:#FBF8FF; border:1px solid #EFE7F7; }
+.score-explain p { margin:3px 0; font-size:8.5px; line-height:1.6; color:#7C6A8E; }
+.score-explain b { color:#5B2A91; }
 </style>

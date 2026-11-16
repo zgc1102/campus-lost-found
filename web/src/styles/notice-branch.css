@@ -26,3 +26,6 @@
 .nd-blocked span { font-size:8.5px; line-height:1.6; color:#7E6E92; }
 .nd-contact { margin-top:8px; font-size:9px; color:#5B2A91; }
 .nd-legacy { margin-top:8px; font-size:9px; line-height:1.6; color:#A97A00; }
+.nd-pickup-code { margin-top:8px; padding:7px 9px; border-radius:8px; background:#F1E8FB; color:#5B2A91; font-size:9px; }
+.nd-pickup-code b { font-size:13px; letter-spacing:.1em; margin:0 5px; }
+.nd-pickup-code span { color:#8E7FA3; }

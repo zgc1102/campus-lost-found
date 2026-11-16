@@ -2814,6 +2814,9 @@ class Handler(BaseHTTPRequestHandler):
                     row["claimPhoneRevealed"] = bool(cl.get("phoneRevealed")) and _revealed
                     row["claimBlocked"] = bool(cl.get("blocked"))
                     row["canBlockClaim"] = bool(it and it.get("ownerToken") == owner and not cl.get("blocked"))
+                    row["claimPickupCode"] = cl.get("pickupCode") or ""
+                    _finder = (it.get("ownerToken") if it and it.get("type") == "found" else cl.get("from")) if it else ""
+                    row["canGeneratePickupCode"] = bool(cl.get("status") == "accepted" and _finder == owner and not cl.get("pickupCode"))
                     row["claimContact"] = (cl.get("contact") if _revealed
                                            else mask_contact(cl.get("contact")))
                     if _revealed and it:
@@ -3879,6 +3882,31 @@ class Handler(BaseHTTPRequestHandler):
                 save_notices(notices)
             return self._json({"ok": True})
 
+        if path.startswith("/api/claims/") and path.endswith("/pickup-code"):
+            owner = self._owner()
+            claim_id = path[len("/api/claims/"):-len("/pickup-code")]
+            with LOCK:
+                claims = load_claims()
+                claim = next((c for c in claims if c.get("id") == claim_id), None)
+                if not claim:
+                    return self._json({"error": "认领记录不存在"}, 404)
+                item = next((x for x in load_items() if x.get("id") == claim.get("itemId")), None)
+                if not item:
+                    return self._json({"error": "物品不存在"}, 404)
+                if claim.get("status") != "accepted":
+                    return self._json({"error": "认领通过后才能生成取件码"}, 400)
+                finder = item.get("ownerToken") if item.get("type") == "found" else claim.get("from")
+                if owner != finder:
+                    return self._json({"error": "只有捡到物品的人可以生成取件码"}, 403)
+                if claim.get("pickupCode"):
+                    return self._json({"ok": True, "pickupCode": claim["pickupCode"], "already": True})
+                claim["pickupCode"] = "%06d" % random.randint(0, 999999)
+                claim["pickupCodeBy"] = owner
+                claim["pickupCodeAt"] = now_ms()
+                claim["updatedAt"] = now_ms()
+                save_claims(claims)
+                return self._json({"ok": True, "pickupCode": claim["pickupCode"]})
+
         if path.startswith("/api/claims/") and path.endswith("/supplement-image"):
             owner = self._owner()
             claim_id = path[len("/api/claims/"):-len("/supplement-image")]
@@ -4041,6 +4069,8 @@ class Handler(BaseHTTPRequestHandler):
                     if not is_send:
                         return self._json({"ok": True, "messages": [], "side": side, "blocked": True, "blockedBy": claim.get("blockedBy") or "owner"})
                     return self._json({"error": "对方已屏蔽你，消息发送失败", "blocked": True}, 403)
+                if claim.get("status") in ("completed", "closed") and is_send:
+                    return self._json({"error": "这次沟通已经结束，不能再发送消息"}, 403)
                 if not is_send:
                     return self._json({"ok": True, "messages": claim.get("messages") or [], "side": side})
                 body = self._read_body()
@@ -4130,6 +4160,8 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json({"ok": True, "messages": [], "side": side,
                                        "blocked": True, "blockedBy": report.get("blockedBy") or "owner"})
                 return self._json({"ok": True, "messages": report.get("messages") or [], "side": side})
+            if report.get("status") == "closed":
+                return self._json({"error": "这次沟通已经结束，不能再发送消息"}, 403)
             if report.get("blocked"):
                 return self._json({"error": "对方已屏蔽你，消息发送失败", "blocked": True}, 403)
             body = self._read_body()

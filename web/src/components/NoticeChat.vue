@@ -9,6 +9,7 @@ const props = defineProps({
   error: { type: String, default: '' },
   blocked: { type: Boolean, default: false },
   blockedBy: { type: String, default: '' },
+  closed: { type: Boolean, default: false },
   placeholder: { type: String, default: '回复对方，不需要暴露手机号' }
 })
 const emit = defineEmits(['send', 'retry', 'refresh'])
@@ -45,6 +46,7 @@ function send() {
       <b>安全提示</b>
       <span>平台不会索要验证码、支付密码，也不会要求转账、扫码付款或代付。对方若主动索要二维码、付款码、验证码，或让你先转账，请立即停止并举报。官方拾光码只用于物品留言，不会要求付款；陌生人私发的二维码，一律不要扫。</span>
     </div>
+    <div class="nd-chat-hint">不方便见面？可以把物品放到校方失物招领点、图书馆服务台等公开地点，再约定时间领取。</div>
     <div v-if="blocked" class="nd-blocked">
       <b>{{ blockedBy === side ? '你已屏蔽对方' : '对方已屏蔽你' }}</b>
       <span>双方都不能再看到对方的新消息，也不能再发送消息。</span>
@@ -69,14 +71,15 @@ function send() {
           <button v-if="m.status === 'failed'" type="button" class="nd-retry" @click="$emit('retry', m)">重试</button>
         </div>
       </template>
-      <div class="nd-chat-input">
+      <div class="nd-chat-input" v-if="!closed">
         <input v-model="text" maxlength="200" :placeholder="placeholder" @keyup.enter="send">
         <button type="button" :disabled="!text.trim()" @click="send">发送</button>
       </div>
-      <div class="nd-chat-foot">
+      <div class="nd-chat-foot" v-if="!closed">
         <button type="button" class="nd-chat-refresh" :disabled="loading" @click="$emit('refresh')">{{ loading ? '刷新中…' : '刷新消息' }}</button>
         <span class="nd-chat-help">对方新消息不会自动弹出，点“刷新消息”获取最新回复；发送失败的消息可点“重试”。</span>
       </div>
+      <div v-if="closed" class="nd-chat-closed">这次沟通已经结束，不能再发送新消息。</div>
     </template>
   </div>
 </template>
@@ -108,4 +111,10 @@ function send() {
 .nd-message { font-size:9.5px; line-height:1.7; color:#6F607F; }
 .nd-card { background:#fff; border:1px solid #EFE7F7; border-radius:13px; padding:11px 12px; margin-top:10px; }
 .nd-card-title { font-size:10px; font-weight:600; color:#5B2A91; margin-bottom:6px; }
+</style>
+<style scoped>
+.nd-chat-closed { margin-top:8px; padding:8px 9px; border-radius:8px; background:#F3F0F7; font-size:9px; color:#7E6E92; }
+</style>
+<style scoped>
+.nd-chat-hint { margin:0 0 8px; padding:6px 8px; border-radius:7px; background:#F3F7FF; border:1px solid #DCE6F7; font-size:8.5px; line-height:1.6; color:#4F6488; }
 </style>

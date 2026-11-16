@@ -1,7 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 const props = defineProps({ notice: { type: Object, required: true } })
-const emit = defineEmits(['claim-action', 'reveal', 'block', 'compare', 'ignore', 'supplement', 'supplement-image'])
+const emit = defineEmits(['claim-action', 'reveal', 'block', 'compare', 'ignore', 'supplement', 'supplement-image', 'pickup-code'])
 const supp = ref('')
 const imageMsg = ref('')
 function submitSupp() {
@@ -45,6 +45,8 @@ function statusText(s) {
       <div v-if="notice.claimAi.points?.length" class="nd-ai-points"><i v-for="p in notice.claimAi.points" :key="p">{{ p }}</i></div>
     </div>
   </div>
+    <div v-if="notice.claimPickupCode" class="nd-pickup-code">取件码：<b>{{ notice.claimPickupCode }}</b><span>双方核对后交接</span></div>
+    <button v-if="notice.canGeneratePickupCode" type="button" class="btn ghost" style="margin-top:8px" @click="$emit('pickup-code')">生成取件码</button>
     <div v-if="notice.claimImage" style="margin-top:8px">
       <img :src="notice.claimImage" alt="补充图片" style="max-width:100%;max-height:220px;border-radius:9px;border:1px solid #EADFF5">
     </div>
