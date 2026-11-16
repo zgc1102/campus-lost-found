@@ -4,6 +4,8 @@ const props = defineProps({ notice: { type: Object, required: true } })
 const emit = defineEmits(['claim-action', 'reveal', 'block', 'compare', 'ignore', 'supplement', 'supplement-image', 'pickup-code'])
 const supp = ref('')
 const imageMsg = ref('')
+const imagePreview = ref('')
+const uploading = ref(false)
 function submitSupp() {
   const text = supp.value.trim()
   if (text.length < 2) return
@@ -16,7 +18,12 @@ function onImage(e) {
   if (!/^image\//.test(file.type)) { imageMsg.value = '请选择图片文件'; return }
   if (file.size > 2 * 1024 * 1024) { imageMsg.value = '图片太大，请压缩后再上传'; return }
   const reader = new FileReader()
-  reader.onload = () => { emit('supplement-image', String(reader.result || '')) }
+  reader.onload = () => {
+    imagePreview.value = String(reader.result || '')
+    imageMsg.value = '正在上传，请稍候…'
+    uploading.value = true
+    emit('supplement-image', imagePreview.value)
+  }
   reader.readAsDataURL(file)
   e.target.value = ''
 }
@@ -50,16 +57,22 @@ function statusText(s) {
     <div v-if="notice.claimImage" style="margin-top:8px">
       <img :src="notice.claimImage" alt="补充图片" style="max-width:100%;max-height:220px;border-radius:9px;border:1px solid #EADFF5">
     </div>
-    <div v-if="notice.isClaimant && notice.claimStatus === 'need_more'" class="nd-phone-fill">
+    <div v-if="notice.isClaimant && notice.claimStatus === 'need_more'" class="nd-phone-fill upload-box">
       <p>辛苦你上传一张物品照片，方便发布者核对，谢谢配合。</p>
-      <input type="file" accept="image/*" @change="onImage">
+      <label class="upload-pick">
+        <input type="file" accept="image/*" @change="onImage">
+        <span>{{ uploading ? '正在上传…' : '选择照片' }}</span>
+      </label>
+      <div v-if="imagePreview && !notice.claimImage" style="margin-top:7px">
+        <img :src="imagePreview" alt="预览" style="max-width:100%;max-height:160px;border-radius:8px;border:1px solid #EADFF5">
+      </div>
       <div v-if="imageMsg" class="nd-phone-msg">{{ imageMsg }}</div>
     </div>
   <slot name="chat" />
   <div class="nd-actions">
     <template v-if="(notice.isPublisher || notice.item?.isMine) && notice.claimId && (!notice.claimStatus || ['pending','need_more'].includes(notice.claimStatus))">
       <button type="button" class="btn" @click="$emit('claim-action', 'accepted')">通过认领并公布双方手机号</button>
-      <button type="button" class="btn ghost" @click="$emit('claim-action', 'need_more', true)">请补充图片</button>
+      <button v-if="notice.claimStatus !== 'need_more'" type="button" class="btn ghost" @click="$emit('claim-action', 'need_more', true)">请补充图片</button>
       <button type="button" class="btn ghost" @click="$emit('claim-action', 'rejected')">拒绝</button>
       <button v-if="notice.canBlockClaim" type="button" class="btn ghost" @click="$emit('block')">屏蔽对方</button>
     </template>
@@ -72,4 +85,9 @@ function statusText(s) {
 <style scoped>
 .nd-phone-fill textarea { width:100%; box-sizing:border-box; min-height:58px; background:#fff; border:1px solid #E4D6F2; border-radius:8px; padding:8px; font-family:inherit; font-size:9.5px; }
 .nd-phone-fill > button { margin-top:6px; width:100%; border:0; background:#5B2A91; color:#fff; border-radius:8px; padding:8px; font-family:inherit; font-size:9.5px; }
+</style>
+<style scoped>
+.upload-box { text-align:center; }
+.upload-pick { display:inline-flex; align-items:center; justify-content:center; min-width:130px; padding:9px 14px; border-radius:9px; background:#5B2A91; color:#fff; font-size:10px; cursor:pointer; }
+.upload-pick input { display:none; }
 </style>

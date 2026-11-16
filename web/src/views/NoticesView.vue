@@ -751,7 +751,7 @@ function fmt(ts) {
           <div class="nd-kv"><span>发布者手机号</span><b>{{ selected.ownerContact || (selected.item?.contact?.phone ? '已留手机号（通过后显示完整）' : '还没留手机号') }}</b></div>
           <div class="nd-kv"><span>认领人手机号</span><b>{{ selected.item?.isMine ? (selected.claimContact || '还没留手机号') : (selected.claimContact ? '已留手机号' : '还没留手机号') }}</b></div>
           <div v-if="selected.item?.isMine && !selected.ownerContact && !selected.item?.contact?.phone" class="nd-phone-fill">
-            <p>你是发布者。留手机号后，认领人通过申请时，双方才能互相联系。</p>
+            <p>你是发布者。留手机号后，你通过认领时，双方才能互相联系。</p>
             <div class="nd-phone-row">
               <input v-model="claimPhoneInput" maxlength="20" placeholder="补充你的手机号">
               <button type="button" :disabled="claimPhoneSaving" @click="saveClaimPhone">{{ claimPhoneSaving ? '保存中…' : '补充手机号' }}</button>
@@ -765,7 +765,7 @@ function fmt(ts) {
             </div>
           </div>
           <div v-if="selected.claimStatus === 'accepted' || selected.claimStatus === 'completed'" class="nd-exchange-ok">双方手机号已交换，可以直接联系。</div>
-          <div v-else class="nd-exchange-tip">发布者通过申请后，双方手机号自动交换；未通过前只显示打码号码。</div>
+          <div v-else class="nd-exchange-tip">发布者确认通过后，双方手机号才会交换；未通过前只显示打码号码。</div>
           <div v-if="claimPhoneMsg" class="nd-phone-msg">{{ claimPhoneMsg }}</div>
         </div>
         <div v-if="matchBothMine" class="compare-note" style="background:#FFF4E5;border-color:#F0D6A8">

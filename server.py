@@ -4751,6 +4751,8 @@ class Handler(BaseHTTPRequestHandler):
                     claim["phoneRevealed"] = True
                     claim["phoneRevealedBy"] = owner
                     claim["phoneRevealedAt"] = now_ms()
+                if status == "need_more" and claim.get("status") == "need_more" and bool(claim.get("needImage")) == need_image:
+                    return self._json({"ok": True, "status": status, "duplicate": True})
                 claim["status"] = status
                 claim["updatedAt"] = now_ms()
                 others = []
