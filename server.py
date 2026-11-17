@@ -2800,6 +2800,17 @@ class Handler(BaseHTTPRequestHandler):
             sent.sort(key=lambda x: x["createdAt"], reverse=True)
             return self._json({"received": received, "sent": sent})
 
+        if path == "/api/moderation/status":
+            owner = self._owner()
+            if not owner:
+                return self._json({"error": "缺少设备标识"}, 400)
+            qs = parse_qs(urlparse(self.path).query)
+            kind = (qs.get("kind") or [""])[0]
+            target_id = (qs.get("targetId") or [""])[0]
+            if kind not in ("claim", "report", "help") or not target_id:
+                return self._json({"error": "参数不正确"}, 400)
+            return self._json({"ok": True, "state": moderation.status(kind, target_id, owner)})
+
         if path == "/api/moderation/reports/mine":
             owner = self._owner()
             if not owner:

@@ -201,6 +201,9 @@ export const api = {
   submitReport(payload) {
     return call('/moderation/reports', { method: 'POST', body: JSON.stringify(payload) })
   },
+  reportStatus(kind, targetId) {
+    return call('/moderation/status?kind=' + encodeURIComponent(kind) + '&targetId=' + encodeURIComponent(targetId), { skipCacheClear: true })
+  },
   myReports() {
     return call('/moderation/reports/mine')
   },

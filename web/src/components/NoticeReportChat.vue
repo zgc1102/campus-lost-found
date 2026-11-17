@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { api } from '../api'
 import ReportDialog from './ReportDialog.vue'
+import ModerationNotice from './ModerationNotice.vue'
 
 const props = defineProps({
   reportId: { type: String, default: '' },
@@ -136,6 +137,7 @@ watch(() => props.reportId, () => {
       <div class="cc-title">匿名沟通</div>
       <button type="button" class="cc-report" @click="showReport = true">举报</button>
     </div>
+    <ModerationNotice kind="report" :target-id="reportId" />
     <div class="cc-safety">
       <b>安全提示</b>
       <span>平台不会索要验证码、支付密码，也不会要求转账、扫码付款或代付。对方若主动索要二维码、付款码、验证码，或让你先转账，请立即停止并举报。</span>

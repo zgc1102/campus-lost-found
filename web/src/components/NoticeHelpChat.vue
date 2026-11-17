@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { api } from '../api'
 import ReportDialog from './ReportDialog.vue'
+import ModerationNotice from './ModerationNotice.vue'
 const props = defineProps({
   claimId: { type: String, default: '' },
   itemTitle: { type: String, default: '' },
@@ -102,6 +103,7 @@ watch(() => props.claimId, () => { messages.value = []; outbox.value = []; load(
       <div class="hc-title">爱心捐赠 · 匿名沟通</div>
       <button type="button" class="hc-report" @click="showReport = true">举报</button>
     </div>
+    <ModerationNotice kind="help" :target-id="claimId" />
     <div class="hc-hint">这里只用于沟通捐赠细节，不会自动公开手机号。</div>
     <div v-if="loading && !displayMessages.length" class="hc-empty">正在加载消息…</div>
     <div v-else-if="!displayMessages.length" class="hc-empty">还没有消息，可以先打个招呼。</div>

@@ -43,5 +43,7 @@ desktop.ini
 # 拾光码运行数据与本地临时文件
 tags.json
 tag_qr/
+moderation_reports.json
+moderation_audit.json
 _local_server.py
 本地二维码*.png

@@ -203,6 +203,10 @@ def _process(report_id):
         report["status"] = "reviewed"
         report["ai"] = result
         report["reviewedAt"] = _now()
+        if result.get("verdict") == "violation" and int(result.get("risk") or 0) >= 70:
+            report["warningFor"] = report.get("targetOwner") or ""
+            report["warning"] = "AI 检测到本次聊天内容存在违规风险，相关记录已保存。请立即停止不当言行。"
+            report["warningAt"] = _now()
         _save(REPORT_FILE, rows)
     _audit(report_id, "ai_review", result.get("reason") or "")
 
@@ -258,6 +262,27 @@ def mine(owner):
     with _LOCK:
         rows = _load(REPORT_FILE, [])
     return [r for r in rows if r.get("reporter") == owner][-100:][::-1]
+
+
+def status(kind, target_id, owner):
+    with _LOCK:
+        rows = _load(REPORT_FILE, [])
+    target_id = _clip(target_id, 64)
+    matches = [r for r in rows if r.get("kind") == kind and r.get("targetId") == target_id]
+    if not matches:
+        return {"active": False, "status": "", "warning": "", "reportId": ""}
+    report = matches[-1]
+    warning = ""
+    if (report.get("warningFor") == owner
+            and report.get("warning")
+            and report.get("status") not in ("dismissed", "resolved")):
+        warning = report.get("warning")
+    return {
+        "active": report.get("status") in ("pending", "reviewing", "reviewed"),
+        "status": report.get("status") or "",
+        "warning": warning,
+        "reportId": report.get("id") or "",
+    }
 
 
 def admin_list():
