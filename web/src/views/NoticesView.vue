@@ -919,7 +919,7 @@ function fmt(ts) {
 
       <NoticeHelp v-else-if="branch === 'help'" :notice="selected" :supplementing="helpSupplementing" :phone-saving="claimPhoneSaving" :supplement-msg="helpSupplementMsg" :phone-msg="claimPhoneMsg" @supplement="supplementHelp" @save-phone="saveClaimPhone" @help-action="helpAction" @complete="completeHelp" @block="blockClaim" @compare="compareOpen = true" @ignore="ignoreNotice" @withdraw="withdrawHelpClaim" @remove="removeHelpClaim" @restore="restoreHelpClaim" @unblock="unblockClaim" @privacy="helpPrivacy" @accept-gift="acceptGift">
         <template #chat>
-          <NoticeHelpChat v-if="selected.helpIsDonation && selected.helpGiftAccepted && ['accepted','completed'].includes(selected.claimStatus)" :claim-id="selected.claimId" :closed="selected.claimStatus === 'completed'" />
+          <NoticeHelpChat v-if="selected.helpIsDonation && ['pending','accepted','completed'].includes(selected.claimStatus)" :claim-id="selected.claimId" :closed="selected.claimStatus === 'completed'" />
         </template>
       </NoticeHelp>
 
@@ -975,25 +975,26 @@ function fmt(ts) {
         <div class="compare-kicker">匹配对比报告</div>
         <h2>{{ selected.item.title || '对应物品' }}</h2>
         <div v-if="selected.claimId" class="cc-claim-detail">
-          <div class="cc-tag">认领详情</div>
+          <div class="cc-tag">{{ selected.helpIsDonation ? '赠与详情' : '认领详情' }}</div>
           <p class="cc-claim-msg">{{ selected.claimMessage || selected.text }}</p>
-          <div class="nd-kv"><span>发布者手机号</span><b>{{ selected.ownerContact || (selected.item?.contact?.phone ? '已留手机号（通过后显示完整）' : '还没留手机号') }}</b></div>
-          <div class="nd-kv"><span>认领人手机号</span><b>{{ selected.item?.isMine ? (selected.claimContact || '还没留手机号') : (selected.claimContact ? '已留手机号' : '还没留手机号') }}</b></div>
-          <div v-if="selected.item?.isMine && !selected.ownerContact && !selected.item?.contact?.phone" class="nd-phone-fill">
+          <div class="nd-kv"><span>发布者手机号</span><b>{{ selected.helpPhonesHidden ? '双方同意不公开' : (selected.ownerContact || (selected.item?.contact?.phone ? '已留手机号（通过后显示完整）' : '还没留手机号')) }}</b></div>
+          <div class="nd-kv"><span>{{ selected.helpIsDonation ? '申请人手机号' : '认领人手机号' }}</span><b>{{ selected.helpPhonesHidden ? '双方同意不公开' : (selected.item?.isMine ? (selected.claimContact || '还没留手机号') : (selected.claimContact ? '已留手机号' : '还没留手机号')) }}</b></div>
+          <div v-if="!selected.helpPhonesHidden && selected.item?.isMine && !selected.ownerContact && !selected.item?.contact?.phone" class="nd-phone-fill">
             <p>你是发布者。留手机号后，你通过认领时，双方才能互相联系。</p>
             <div class="nd-phone-row">
               <input v-model="claimPhoneInput" maxlength="20" placeholder="补充你的手机号">
               <button type="button" :disabled="claimPhoneSaving" @click="saveClaimPhone">{{ claimPhoneSaving ? '保存中…' : '补充手机号' }}</button>
             </div>
           </div>
-          <div v-else-if="!selected.item?.isMine && !selected.claimContact" class="nd-phone-fill">
+          <div v-else-if="!selected.helpPhonesHidden && !selected.item?.isMine && !selected.claimContact" class="nd-phone-fill">
             <p>你还没有留手机号。补充后，发布者通过申请时才能联系你。</p>
             <div class="nd-phone-row">
               <input v-model="claimPhoneInput" maxlength="20" placeholder="补充你的手机号">
               <button type="button" :disabled="claimPhoneSaving" @click="saveClaimPhone">{{ claimPhoneSaving ? '保存中…' : '补充手机号' }}</button>
             </div>
           </div>
-          <div v-if="selected.claimStatus === 'accepted' || selected.claimStatus === 'completed'" class="nd-exchange-ok">双方手机号已交换，可以直接联系。</div>
+          <div v-if="selected.helpPhonesHidden" class="nd-exchange-ok">双方已同意不公开手机号，可通过匿名沟通完成{{ selected.helpIsDonation ? '捐赠' : '帮助' }}。</div>
+          <div v-else-if="selected.claimStatus === 'accepted' || selected.claimStatus === 'completed'" class="nd-exchange-ok">双方手机号已交换，可以直接联系。</div>
           <div v-else class="nd-exchange-tip">发布者确认通过后，双方手机号才会交换；未通过前只显示打码号码。</div>
           <div v-if="claimPhoneMsg" class="nd-phone-msg">{{ claimPhoneMsg }}</div>
         </div>

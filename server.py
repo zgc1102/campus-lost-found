@@ -5129,10 +5129,8 @@ class Handler(BaseHTTPRequestHandler):
                 side = "owner" if item.get("ownerToken") == owner else "claimer" if claim.get("from") == owner else ""
                 if not side:
                     return self._json({"error": "无权查看这条沟通"}, 403)
-                if claim.get("status") not in ("accepted", "completed"):
-                    return self._json({"error": "接受帮忙后才能匿名沟通"}, 409)
-                if (item.get("helpCat") == "help_donate" or item.get("cat") == "help_donate") and not claim.get("giftAccepted"):
-                    return self._json({"error": "请先确认接受赠与，再开始匿名沟通"}, 409)
+                if claim.get("status") not in ("pending", "accepted", "completed"):
+                    return self._json({"error": "当前状态不能匿名沟通"}, 409)
                 if is_send and claim.get("status") == "completed":
                     return self._json({"error": "这次沟通已经结束"}, 403)
                 if claim.get("blocked"):
