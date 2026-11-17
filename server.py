@@ -2841,6 +2841,7 @@ class Handler(BaseHTTPRequestHandler):
                         "status": rp.get("status") or "pending",
                         "needPhoto": bool(rp.get("needPhoto")),
                         "blocked": bool(rp.get("blocked")),
+                        "blockedByMe": bool(rp.get("blocked") and rp.get("blockedBy") in ("owner", owner)),
                         "at": rp.get("createdAt"),
                         "itemId": rp.get("itemId") or "",
                         "phoneRevealed": bool(rp.get("phoneRevealed")),
@@ -2870,6 +2871,11 @@ class Handler(BaseHTTPRequestHandler):
                         _revealed = False
                     row["claimPhoneRevealed"] = bool(cl.get("phoneRevealed")) and _revealed
                     row["claimBlocked"] = bool(cl.get("blocked"))
+                    row["claimBlockedByMe"] = bool(cl.get("blocked") and cl.get("blockedBy") == owner)
+                    row["claimBlockedBySide"] = (
+                        "owner" if cl.get("blockedBy") == (it or {}).get("ownerToken")
+                        else "claimer" if cl.get("blockedBy") == cl.get("from")
+                        else "")
                     row["canBlockClaim"] = bool(it and it.get("ownerToken") == owner and not cl.get("blocked"))
                     row["claimPickupCode"] = cl.get("pickupCode") or ""
                     if it and it.get("type") == "help":
@@ -4310,7 +4316,9 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json({"error": "无权查看这条沟通"}, 403)
                 if claim.get("blocked"):
                     if not is_send:
-                        return self._json({"ok": True, "messages": [], "side": side, "blocked": True, "blockedBy": claim.get("blockedBy") or "owner"})
+                        _blocker = claim.get("blockedBy")
+                        _blocked_side = "owner" if _blocker == item.get("ownerToken") else "claimer"
+                        return self._json({"ok": True, "messages": [], "side": side, "blocked": True, "blockedBy": _blocked_side})
                     return self._json({"error": "对方已屏蔽你，消息发送失败", "blocked": True}, 403)
                 if claim.get("status") in ("completed", "closed") and is_send:
                     return self._json({"error": "这次沟通已经结束，不能再发送消息"}, 403)
@@ -4400,8 +4408,10 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"error": "无权查看这条对话"}, 403)
             if not is_send:
                 if report.get("blocked"):
+                    _blocker = report.get("blockedBy")
+                    _blocked_side = "owner" if _blocker in ("owner", report.get("owner")) else "finder"
                     return self._json({"ok": True, "messages": [], "side": side,
-                                       "blocked": True, "blockedBy": report.get("blockedBy") or "owner"})
+                                       "blocked": True, "blockedBy": _blocked_side})
                 return self._json({"ok": True, "messages": report.get("messages") or [], "side": side})
             if report.get("status") == "closed":
                 return self._json({"error": "这次沟通已经结束，不能再发送消息"}, 403)
@@ -4612,6 +4622,39 @@ class Handler(BaseHTTPRequestHandler):
                 save_notices(notices)
             return self._json({"ok": True})
 
+        if path.startswith("/api/reports/") and path.endswith("/unblock"):
+            owner = self._owner()
+            report_id = path[len("/api/reports/"):-len("/unblock")]
+            with LOCK:
+                reports = load_tag_reports()
+                report = next((r for r in reports if r.get("id") == report_id), None)
+                if not report:
+                    return self._json({"error": "捡到上报不存在"}, 404)
+                if report.get("blockedBy") not in ("owner", owner):
+                    return self._json({"error": "只有屏蔽方可以解除屏蔽"}, 403)
+                tags = load_tags()
+                for tag in tags:
+                    if tag.get("code") == report.get("tagCode"):
+                        tag["blockedFinders"] = [x for x in (tag.get("blockedFinders") or [])
+                                                 if x != report.get("finder")]
+                        save_tags(tags)
+                        break
+                report["blocked"] = False
+                report["blockedBy"] = ""
+                report["blockedAt"] = 0
+                if report.get("status") == "closed":
+                    report["status"] = "pending"
+                report["updatedAt"] = now_ms()
+                save_tag_reports(reports)
+                notices = load_notices()
+                add_notice(notices, report.get("finder"), "pickup_unblocked",
+                           "失主解除了对《%s》沟通的屏蔽，可以继续联系" % (report.get("itemName") or "物品"),
+                           "", "")
+                if notices:
+                    notices[-1]["reportId"] = report_id
+                save_notices(notices)
+            return self._json({"ok": True})
+
         if path.startswith("/api/reports/") and path.endswith("/block"):
             owner = self._owner()
             report_id = path[len("/api/reports/"):-len("/block")]
@@ -4633,7 +4676,7 @@ class Handler(BaseHTTPRequestHandler):
                         break
                 report["status"] = "closed"
                 report["blocked"] = True
-                report["blockedBy"] = "owner"
+                report["blockedBy"] = owner
                 report["blockedAt"] = now_ms()
                 report["updatedAt"] = now_ms()
                 save_tag_reports(reports)
@@ -5175,6 +5218,60 @@ class Handler(BaseHTTPRequestHandler):
                            item.get("id"), claim.get("id"))
                 save_notices(notices)
             return self._json({"ok": True, "status": "removed"})
+
+        if path.startswith("/api/claims/") and path.endswith("/unblock"):
+            owner = self._owner()
+            claim_id = path[len("/api/claims/"):-len("/unblock")]
+            with LOCK:
+                claims = load_claims()
+                claim = next((c for c in claims if c.get("id") == claim_id), None)
+                if not claim:
+                    return self._json({"error": "认领记录不存在"}, 404)
+                item = next((x for x in load_items() if x.get("id") == claim.get("itemId")), None)
+                if not item:
+                    return self._json({"error": "物品不存在"}, 404)
+                if claim.get("blockedBy") != owner:
+                    return self._json({"error": "只有屏蔽方可以解除屏蔽"}, 403)
+                claim["blocked"] = False
+                claim["blockedBy"] = ""
+                claim["blockedAt"] = 0
+                if claim.get("status") == "closed":
+                    claim["status"] = "pending"
+                claim["updatedAt"] = now_ms()
+                save_claims(claims)
+                notices = load_notices()
+                other = item.get("ownerToken") if owner == claim.get("from") else claim.get("from")
+                add_notice(notices, other, "claim_unblocked",
+                           "对方解除了对《%s》沟通的屏蔽，可以继续联系" % (item.get("title") or ""),
+                           item.get("id"), claim.get("id"))
+                save_notices(notices)
+            return self._json({"ok": True})
+
+        if path.startswith("/api/help-claims/") and path.endswith("/unblock"):
+            owner = self._owner()
+            claim_id = path[len("/api/help-claims/"):-len("/unblock")]
+            with LOCK:
+                tasks = load_help_tasks()
+                claim = next((c for c in tasks if c.get("id") == claim_id), None)
+                if not claim:
+                    return self._json({"error": "帮忙申请不存在"}, 404)
+                item = next((x for x in load_items() if x.get("id") == claim.get("itemId")), None)
+                if not item:
+                    return self._json({"error": "求助不存在"}, 404)
+                if claim.get("blockedBy") != owner:
+                    return self._json({"error": "只有屏蔽方可以解除屏蔽"}, 403)
+                claim["blocked"] = False
+                claim["blockedBy"] = ""
+                claim["blockedAt"] = 0
+                claim["updatedAt"] = now_ms()
+                save_help_tasks(tasks)
+                notices = load_notices()
+                other = item.get("ownerToken") if owner == claim.get("from") else claim.get("from")
+                add_notice(notices, other, "help_unblocked",
+                           "对方解除了对《%s》沟通的屏蔽" % (item.get("title") or ""),
+                           item.get("id"), claim.get("id"))
+                save_notices(notices)
+            return self._json({"ok": True})
 
         if path.startswith("/api/claims/") and path.endswith("/restore"):
             owner = self._owner()

@@ -7,7 +7,7 @@ const props = defineProps({
   imageBusy: { type: Boolean, default: false },
   imageError: { type: String, default: '' }
 })
-const emit = defineEmits(['claim-action', 'reveal', 'block', 'compare', 'ignore', 'supplement', 'supplement-image', 'pickup-code', 'restore'])
+const emit = defineEmits(['claim-action', 'reveal', 'block', 'compare', 'ignore', 'supplement', 'supplement-image', 'pickup-code', 'restore', 'unblock'])
 const supp = ref('')
 const imageMsg = ref('')
 const imagePreview = ref('')
@@ -131,6 +131,7 @@ function reviewText(r) {
       <button v-if="notice.canBlockClaim" type="button" class="btn ghost" @click="requestBlock">屏蔽对方</button>
     </template>
     <button v-if="(notice.isPublisher || notice.item?.isMine) && notice.claimStatus === 'rejected'" type="button" class="btn ghost" @click="requestRestore">拉回申请</button>
+    <button v-if="notice.claimBlockedByMe" type="button" class="btn ghost" @click="$emit('unblock')">解除屏蔽</button>
     <button v-if="notice.item" type="button" class="btn ghost" @click="$emit('compare')">查看匹配报告</button>
     <button type="button" class="btn ghost" @click="$emit('ignore')">忽略</button>
   </div>

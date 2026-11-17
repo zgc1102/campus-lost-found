@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import ImageViewer from './ImageViewer.vue'
 import { compressImage } from '../utils/image'
 const props = defineProps({ notice: { type: Object, required: true } })
-const emit = defineEmits(['reveal', 'publish', 'block', 'close', 'ignore', 'request-photo', 'supplement-photo', 'reopen'])
+const emit = defineEmits(['reveal', 'publish', 'block', 'close', 'ignore', 'request-photo', 'supplement-photo', 'reopen', 'unblock'])
 const viewerUrl = ref('')
 const photoPreview = ref('')
 const photoMsg = ref('')
@@ -86,6 +86,7 @@ function reviewText(r) {
       <button v-if="!notice.report?.phoneRevealed" type="button" class="btn" @click="$emit('reveal')">公布双方手机号并联系</button>
       <button v-if="notice.report?.status !== 'closed'" type="button" class="btn ghost" :disabled="notice.report?.needPhoto" @click="$emit('request-photo')">{{ notice.report?.needPhoto ? '已请求补充照片' : '请对方补充照片' }}</button>
       <button type="button" class="btn ghost" @click="requestBlock">屏蔽</button>
+      <button v-if="notice.report?.blockedByMe" type="button" class="btn ghost" @click="$emit('unblock')">解除屏蔽</button>
       <button v-if="notice.report?.status !== 'closed'" type="button" class="btn ghost" @click="requestClose">关闭</button>
       <button v-if="notice.report?.status === 'closed'" type="button" class="btn ghost" @click="requestReopen">重新打开</button>
     </template>

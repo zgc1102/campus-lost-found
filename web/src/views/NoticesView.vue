@@ -202,6 +202,9 @@ function typeLabel(t, itemType = '') {
       help_supplement: '💬 帮忙人补充了说明',
       help_done: '🎉 爱心帮助已完成',
       help_restored: '↩️ 帮忙申请已拉回',
+      help_unblocked: '🔓 屏蔽已解除',
+      claim_unblocked: '🔓 屏蔽已解除',
+      pickup_unblocked: '🔓 屏蔽已解除',
       pickup_photo_request: '📷 失主请你补充照片',
       pickup_photo_supplement: '📷 捡到者补充了照片',
       pickup_reopen: '🔓 拾光码上报已重新打开'
@@ -215,6 +218,8 @@ function typeLabel(t, itemType = '') {
     need_more: '📝 申请待补充',
     done: '🎉 已完成归还',
     claim_restored: '↩️ 认领申请已拉回',
+    claim_unblocked: '🔓 屏蔽已解除',
+    pickup_unblocked: '🔓 屏蔽已解除',
     pickup: '🔖 拾光码提醒',
     pickup_code: '🔢 取件码已生成',
     pickup_photo_request: '📷 失主请你补充照片',
@@ -441,6 +446,37 @@ async function publishReport() {
   } catch (e) { actionMsg.value = e.message || '公开失败' }
 }
 
+async function unblockClaim() {
+  const rid = selected.value?.claimId
+  if (!rid) return
+  try {
+    if (selected.value.itemType === 'help') await api.helpClaimUnblock(rid)
+    else await api.claimUnblock(rid)
+    selected.value.claimBlocked = false
+    selected.value.claimBlockedByMe = false
+    chatBlocked.value = false
+    blockedBy.value = ''
+    actionMsg.value = '已解除屏蔽'
+    await refreshSelected()
+  } catch (e) {
+    actionMsg.value = e.message || '解除屏蔽失败'
+  }
+}
+async function unblockReport() {
+  const rid = selected.value?.report?.id
+  if (!rid) return
+  try {
+    await api.reportUnblock(rid)
+    selected.value.report.blocked = false
+    selected.value.report.blockedByMe = false
+    chatBlocked.value = false
+    blockedBy.value = ''
+    actionMsg.value = '已解除屏蔽'
+    await refreshSelected()
+  } catch (e) {
+    actionMsg.value = e.message || '解除屏蔽失败'
+  }
+}
 async function restoreClaim() {
   const rid = selected.value?.claimId
   if (!rid) return
@@ -812,19 +848,19 @@ function fmt(ts) {
         <div v-if="selected.report && selected.itemType !== 'help'" class="nd-state">{{ ({pending:'待确认', contacted:'已联系', published:'已公开', closed:'已找回'})[selected.report.status] || selected.report.status }}</div>
       </div>
 
-      <NoticePickup v-if="branch === 'pickup'" :notice="selected" @reveal="askRevealPhone('report')" @publish="publishReport" @block="blockReport" @close="closeReport" @ignore="ignoreNotice" @request-photo="requestPickupPhoto" @supplement-photo="supplementPickupPhoto" @reopen="reopenPickup">
+      <NoticePickup v-if="branch === 'pickup'" :notice="selected" @reveal="askRevealPhone('report')" @publish="publishReport" @block="blockReport" @close="closeReport" @ignore="ignoreNotice" @request-photo="requestPickupPhoto" @supplement-photo="supplementPickupPhoto" @reopen="reopenPickup" @unblock="unblockReport">
         <template #chat>
           <NoticeChat :messages="chat" :outbox="outbox" :side="chatSide" :loading="chatLoading" :error="chatError" :blocked="chatBlocked" :blocked-by="blockedBy" :closed="chatClosed" placeholder="回复捡到者，不需要暴露手机号" @send="sendChat" @retry="retryOutbox" @refresh="refreshChat" />
         </template>
       </NoticePickup>
 
-      <NoticeClaim v-else-if="branch === 'claim'" :notice="selected" :image-busy="claimImageBusy" :image-error="claimImageError" @claim-action="claimAction" @reveal="askRevealPhone('claim')" @block="blockClaim" @compare="compareOpen = true" @ignore="ignoreNotice" @supplement="supplementClaim" @supplement-image="supplementClaimImage" @pickup-code="generatePickupCode" @restore="restoreClaim">
+      <NoticeClaim v-else-if="branch === 'claim'" :notice="selected" :image-busy="claimImageBusy" :image-error="claimImageError" @claim-action="claimAction" @reveal="askRevealPhone('claim')" @block="blockClaim" @compare="compareOpen = true" @ignore="ignoreNotice" @supplement="supplementClaim" @supplement-image="supplementClaimImage" @pickup-code="generatePickupCode" @restore="restoreClaim" @unblock="unblockClaim">
         <template #chat>
           <NoticeChat :messages="chat" :outbox="outbox" :side="chatSide" :loading="chatLoading" :error="chatError" :blocked="chatBlocked" :blocked-by="blockedBy" :closed="chatClosed" placeholder="回复对方，不需要暴露手机号" @send="sendChat" @retry="retryOutbox" @refresh="refreshChat" />
         </template>
       </NoticeClaim>
 
-      <NoticeHelp v-else-if="branch === 'help'" :notice="selected" :supplementing="helpSupplementing" :phone-saving="claimPhoneSaving" :supplement-msg="helpSupplementMsg" :phone-msg="claimPhoneMsg" @supplement="supplementHelp" @save-phone="saveClaimPhone" @help-action="helpAction" @complete="completeHelp" @block="blockClaim" @compare="compareOpen = true" @ignore="ignoreNotice" @withdraw="withdrawHelpClaim" @remove="removeHelpClaim" @restore="restoreHelpClaim" />
+      <NoticeHelp v-else-if="branch === 'help'" :notice="selected" :supplementing="helpSupplementing" :phone-saving="claimPhoneSaving" :supplement-msg="helpSupplementMsg" :phone-msg="claimPhoneMsg" @supplement="supplementHelp" @save-phone="saveClaimPhone" @help-action="helpAction" @complete="completeHelp" @block="blockClaim" @compare="compareOpen = true" @ignore="ignoreNotice" @withdraw="withdrawHelpClaim" @remove="removeHelpClaim" @restore="restoreHelpClaim" @unblock="unblockClaim" />
 
       <NoticeSystem v-else :notice="selected" @compare="compareOpen = true" @ignore="ignoreNotice" />
 

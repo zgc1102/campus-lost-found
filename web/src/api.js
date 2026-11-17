@@ -252,6 +252,15 @@ export const api = {
   helpClaimRemove(id) {
     return call('/help-claims/' + encodeURIComponent(id) + '/remove', { method: 'PATCH', body: '{}', skipCacheClear: true })
   },
+  claimUnblock(id) {
+    return call('/claims/' + encodeURIComponent(id) + '/unblock', { method: 'PATCH', body: '{}', skipCacheClear: true })
+  },
+  helpClaimUnblock(id) {
+    return call('/help-claims/' + encodeURIComponent(id) + '/unblock', { method: 'PATCH', body: '{}', skipCacheClear: true })
+  },
+  reportUnblock(id) {
+    return call('/reports/' + encodeURIComponent(id) + '/unblock', { method: 'POST', body: '{}', skipCacheClear: true })
+  },
   claimRestore(id) {
     return call('/claims/' + encodeURIComponent(id) + '/restore', { method: 'PATCH', body: '{}', skipCacheClear: true })
   },
