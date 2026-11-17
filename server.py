@@ -5676,7 +5676,8 @@ class Handler(BaseHTTPRequestHandler):
                 claim = next((c for c in claims if c.get("id") == claim_id), None)
                 if not claim:
                     return self._json({"error": "认领记录不存在"}, 404)
-                item = next((x for x in load_items() if x.get("id") == claim.get("itemId")), None)
+                items = load_items()
+                item = next((x for x in items if x.get("id") == claim.get("itemId")), None)
                 if not item:
                     return self._json({"error": "物品不存在"}, 404)
                 if owner not in (claim.get("from"), item.get("ownerToken")):
