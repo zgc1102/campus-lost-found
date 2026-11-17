@@ -4247,6 +4247,7 @@ class Handler(BaseHTTPRequestHandler):
                 claim["blocked"] = True
                 claim["blockedBy"] = owner
                 claim["blockedAt"] = now_ms()
+                claim["statusBeforeBlock"] = claim.get("status") or "pending"
                 claim["status"] = "closed"
                 claim["updatedAt"] = now_ms()
                 if help_mode:
@@ -4643,7 +4644,7 @@ class Handler(BaseHTTPRequestHandler):
                 report["blockedBy"] = ""
                 report["blockedAt"] = 0
                 if report.get("status") == "closed":
-                    report["status"] = "pending"
+                    report["status"] = report.pop("statusBeforeBlock", "pending") or "pending"
                 report["updatedAt"] = now_ms()
                 save_tag_reports(reports)
                 notices = load_notices()
@@ -4674,7 +4675,9 @@ class Handler(BaseHTTPRequestHandler):
                         tag["blockedFinders"] = blocked[-50:]
                         save_tags(tags)
                         break
+                _before_block = report.get("status") or "pending"
                 report["status"] = "closed"
+                report["statusBeforeBlock"] = _before_block
                 report["blocked"] = True
                 report["blockedBy"] = owner
                 report["blockedAt"] = now_ms()
@@ -5236,7 +5239,7 @@ class Handler(BaseHTTPRequestHandler):
                 claim["blockedBy"] = ""
                 claim["blockedAt"] = 0
                 if claim.get("status") == "closed":
-                    claim["status"] = "pending"
+                    claim["status"] = claim.pop("statusBeforeBlock", "pending") or "pending"
                 claim["updatedAt"] = now_ms()
                 save_claims(claims)
                 notices = load_notices()
