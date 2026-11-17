@@ -7,7 +7,7 @@ const props = defineProps({
   imageBusy: { type: Boolean, default: false },
   imageError: { type: String, default: '' }
 })
-const emit = defineEmits(['claim-action', 'reveal', 'block', 'compare', 'ignore', 'supplement', 'supplement-image', 'pickup-code', 'restore', 'unblock', 'end-talk', 'finish-talk'])
+const emit = defineEmits(['claim-action', 'reveal', 'block', 'compare', 'ignore', 'supplement', 'supplement-image', 'pickup-code', 'restore', 'unblock', 'end-talk', 'finish-talk', 'request-image'])
 const supp = ref('')
 const imageMsg = ref('')
 const imagePreview = ref('')
@@ -123,7 +123,7 @@ function reviewText(r) {
       <img :src="notice.claimImage" alt="补充图片" title="双击查看大图" style="max-width:100%;max-height:220px;border-radius:9px;border:1px solid #EADFF5;cursor:zoom-in" @dblclick="openImage">
       <div v-if="reviewText(notice.claimImageReview)" class="nd-review">{{ reviewText(notice.claimImageReview) }}</div>
     </div>
-    <div v-if="notice.isClaimant && notice.claimStatus === 'need_more'" class="nd-phone-fill upload-box">
+    <div v-if="notice.isClaimant && (notice.claimNeedImage || notice.claimStatus === 'need_more')" class="nd-phone-fill upload-box">
       <p>辛苦你上传一张物品照片，方便发布者核对，谢谢配合。</p>
       <p class="upload-tip">建议选择 2MB 以内的 JPG / PNG 照片，系统会自动压缩，不用手动处理。</p>
       <label class="upload-pick">
@@ -147,6 +147,7 @@ function reviewText(r) {
     </template>
     <button v-if="(notice.isPublisher || notice.item?.isMine) && notice.claimStatus === 'rejected'" type="button" class="btn ghost" @click="requestRestore">拉回申请</button>
     <button v-if="(notice.isPublisher || notice.item?.isMine) && notice.claimStatus === 'accepted'" type="button" class="btn" @click="requestFinishTalk">结束本次认领</button>
+    <button v-if="(notice.isPublisher || notice.item?.isMine) && notice.claimStatus === 'accepted'" type="button" class="btn ghost" @click="$emit('request-image')">邀请对方补充图片</button>
     <button v-if="notice.isClaimant && notice.claimStatus === 'pending'" type="button" class="btn ghost" @click="requestEndTalk">撤回申请</button>
     <button v-if="notice.isClaimant && notice.claimStatus === 'accepted'" type="button" class="btn" @click="requestFinishTalk">结束本次认领</button>
     <button v-if="notice.claimBlockedByMe" type="button" class="btn ghost" @click="$emit('unblock')">解除屏蔽</button>
@@ -157,6 +158,7 @@ function reviewText(r) {
     <div class="confirm-card">
       <h3>确认与 TA 沟通？</h3>
       <p>确认后你将无法与其他人继续沟通，系统也会告知其他申请人。</p>
+      <p>确认后你和对方的手机号会互相公开，对方也会看到你的手机号。</p>
       <p>如果线下见面发现物品不是你的，请结束本次认领后重新发布；进入沟通后不能单方面取消回到发布中。</p>
       <div class="confirm-actions">
         <button type="button" class="btn" @click="confirmTalk">确认并交换联系方式</button>

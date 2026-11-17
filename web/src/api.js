@@ -288,6 +288,9 @@ export const api = {
   reopenReport(id) {
     return call('/reports/' + encodeURIComponent(id) + '/reopen', { method: 'POST', body: '{}', skipCacheClear: true })
   },
+  claimRequestImage(id) {
+    return call('/claims/' + encodeURIComponent(id) + '/request-image', { method: 'PATCH', body: '{}', skipCacheClear: true })
+  },
   claimFinish(id) {
     return call('/claims/' + encodeURIComponent(id) + '/finish', { method: 'PATCH', body: '{}', skipCacheClear: true })
   },

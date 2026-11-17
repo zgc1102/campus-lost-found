@@ -113,6 +113,7 @@ watch(() => props.claimId, () => { messages.value = []; outbox.value = []; load(
       <button type="button" :disabled="!text.trim()" @click="send">发送</button>
     </div>
     <button type="button" class="hc-refresh" :disabled="loading" @click="load">{{ loading ? '刷新中…' : '刷新消息' }}</button>
+    <div class="hc-auto-hint">发送后会自动获取一次对方最新消息；也可以点“刷新消息”手动获取。</div>
   </div>
 </template>
 
@@ -138,4 +139,7 @@ watch(() => props.claimId, () => { messages.value = []; outbox.value = []; load(
 .hc-time { display:block; margin-top:3px; font-style:normal; font-size:7.5px; opacity:.65; text-align:right; }
 .hc-row.mine .hc-time { color:#F0E6FF; }
 .hc-retry { margin-left:5px; align-self:center; border:1px solid #E7B9AE; background:#fff; color:#A23B2A; border-radius:7px; padding:3px 7px; font-family:inherit; font-size:8px; }
+</style>
+<style scoped>
+.hc-auto-hint { margin-top:5px; font-size:8px; line-height:1.5; color:#8E7FA3; }
 </style>

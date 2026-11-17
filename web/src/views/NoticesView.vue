@@ -464,7 +464,7 @@ let chatRefreshTimer = null
 function scheduleChatRefresh() {
   if (chatRefreshTimer) clearTimeout(chatRefreshTimer)
   chatRefreshTimer = setTimeout(() => {
-    if (!chatLoading.value) refreshChat()
+    if (!chatLoading.value && chatTargetId.value) loadChat(chatTargetId.value, chatKind.value)
   }, 400)
 }
 async function refreshChat() {
@@ -535,6 +535,18 @@ async function unblockReport() {
     await refreshSelected()
   } catch (e) {
     actionMsg.value = e.message || '解除屏蔽失败'
+  }
+}
+async function requestClaimImage() {
+  const rid = selected.value?.claimId
+  if (!rid) return
+  try {
+    await api.claimRequestImage(rid)
+    selected.value.claimNeedImage = true
+    actionMsg.value = '已邀请对方补充图片'
+    await refreshSelected()
+  } catch (e) {
+    actionMsg.value = e.message || '邀请失败'
   }
 }
 async function finishClaim() {
@@ -680,7 +692,7 @@ async function supplementClaimImage(image) {
     await api.claimSupplementImage(rid, image)
     if (selected.value?.claimId === rid) {
       selected.value.claimImage = image
-      selected.value.claimStatus = 'pending'
+      if (selected.value.claimStatus !== 'accepted') selected.value.claimStatus = 'pending'
       selected.value.claimNeedImage = false
       selected.value.hasClaimImage = true
     }
@@ -969,7 +981,7 @@ function fmt(ts) {
         </template>
       </NoticePickup>
 
-      <NoticeClaim v-else-if="branch === 'claim'" :notice="selected" :image-busy="claimImageBusy" :image-error="claimImageError" @claim-action="claimAction" @reveal="askRevealPhone('claim')" @block="blockClaim" @compare="compareOpen = true" @ignore="ignoreNotice" @supplement="supplementClaim" @supplement-image="supplementClaimImage" @pickup-code="generatePickupCode" @restore="restoreClaim" @unblock="unblockClaim" @end-talk="endClaimTalk" @finish-talk="finishClaim">
+      <NoticeClaim v-else-if="branch === 'claim'" :notice="selected" :image-busy="claimImageBusy" :image-error="claimImageError" @claim-action="claimAction" @reveal="askRevealPhone('claim')" @block="blockClaim" @compare="compareOpen = true" @ignore="ignoreNotice" @supplement="supplementClaim" @supplement-image="supplementClaimImage" @pickup-code="generatePickupCode" @restore="restoreClaim" @unblock="unblockClaim" @end-talk="endClaimTalk" @finish-talk="finishClaim" @request-image="requestClaimImage">
         <template #chat>
           <NoticeChat :messages="chat" :outbox="outbox" :side="chatSide" :loading="chatLoading" :error="chatError" :blocked="chatBlocked" :blocked-by="blockedBy" :closed="chatClosed" placeholder="回复对方，不需要暴露手机号" @send="sendChat" @retry="retryOutbox" @refresh="refreshChat" />
         </template>

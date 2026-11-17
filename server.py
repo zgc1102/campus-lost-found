@@ -4142,7 +4142,8 @@ class Handler(BaseHTTPRequestHandler):
                 claim["supplementImage"] = image
                 claim["imageModeration"] = {k: v for k, v in _mod.items() if k in ("ok", "safe", "category", "confidence", "reason")}
                 claim["needImage"] = False
-                claim["status"] = "pending"
+                if claim.get("status") != "accepted":
+                    claim["status"] = "pending"
                 claim["updatedAt"] = now_ms()
                 save_claims(claims)
                 if item:
@@ -5507,6 +5508,31 @@ class Handler(BaseHTTPRequestHandler):
                            item.get("id"), claim.get("id"))
                 save_notices(notices)
             return self._json({"ok": True, "status": target})
+
+        if path.startswith("/api/claims/") and path.endswith("/request-image"):
+            owner = self._owner()
+            claim_id = path[len("/api/claims/"):-len("/request-image")]
+            with LOCK:
+                claims = load_claims()
+                claim = next((c for c in claims if c.get("id") == claim_id), None)
+                if not claim:
+                    return self._json({"error": "认领记录不存在"}, 404)
+                item = next((x for x in load_items() if x.get("id") == claim.get("itemId")), None)
+                if not item:
+                    return self._json({"error": "物品不存在"}, 404)
+                if item.get("ownerToken") != owner:
+                    return self._json({"error": "只有发布者能邀请补充图片"}, 403)
+                if claim.get("status") != "accepted":
+                    return self._json({"error": "认领通过后才能邀请补充图片"}, 409)
+                claim["needImage"] = True
+                claim["updatedAt"] = now_ms()
+                save_claims(claims)
+                notices = load_notices()
+                add_notice(notices, claim.get("from"), "claim_image_request",
+                           "发布者邀请你补充一张《%s》的照片" % (item.get("title") or ""),
+                           item.get("id"), claim.get("id"))
+                save_notices(notices)
+            return self._json({"ok": True, "needImage": True})
 
         if path.startswith("/api/claims/") and path.endswith("/finish"):
             owner = self._owner()

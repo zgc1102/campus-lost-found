@@ -77,7 +77,7 @@ function send() {
       </div>
       <div class="nd-chat-foot" v-if="!closed">
         <button type="button" class="nd-chat-refresh" :disabled="loading" @click="$emit('refresh')">{{ loading ? '刷新中…' : '刷新消息' }}</button>
-        <span class="nd-chat-help">对方新消息不会自动弹出，点“刷新消息”获取最新回复；发送失败的消息可点“重试”。</span>
+        <span class="nd-chat-help">发送后会自动获取一次对方最新消息；也可以点“刷新消息”手动获取。</span>
       </div>
       <div v-if="closed" class="nd-chat-closed">这次沟通已经结束，不能再发送新消息。</div>
     </template>
