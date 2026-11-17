@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { api } from '../api'
 const props = defineProps({
@@ -114,7 +114,7 @@ watch(() => props.claimId, () => { messages.value = []; outbox.value = []; load(
       <button type="button" :disabled="!text.trim()" @click="send">发送</button>
     </div>
     <button type="button" class="hc-refresh" :disabled="loading" @click="load">{{ loading ? '刷新中…' : '刷新消息' }}</button>
-    <div class="hc-auto-hint">发送后会自动获取一次对方最新消息；也可以点“刷新消息”手动获取。</div>
+    <div class="hc-auto-hint">发送后会自动拉取对方的新消息（可能多条）；也可以点“刷新消息”手动获取。</div>
   </div>
 </template>
 

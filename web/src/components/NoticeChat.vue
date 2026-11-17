@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { ref } from 'vue'
 
 const props = defineProps({
@@ -77,7 +77,7 @@ function send() {
       </div>
       <div class="nd-chat-foot" v-if="!closed">
         <button type="button" class="nd-chat-refresh" :disabled="loading" @click="$emit('refresh')">{{ loading ? '刷新中…' : '刷新消息' }}</button>
-        <span class="nd-chat-help">发送后会自动获取一次对方最新消息；也可以点“刷新消息”手动获取。</span>
+        <span class="nd-chat-help">发送后会自动拉取对方的新消息（可能多条）；也可以点“刷新消息”手动获取。</span>
       </div>
       <div v-if="closed" class="nd-chat-closed">这次沟通已经结束，不能再发送新消息。</div>
     </template>
