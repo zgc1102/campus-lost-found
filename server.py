@@ -29,6 +29,7 @@ from urllib.parse import unquote, urlparse, parse_qs
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 import moderation
 import chat_guard
+import risk_profile
 
 
 def load_dotenv(path=None):
@@ -2832,6 +2833,7 @@ class Handler(BaseHTTPRequestHandler):
                 return
             return self._json({"ok": True, "reports": moderation.admin_list(),
                                "chatAlerts": chat_guard.admin_list(),
+                               "riskProfiles": risk_profile.admin_list(),
                                "summary": moderation.summary()})
 
         if path == "/api/notices":
@@ -4431,7 +4433,9 @@ class Handler(BaseHTTPRequestHandler):
                         save_notices(notices)
                     try:
                         chat_guard.observe("claim", claim.get("id"), item.get("id"), side,
-                                           item.get("ownerToken"), text, claim.get("messages"))
+                                           item.get("ownerToken") if side == "claimer" else claim.get("from"),
+                                           text, claim.get("messages"),
+                                           claim.get("from") if side == "claimer" else item.get("ownerToken"))
                     except Exception:
                         pass
                 return self._json({"ok": True, "message": msg, "duplicate": False})
@@ -4544,7 +4548,8 @@ class Handler(BaseHTTPRequestHandler):
                 try:
                     chat_guard.observe("report", report_id, report.get("itemId"), side,
                                        report.get("owner") if side == "finder" else report.get("finder"),
-                                       text, report.get("messages"))
+                                       text, report.get("messages"),
+                                       report.get("finder") if side == "owner" else report.get("owner"))
                 except Exception:
                     pass
             return self._json({"ok": True, "message": msg, "duplicate": False})
@@ -5325,7 +5330,9 @@ class Handler(BaseHTTPRequestHandler):
                     save_notices(notices)
                 try:
                     chat_guard.observe("help", claim.get("id"), item.get("id"), side,
-                                       item.get("ownerToken"), text, messages)
+                                       item.get("ownerToken") if side == "claimer" else claim.get("from"),
+                                       text, messages,
+                                       claim.get("from") if side == "claimer" else item.get("ownerToken"))
                 except Exception:
                     pass
                 return self._json({"ok": True, "message": msg, "duplicate": False})
@@ -6296,6 +6303,7 @@ def main():
         return
 
     start_review_workers(2)
+    risk_profile.init(BASE_DIR)
     moderation.init(BASE_DIR)
     moderation.start_worker()
     chat_guard.init(BASE_DIR)

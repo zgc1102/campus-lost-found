@@ -16,6 +16,7 @@ import time
 import uuid
 import urllib.error
 import urllib.request
+import risk_profile
 
 _LOCK = threading.Lock()
 _QUEUE = queue.Queue()
@@ -205,9 +206,14 @@ def _process(alert_id):
         alert["status"] = "reviewed"
         alert["reviewedAt"] = _now()
         if result.get("verdict") == "violation" and int(result.get("risk") or 0) >= 70:
-            alert["warningFor"] = alert.get("targetOwner") or ""
+            alert["warningFor"] = alert.get("senderOwner") or alert.get("targetOwner") or ""
             alert["warning"] = "AI 检测到本次聊天内容存在违规风险，相关记录已保存。请立即停止不当言行。"
             alert["warningAt"] = _now()
+            try:
+                risk_profile.note_violation(alert.get("senderOwner"), "chat_guard",
+                                            result.get("reason"), result.get("risk"), alert.get("id"))
+            except Exception:
+                pass
         _save(rows)
 
 
@@ -230,10 +236,11 @@ def start_worker():
     threading.Thread(target=_worker, daemon=True).start()
 
 
-def observe(kind, target_id, item_id, from_side, target_owner, text, messages):
-    """每条聊天消息调用；本地命中才进入 AI 队列。"""
+def observe(kind, target_id, item_id, from_side, target_owner, text, messages, sender_owner=""):
+    """每条聊天消息调用；本地命中或高风险用户才进入 AI 队列。"""
     hits = local_hits(text)
-    if not hits:
+    forced = risk_profile.needs_full_scan(sender_owner)
+    if not hits and not forced:
         return None
     alert_id = "cg_" + uuid.uuid4().hex[:12]
     row = {
@@ -242,10 +249,12 @@ def observe(kind, target_id, item_id, from_side, target_owner, text, messages):
         "targetId": target_id,
         "itemId": item_id or "",
         "fromSide": from_side,
+        "senderOwner": sender_owner or "",
         "targetOwner": target_owner or "",
         "text": _clip(text, 500),
         "messages": (messages or [])[-12:],
         "localHits": hits,
+        "forced": forced,
         "status": "reviewing",
         "createdAt": _now(),
     }

@@ -17,6 +17,7 @@ import time
 import uuid
 import urllib.error
 import urllib.request
+import risk_profile
 
 _LOCK = threading.Lock()
 _QUEUE = queue.Queue()
@@ -207,6 +208,11 @@ def _process(report_id):
             report["warningFor"] = report.get("targetOwner") or ""
             report["warning"] = "AI 检测到本次聊天内容存在违规风险，相关记录已保存。请立即停止不当言行。"
             report["warningAt"] = _now()
+            try:
+                risk_profile.note_violation(report.get("targetOwner"), "report",
+                                            result.get("reason"), result.get("risk"), report.get("id"))
+            except Exception:
+                pass
         _save(REPORT_FILE, rows)
     _audit(report_id, "ai_review", result.get("reason") or "")
 

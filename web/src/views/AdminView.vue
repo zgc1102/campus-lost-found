@@ -22,6 +22,7 @@ const config = ref(null)
 const deployLog = ref([])
 const reports = ref([])
 const chatAlerts = ref([])
+const riskProfiles = ref([])
 const deploying = ref(false)
 const deployCountdown = ref(0)
 const deployMsg = ref('')
@@ -90,6 +91,7 @@ async function loadAll(silent = false) {
     deployLog.value = Array.isArray(dep) ? dep : (dep.log ? String(dep.log).split('\n').filter(Boolean).map((x) => ({ text: x })) : (dep.items || dep.logs || []))
     reports.value = Array.isArray(reps?.reports) ? reps.reports : []
     chatAlerts.value = Array.isArray(reps?.chatAlerts) ? reps.chatAlerts : []
+    riskProfiles.value = Array.isArray(reps?.riskProfiles) ? reps.riskProfiles : []
   } catch (e) {
     error.value = e.message || '读取失败'
     if (e.status === 401 || /unauthorized|登录/i.test(String(e.message))) logout()
@@ -473,6 +475,15 @@ function statusClass(s) {
       <div class="report-meta">{{ new Date(a.createdAt).toLocaleString('zh-CN') }} · 命中：{{ (a.localHits || []).join('、') }}</div>
       <div class="report-detail">消息：{{ a.text }}</div>
       <div v-if="a.ai" class="report-ai">AI：{{ a.ai.verdict }} / 风险 {{ a.ai.risk }} · {{ a.ai.reason }}</div>
+    </div>
+  </div>
+
+  <div v-if="tab === 'reports'" class="panel" style="margin-top:14px">
+    <h3>高风险用户</h3>
+    <div v-if="!riskProfiles.length" class="reports-empty">还没有风险记录</div>
+    <div v-for="u in riskProfiles" :key="u.owner" class="report-row">
+      <div class="report-head"><b>{{ u.owner }}</b><span class="report-status">{{ u.level }}</span></div>
+      <div class="report-meta">近 30 天违规 {{ u.count }} 次 · 高危 {{ u.highCount }} 次</div>
     </div>
   </div>
 
