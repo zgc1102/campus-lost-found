@@ -7,7 +7,7 @@ const props = defineProps({
   supplementMsg: { type: String, default: '' },
   phoneMsg: { type: String, default: '' }
 })
-const emit = defineEmits(['supplement', 'save-phone', 'help-action', 'complete', 'block', 'compare', 'ignore', 'withdraw', 'remove', 'restore', 'unblock'])
+const emit = defineEmits(['supplement', 'save-phone', 'help-action', 'complete', 'block', 'compare', 'ignore', 'withdraw', 'remove', 'restore', 'unblock', 'privacy'])
 const supp = ref('')
 const phone = ref('')
 function requestReject() {
@@ -55,6 +55,24 @@ function submitPhone() {
     <div v-if="notice.claimStatus" class="nd-state" style="margin-top:8px">{{ statusText(notice.claimStatus) }}</div>
     <div v-if="notice.helpNeedCount" class="nd-kv"><span>需要人数</span><b>{{ notice.helpNeedCount }} 人 · 已接受 {{ notice.helpAcceptedCount || 0 }} 人</b></div>
     <div v-if="notice.item?.askPrompt" class="nd-ask-prompt"><b>发布者希望你说明</b><span>{{ notice.item.askPrompt }}</span></div>
+    <div v-if="notice.helpIsDonation && notice.helpPhonesHidden" class="nd-ask-prompt">
+      <b>双方已同意不公开手机号</b><span>这次爱心捐赠通过匿名沟通完成，结束后也不会公开手机号。</span>
+    </div>
+    <div v-else-if="notice.helpIsDonation && notice.helpHideRequestByOther" class="nd-ask-prompt">
+      <b>对方希望不公开双方手机号</b><span>只有双方都同意才会生效。</span>
+      <div class="nd-privacy-actions">
+        <button type="button" @click="$emit('privacy', 'agree')">同意不公开</button>
+        <button type="button" class="ghost" @click="$emit('privacy', 'later')">暂不</button>
+      </div>
+    </div>
+    <div v-else-if="notice.helpIsDonation && notice.helpHideRequestByMe" class="nd-ask-prompt">
+      <b>已申请不公开手机号</b><span>等待对方同意后生效。</span>
+      <div class="nd-privacy-actions"><button type="button" class="ghost" @click="$emit('privacy', 'cancel')">取消申请</button></div>
+    </div>
+    <div v-else-if="notice.helpIsDonation && ['pending','accepted'].includes(notice.claimStatus)" class="nd-ask-prompt">
+      <b>不想公开手机号？</b><span>需要双方都同意，单方不能决定。申请后对方会收到通知。</span>
+      <div class="nd-privacy-actions"><button type="button" class="ghost" @click="$emit('privacy', 'request')">申请不公开手机号</button></div>
+    </div>
     <div v-if="notice.claimBlocked" class="nd-blocked">
       <b>{{ notice.claimBlockedByMe ? '你已屏蔽对方' : '对方已屏蔽你' }}</b><span>双方不能再互发消息，也不能再查看对方手机号。</span>
     </div>
@@ -65,19 +83,22 @@ function submitPhone() {
       <div v-if="supplementMsg" class="nd-phone-msg">{{ supplementMsg }}</div>
     </div>
     <div v-else-if="notice.claimStatus === 'need_more'" class="nd-exchange-tip">已请帮忙人补充说明，等对方提交后会自动回到待处理。</div>
-    <div class="nd-kv" style="margin-top:8px"><span>发布者手机号</span><b>{{ notice.ownerContact || (notice.item?.contact?.phone ? '已留手机号（通过后显示完整）' : '还没留手机号') }}</b></div>
-    <div class="nd-kv"><span>帮忙人手机号</span><b>{{ notice.item?.isMine ? (notice.claimContact || '还没留手机号') : (notice.claimContact ? '已留手机号' : '还没留手机号') }}</b></div>
-    <div v-if="notice.item?.isMine && !notice.ownerContact && !notice.item?.contact?.phone" class="nd-phone-fill">
+    <div class="nd-kv" style="margin-top:8px"><span>发布者手机号</span><b>{{ notice.helpPhonesHidden ? '双方同意不公开' : (notice.ownerContact || (notice.item?.contact?.phone ? '已留手机号（通过后显示完整）' : '还没留手机号')) }}</b></div>
+    <div class="nd-kv"><span>帮忙人手机号</span><b>{{ notice.helpPhonesHidden ? '双方同意不公开' : (notice.item?.isMine ? (notice.claimContact || '还没留手机号') : (notice.claimContact ? '已留手机号' : '还没留手机号')) }}</b></div>
+    <div v-if="notice.item?.isMine && !notice.ownerContact && !notice.item?.contact?.phone && !notice.helpPhonesHidden" class="nd-phone-fill">
       <p>你是发布者。留手机号后，接受帮忙时双方才能互相联系。</p>
       <div class="nd-phone-row"><input v-model="phone" maxlength="20" placeholder="补充你的手机号"><button type="button" :disabled="phoneSaving" @click="submitPhone">{{ phoneSaving ? '保存中…' : '补充手机号' }}</button></div>
     </div>
-    <div v-if="notice.isClaimant && !notice.claimContact" class="nd-phone-fill">
+    <div v-if="notice.isClaimant && !notice.claimContact && !notice.helpPhonesHidden" class="nd-phone-fill">
       <p>你还没有预留手机号，发布者无法接受帮忙，也无法公布双方手机号。</p>
       <div class="nd-phone-row"><input v-model="phone" maxlength="20" placeholder="补充你的手机号"><button type="button" :disabled="phoneSaving" @click="submitPhone">{{ phoneSaving ? '保存中…' : '补充手机号' }}</button></div>
     </div>
-    <div v-if="(notice.claimStatus === 'accepted' || notice.claimStatus === 'completed') && notice.claimContact && (notice.ownerContact || notice.item?.contact?.phone)" class="nd-exchange-ok">双方已公布手机号，可以直接联系。</div>
+    <div v-if="notice.helpPhonesHidden" class="nd-exchange-tip">双方已同意不公开手机号，可通过匿名沟通完成捐赠。</div>
+    <div v-else-if="(notice.claimStatus === 'accepted' || notice.claimStatus === 'completed') && notice.claimContact && (notice.ownerContact || notice.item?.contact?.phone)" class="nd-exchange-ok">双方已公布手机号，可以直接联系。</div>
     <div v-else-if="notice.claimStatus === 'accepted' || notice.claimStatus === 'completed'" class="nd-exchange-tip" style="color:#A23B2A">帮忙人还没有预留手机号，双方手机号尚未交换。</div>
     <div v-if="phoneMsg" class="nd-phone-msg">{{ phoneMsg }}</div>
+    <div v-if="!notice.helpIsDonation" class="nd-ask-prompt"><b>沟通提示</b><span>如果需要进一步约定，建议在合适时通过电话或微信联系；本分类暂不开放匿名沟通。</span></div>
+    <slot name="chat" />
   </div>
   <div class="nd-actions">
     <template v-if="(notice.isPublisher || notice.item?.isMine) && notice.claimId && ['pending','need_more'].includes(notice.claimStatus)">
@@ -105,4 +126,9 @@ function submitPhone() {
 .nd-ask-prompt { margin-top:8px; padding:8px 9px; border-radius:8px; background:#F8F4FD; border:1px solid #EADFF5; display:flex; flex-direction:column; gap:3px; }
 .nd-ask-prompt b { font-size:9px; color:#5B2A91; }
 .nd-ask-prompt span { font-size:9px; line-height:1.6; color:#4E445D; }
+</style>
+<style scoped>
+.nd-privacy-actions { display:flex; gap:6px; margin-top:6px; }
+.nd-privacy-actions button { border:0; background:#5B2A91; color:#fff; border-radius:7px; padding:6px 9px; font-family:inherit; font-size:9px; }
+.nd-privacy-actions button.ghost { background:#F1E8FB; color:#5B2A91; }
 </style>

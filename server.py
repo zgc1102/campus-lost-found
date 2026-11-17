@@ -2864,6 +2864,8 @@ class Handler(BaseHTTPRequestHandler):
                     if cl.get("imageModeration"):
                         row["claimImageReview"] = cl.get("imageModeration")
                     _revealed = bool(cl.get("phoneRevealed")) or cl.get("status") in ("accepted", "completed")
+                    if cl.get("phonesHidden"):
+                        _revealed = False
                     if cl.get("status") in ("accepted", "completed"):
                         if not ((cl.get("contact") or "").strip() and ((it.get("contact") or {}).get("phone") or "").strip() if it else False):
                             _revealed = False
@@ -2883,13 +2885,23 @@ class Handler(BaseHTTPRequestHandler):
                         row["helpAcceptedCount"] = sum(
                             1 for c in claim_map.values()
                             if c.get("itemId") == it.get("id") and c.get("status") in ("accepted", "completed"))
+                        row["helpIsDonation"] = it.get("helpCat") == "help_donate" or it.get("cat") == "help_donate"
+                        row["helpPhonesHidden"] = bool(cl.get("phonesHidden"))
+                        row["helpHideRequestByMe"] = cl.get("hidePhoneRequestBy") == (
+                            "owner" if it.get("ownerToken") == owner else "claimer")
+                        row["helpHideRequestByOther"] = bool(cl.get("hidePhoneRequestBy")) and not row["helpHideRequestByMe"]
                     _finder = (it.get("ownerToken") if it and it.get("type") == "found" else cl.get("from")) if it else ""
                     row["canGeneratePickupCode"] = bool(cl.get("status") == "accepted" and _finder == owner and not cl.get("pickupCode"))
                     row["claimContact"] = (cl.get("contact") if (_revealed or cl.get("from") == owner)
                                            else mask_contact(cl.get("contact")))
+                    if cl.get("phonesHidden"):
+                        row["claimContact"] = ""
                     if _revealed and it:
                         row["ownerContact"] = (it.get("contact") or {}).get("phone") or ""
-                    row["canRevealPhone"] = bool(it and _can_reveal_phone(it, cl, owner, item_map.values()))
+                    if cl.get("phonesHidden"):
+                        row["ownerContact"] = ""
+                    row["canRevealPhone"] = bool(it and not cl.get("phonesHidden")
+                                                 and _can_reveal_phone(it, cl, owner, item_map.values()))
                     row["claimAi"] = cl.get("aiCheck") or None
                 if n.get("type") == "match":
                     src = item_map.get(n.get("matchSourceId"))
@@ -4271,6 +4283,8 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json({"error": "认领记录不存在"}, 404)
                 if help_mode:
                     return self._json({"error": "帮忙申请请使用专用接口"}, 400)
+                if claim.get("phonesHidden"):
+                    return self._json({"error": "双方已同意不公开手机号"}, 409)
                 items = load_items()
                 item = next((x for x in items if x.get("id") == claim.get("itemId")), None)
                 if not item:
@@ -5092,6 +5106,120 @@ class Handler(BaseHTTPRequestHandler):
     def do_PATCH(self):
         path = unquote(urlparse(self.path).path)
         patch = self._read_body()
+
+        if path.startswith("/api/help-claims/") and (path.endswith("/messages/list") or path.endswith("/messages/send")):
+            owner = self._owner()
+            is_send = path.endswith("/messages/send")
+            claim_id = path[len("/api/help-claims/"):].replace("/messages/send", "").replace("/messages/list", "")
+            with LOCK:
+                tasks = load_help_tasks()
+                claim = next((c for c in tasks if c.get("id") == claim_id), None)
+                if not claim:
+                    return self._json({"error": "帮忙申请不存在"}, 404)
+                item = next((x for x in load_items() if x.get("id") == claim.get("itemId")), None)
+                if not item:
+                    return self._json({"error": "求助不存在"}, 404)
+                if item.get("helpCat") != "help_donate" and item.get("cat") != "help_donate":
+                    return self._json({"error": "只有爱心捐赠支持匿名沟通"}, 403)
+                side = "owner" if item.get("ownerToken") == owner else "claimer" if claim.get("from") == owner else ""
+                if not side:
+                    return self._json({"error": "无权查看这条沟通"}, 403)
+                if claim.get("status") not in ("accepted", "completed"):
+                    return self._json({"error": "接受帮忙后才能匿名沟通"}, 409)
+                if is_send and claim.get("status") == "completed":
+                    return self._json({"error": "这次沟通已经结束"}, 403)
+                if claim.get("blocked"):
+                    if not is_send:
+                        _blocker = claim.get("blockedBy")
+                        _side = "owner" if _blocker == item.get("ownerToken") else "claimer"
+                        return self._json({"ok": True, "messages": [], "side": side, "blocked": True, "blockedBy": _side})
+                    return self._json({"error": "对方已屏蔽你，消息发送失败", "blocked": True}, 403)
+                if not is_send:
+                    return self._json({"ok": True, "messages": claim.get("messages") or [], "side": side})
+                body = patch
+                text = str(body.get("text") or "").strip()[:200]
+                client_msg_id = str(body.get("clientMsgId") or "").strip()[:80]
+                if not text:
+                    return self._json({"error": "请输入消息"}, 400)
+                _ok, _why = moderate_text(text, "爱心捐赠沟通", allow_help=True)
+                if not _ok:
+                    return self._json({"error": "消息未通过审核：" + _why}, 400)
+                messages = claim.get("messages") or []
+                if client_msg_id and any(m.get("clientMsgId") == client_msg_id for m in messages):
+                    old = next(m for m in messages if m.get("clientMsgId") == client_msg_id)
+                    return self._json({"ok": True, "message": old, "duplicate": True})
+                msg = {"id": "hm_" + uuid.uuid4().hex[:10], "from": side,
+                       "text": text, "at": now_ms(), "clientMsgId": client_msg_id}
+                messages.append(msg)
+                claim["messages"] = messages[-50:]
+                claim["updatedAt"] = now_ms()
+                save_help_tasks(tasks)
+                other = item.get("ownerToken") if side == "claimer" else claim.get("from")
+                if other:
+                    notices = load_notices()
+                    add_notice(notices, other, "help_message",
+                               "爱心捐赠匿名沟通有新消息：" + text[:40],
+                               item.get("id"), claim.get("id"))
+                    save_notices(notices)
+                return self._json({"ok": True, "message": msg, "duplicate": False})
+
+        if path.startswith("/api/help-claims/") and path.endswith("/privacy"):
+            owner = self._owner()
+            claim_id = path[len("/api/help-claims/"):-len("/privacy")]
+            body = patch
+            action = str(body.get("action") or "").strip()
+            with LOCK:
+                tasks = load_help_tasks()
+                claim = next((c for c in tasks if c.get("id") == claim_id), None)
+                if not claim:
+                    return self._json({"error": "帮忙申请不存在"}, 404)
+                item = next((x for x in load_items() if x.get("id") == claim.get("itemId")), None)
+                if not item:
+                    return self._json({"error": "求助不存在"}, 404)
+                if item.get("helpCat") != "help_donate" and item.get("cat") != "help_donate":
+                    return self._json({"error": "只有爱心捐赠支持这个设置"}, 403)
+                side = "owner" if item.get("ownerToken") == owner else "claimer" if claim.get("from") == owner else ""
+                if not side:
+                    return self._json({"error": "无权修改这条申请"}, 403)
+                if claim.get("status") not in ("pending", "accepted"):
+                    return self._json({"error": "当前状态不能设置"}, 409)
+                if action == "request":
+                    if claim.get("phonesHidden"):
+                        return self._json({"ok": True, "already": True})
+                    claim["hidePhoneRequestBy"] = side
+                    claim["hidePhoneRequestAt"] = now_ms()
+                elif action == "agree":
+                    if claim.get("phonesHidden"):
+                        return self._json({"ok": True, "already": True})
+                    if claim.get("hidePhoneRequestBy") != ("claimer" if side == "owner" else "owner"):
+                        return self._json({"error": "需要对方先发起不公开手机号申请"}, 409)
+                    claim["phonesHidden"] = True
+                    claim["phonesHiddenAt"] = now_ms()
+                elif action == "cancel":
+                    if claim.get("phonesHidden"):
+                        return self._json({"error": "双方已经同意，不能单方取消"}, 409)
+                    if claim.get("hidePhoneRequestBy") != side:
+                        return self._json({"error": "没有待取消的申请"}, 409)
+                    claim["hidePhoneRequestBy"] = ""
+                else:
+                    return self._json({"error": "bad action"}, 400)
+                claim["updatedAt"] = now_ms()
+                save_help_tasks(tasks)
+                other = item.get("ownerToken") if side == "claimer" else claim.get("from")
+                if other:
+                    notices = load_notices()
+                    if action == "request":
+                        text = "对方申请不公开双方手机号，是否同意？"
+                        ntype = "help_privacy_request"
+                    elif action == "agree":
+                        text = "双方已同意不公开手机号，可以匿名沟通"
+                        ntype = "help_privacy_agreed"
+                    else:
+                        text = "对方取消了不公开手机号申请"
+                        ntype = "help_privacy_cancel"
+                    add_notice(notices, other, ntype, text, item.get("id"), claim.get("id"))
+                    save_notices(notices)
+            return self._json({"ok": True})
 
         if path.startswith("/api/help-claims/") and path.endswith("/action"):
             owner = self._owner()

@@ -231,6 +231,15 @@ export const api = {
   reportSend(id, text, clientMsgId) {
     return call('/reports/' + encodeURIComponent(id) + '/messages/send', { method: 'POST', body: JSON.stringify({ text, clientMsgId }), skipCacheClear: true })
   },
+  helpClaimMessages(id) {
+    return call('/help-claims/' + encodeURIComponent(id) + '/messages/list', { method: 'PATCH', body: '{}', skipCacheClear: true })
+  },
+  helpClaimSend(id, text, clientMsgId) {
+    return call('/help-claims/' + encodeURIComponent(id) + '/messages/send', { method: 'PATCH', body: JSON.stringify({ text, clientMsgId }), skipCacheClear: true })
+  },
+  helpClaimPrivacy(id, action) {
+    return call('/help-claims/' + encodeURIComponent(id) + '/privacy', { method: 'PATCH', body: JSON.stringify({ action }), skipCacheClear: true })
+  },
   helpClaimAction(id, body) {
     return call('/help-claims/' + encodeURIComponent(id) + '/action', { method: 'PATCH', body: JSON.stringify(body || {}), skipCacheClear: true })
   },

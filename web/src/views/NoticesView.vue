@@ -6,6 +6,7 @@ import NoticeChat from '../components/NoticeChat.vue'
 import NoticePickup from '../components/NoticePickup.vue'
 import NoticeClaim from '../components/NoticeClaim.vue'
 import NoticeHelp from '../components/NoticeHelp.vue'
+import NoticeHelpChat from '../components/NoticeHelpChat.vue'
 import NoticeSystem from '../components/NoticeSystem.vue'
 
 const emit = defineEmits(['nav'])
@@ -203,6 +204,10 @@ function typeLabel(t, itemType = '') {
       help_done: '🎉 爱心帮助已完成',
       help_restored: '↩️ 帮忙申请已拉回',
       help_unblocked: '🔓 屏蔽已解除',
+      help_message: '💬 爱心捐赠匿名消息',
+      help_privacy_request: '🔒 不公开手机号申请',
+      help_privacy_agreed: '🔒 双方同意不公开手机号',
+      help_privacy_cancel: '🔓 不公开手机号申请已取消',
       claim_unblocked: '🔓 屏蔽已解除',
       pickup_unblocked: '🔓 屏蔽已解除',
       pickup_photo_request: '📷 失主请你补充照片',
@@ -693,6 +698,23 @@ async function blockClaim() {
     await refreshSelected()
   } catch (e) { actionMsg.value = e.message || '屏蔽失败' }
 }
+async function helpPrivacy(action) {
+  const rid = selected.value?.claimId
+  if (!rid) return
+  if (action === 'later') {
+    actionMsg.value = '已暂不处理，对方仍会保留申请'
+    return
+  }
+  try {
+    await api.helpClaimPrivacy(rid, action)
+    actionMsg.value = action === 'request' ? '已申请不公开手机号，等待对方同意'
+      : action === 'agree' ? '已同意不公开手机号'
+      : '已取消不公开手机号申请'
+    await refreshSelected()
+  } catch (e) {
+    actionMsg.value = e.message || '操作失败'
+  }
+}
 async function helpAction(status) {
   if (!selected.value?.claimId) return
   try {
@@ -860,7 +882,11 @@ function fmt(ts) {
         </template>
       </NoticeClaim>
 
-      <NoticeHelp v-else-if="branch === 'help'" :notice="selected" :supplementing="helpSupplementing" :phone-saving="claimPhoneSaving" :supplement-msg="helpSupplementMsg" :phone-msg="claimPhoneMsg" @supplement="supplementHelp" @save-phone="saveClaimPhone" @help-action="helpAction" @complete="completeHelp" @block="blockClaim" @compare="compareOpen = true" @ignore="ignoreNotice" @withdraw="withdrawHelpClaim" @remove="removeHelpClaim" @restore="restoreHelpClaim" @unblock="unblockClaim" />
+      <NoticeHelp v-else-if="branch === 'help'" :notice="selected" :supplementing="helpSupplementing" :phone-saving="claimPhoneSaving" :supplement-msg="helpSupplementMsg" :phone-msg="claimPhoneMsg" @supplement="supplementHelp" @save-phone="saveClaimPhone" @help-action="helpAction" @complete="completeHelp" @block="blockClaim" @compare="compareOpen = true" @ignore="ignoreNotice" @withdraw="withdrawHelpClaim" @remove="removeHelpClaim" @restore="restoreHelpClaim" @unblock="unblockClaim" @privacy="helpPrivacy">
+        <template #chat>
+          <NoticeHelpChat v-if="selected.helpIsDonation && ['accepted','completed'].includes(selected.claimStatus)" :claim-id="selected.claimId" :closed="selected.claimStatus === 'completed'" />
+        </template>
+      </NoticeHelp>
 
       <NoticeSystem v-else :notice="selected" @compare="compareOpen = true" @ignore="ignoreNotice" />
 
