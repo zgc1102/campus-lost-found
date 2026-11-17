@@ -2885,7 +2885,7 @@ class Handler(BaseHTTPRequestHandler):
                             if c.get("itemId") == it.get("id") and c.get("status") in ("accepted", "completed"))
                     _finder = (it.get("ownerToken") if it and it.get("type") == "found" else cl.get("from")) if it else ""
                     row["canGeneratePickupCode"] = bool(cl.get("status") == "accepted" and _finder == owner and not cl.get("pickupCode"))
-                    row["claimContact"] = (cl.get("contact") if _revealed
+                    row["claimContact"] = (cl.get("contact") if (_revealed or cl.get("from") == owner)
                                            else mask_contact(cl.get("contact")))
                     if _revealed and it:
                         row["ownerContact"] = (it.get("contact") or {}).get("phone") or ""
@@ -5674,6 +5674,7 @@ class Handler(BaseHTTPRequestHandler):
             if isinstance(body.get("fields"), dict) else None,
             "summary": str(body.get("summary") or "").strip()[:40],
             "helpCat": str(body.get("helpCat") or "")[:20],
+            "askPrompt": str(body.get("askPrompt") or "").strip()[:200] if body.get("type") == "help" else "",
             "needCount": max(1, min(20, int(body.get("needCount") or 1))) if body.get("type") == "help" else 1,
             "contact": {"phone": str((body.get("contact") or {}).get("phone") or "")[:20]}
             if isinstance(body.get("contact"), dict) else {"phone": ""},

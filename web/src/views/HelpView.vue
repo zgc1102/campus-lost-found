@@ -171,6 +171,9 @@ async function submitHelp() {
       <div v-if="selected.status !== 'approved'" class="sa" style="margin-top:10px;color:var(--sub)">
         这条求助{{ selected.status === 'closed' ? '已经结束' : '已经有人帮忙，正在进行中' }}。
       </div>
+      <div v-if="selected.askPrompt" class="sa" style="margin-top:8px;background:#F8F4FD;border:1px solid #EADFF5;border-radius:9px;padding:8px">
+        <b>发布者希望你说明：</b>{{ selected.askPrompt }}
+      </div>
       <template v-else>
         <textarea v-model="goMsg" maxlength="120" placeholder="说一句你能怎么帮，例如：我明天上午可以带过去" style="width:100%;box-sizing:border-box;margin-top:10px;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:11px;padding:10px;font-family:inherit;font-size:11px;min-height:64px"></textarea>
         <input v-model="goPhone" maxlength="20" placeholder="你的手机号（必填，对方确认后可见）" style="width:100%;box-sizing:border-box;margin-top:7px;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:11px;padding:10px;font-family:inherit;font-size:11px">

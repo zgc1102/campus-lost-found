@@ -54,6 +54,7 @@ function submitPhone() {
     </div>
     <div v-if="notice.claimStatus" class="nd-state" style="margin-top:8px">{{ statusText(notice.claimStatus) }}</div>
     <div v-if="notice.helpNeedCount" class="nd-kv"><span>需要人数</span><b>{{ notice.helpNeedCount }} 人 · 已接受 {{ notice.helpAcceptedCount || 0 }} 人</b></div>
+    <div v-if="notice.item?.askPrompt" class="nd-ask-prompt"><b>发布者希望你说明</b><span>{{ notice.item.askPrompt }}</span></div>
     <div v-if="notice.claimBlocked" class="nd-blocked">
       <b>{{ notice.claimBlockedByMe ? '你已屏蔽对方' : '对方已屏蔽你' }}</b><span>双方不能再互发消息，也不能再查看对方手机号。</span>
     </div>
@@ -99,4 +100,9 @@ function submitPhone() {
 <style scoped>
 .nd-phone-fill textarea { width:100%; box-sizing:border-box; min-height:58px; background:#fff; border:1px solid #E4D6F2; border-radius:8px; padding:8px; font-family:inherit; font-size:9.5px; }
 .nd-phone-fill > button { margin-top:6px; width:100%; border:0; background:#5B2A91; color:#fff; border-radius:8px; padding:8px; font-family:inherit; font-size:9.5px; }
+</style>
+<style scoped>
+.nd-ask-prompt { margin-top:8px; padding:8px 9px; border-radius:8px; background:#F8F4FD; border:1px solid #EADFF5; display:flex; flex-direction:column; gap:3px; }
+.nd-ask-prompt b { font-size:9px; color:#5B2A91; }
+.nd-ask-prompt span { font-size:9px; line-height:1.6; color:#4E445D; }
 </style>
