@@ -13,6 +13,7 @@ const imageMsg = ref('')
 const imagePreview = ref('')
 const uploading = ref(false)
 const viewerUrl = ref('')
+const confirmTalkOpen = ref(false)
 watch(() => props.imageError, (v) => {
   if (v) {
     uploading.value = false
@@ -50,6 +51,10 @@ function requestFinishTalk() {
   if (window.confirm('确定结束本次认领吗？结束后不能恢复，也不会回到发布中。如果物品不是你的，请重新发布一条失物招领。')) {
     emit('finish-talk')
   }
+}
+function confirmTalk() {
+  confirmTalkOpen.value = false
+  emit('claim-action', 'accepted')
 }
 function submitSupp() {
   const text = supp.value.trim()
@@ -135,20 +140,29 @@ function reviewText(r) {
   <slot name="chat" />
   <div class="nd-actions">
     <template v-if="(notice.isPublisher || notice.item?.isMine) && notice.claimId && (!notice.claimStatus || ['pending','need_more'].includes(notice.claimStatus))">
-      <button type="button" class="btn" @click="$emit('claim-action', 'accepted')">确认与 TA 沟通并公布手机号</button>
+      <button type="button" class="btn confirm-talk" @click="confirmTalkOpen = true">确认与 TA 沟通并公布手机号</button>
       <button type="button" class="btn ghost" :disabled="notice.claimStatus === 'need_more'" @click="$emit('claim-action', 'need_more', true)">{{ notice.claimStatus === 'need_more' ? '已请求补充图片' : '请补充图片' }}</button>
       <button type="button" class="btn ghost" @click="requestReject">拒绝</button>
       <button v-if="notice.canBlockClaim" type="button" class="btn ghost" @click="requestBlock">屏蔽对方</button>
     </template>
     <button v-if="(notice.isPublisher || notice.item?.isMine) && notice.claimStatus === 'rejected'" type="button" class="btn ghost" @click="requestRestore">拉回申请</button>
     <button v-if="(notice.isPublisher || notice.item?.isMine) && notice.claimStatus === 'accepted'" type="button" class="btn ghost" @click="requestFinishTalk">结束本次认领</button>
-    <div v-if="notice.claimStatus === 'accepted'" class="nd-exchange-tip">线下见面发现物品不是你的？请结束本次认领后重新发布。进入沟通后不能单方面取消回到发布中。</div>
-    <div v-if="(notice.isPublisher || notice.item?.isMine) && ['pending','need_more'].includes(notice.claimStatus)" class="nd-exchange-tip">确认与其中一人沟通后，其他人暂时不能继续沟通；结束后物品会回到发布中，可以重新选择。</div>
     <button v-if="notice.isClaimant && notice.claimStatus === 'pending'" type="button" class="btn ghost" @click="requestEndTalk">撤回申请</button>
     <button v-if="notice.isClaimant && notice.claimStatus === 'accepted'" type="button" class="btn ghost" @click="requestFinishTalk">结束本次认领</button>
     <button v-if="notice.claimBlockedByMe" type="button" class="btn ghost" @click="$emit('unblock')">解除屏蔽</button>
     <button v-if="notice.item" type="button" class="btn ghost" @click="$emit('compare')">查看匹配报告</button>
     <button type="button" class="btn ghost" @click="$emit('ignore')">忽略</button>
+  </div>
+  <div v-if="confirmTalkOpen" class="confirm-overlay" @click.self="confirmTalkOpen = false">
+    <div class="confirm-card">
+      <h3>确认与 TA 沟通？</h3>
+      <p>确认后你将无法与其他人继续沟通，系统也会告知其他申请人。</p>
+      <p>如果线下见面发现物品不是你的，请结束本次认领后重新发布；进入沟通后不能单方面取消回到发布中。</p>
+      <div class="confirm-actions">
+        <button type="button" class="btn" @click="confirmTalk">确认并交换联系方式</button>
+        <button type="button" class="btn ghost" @click="confirmTalkOpen = false">取消</button>
+      </div>
+    </div>
   </div>
   <ImageViewer :src="viewerUrl" @close="viewerUrl = ''" />
 </template>
@@ -165,4 +179,13 @@ function reviewText(r) {
 </style>
 <style scoped>
 .upload-tip { font-size:8px; color:#8E7FA3; margin:2px 0 7px; line-height:1.6; }
+</style>
+<style scoped>
+.confirm-talk { flex:1.6; min-width:220px; white-space:normal; line-height:1.5; }
+.confirm-overlay { position:fixed; inset:0; z-index:1200; background:rgba(35,22,48,.55); display:flex; align-items:center; justify-content:center; padding:20px; }
+.confirm-card { width:min(420px,92vw); background:#fff; border-radius:15px; padding:16px; box-shadow:0 16px 42px rgba(0,0,0,.24); }
+.confirm-card h3 { margin:0 0 8px; font-size:15px; color:#3B1D63; }
+.confirm-card p { margin:0 0 8px; font-size:10px; line-height:1.7; color:#5C4B70; }
+.confirm-actions { display:flex; gap:7px; margin-top:12px; }
+.confirm-actions .btn { flex:1; }
 </style>
