@@ -208,6 +208,7 @@ function typeLabel(t, itemType = '') {
       help_privacy_request: '🔒 不公开手机号申请',
       help_privacy_agreed: '🔒 双方同意不公开手机号',
       help_privacy_cancel: '🔓 不公开手机号申请已取消',
+      help_gift_accepted: '🎁 对方已接受赠与',
       claim_unblocked: '🔓 屏蔽已解除',
       pickup_unblocked: '🔓 屏蔽已解除',
       pickup_photo_request: '📷 失主请你补充照片',
@@ -698,6 +699,17 @@ async function blockClaim() {
     await refreshSelected()
   } catch (e) { actionMsg.value = e.message || '屏蔽失败' }
 }
+async function acceptGift() {
+  const rid = selected.value?.claimId
+  if (!rid) return
+  try {
+    await api.helpClaimAcceptGift(rid)
+    actionMsg.value = '已确认接受赠与，可以开始匿名沟通'
+    await refreshSelected()
+  } catch (e) {
+    actionMsg.value = e.message || '确认失败'
+  }
+}
 async function helpPrivacy(action) {
   const rid = selected.value?.claimId
   if (!rid) return
@@ -882,9 +894,9 @@ function fmt(ts) {
         </template>
       </NoticeClaim>
 
-      <NoticeHelp v-else-if="branch === 'help'" :notice="selected" :supplementing="helpSupplementing" :phone-saving="claimPhoneSaving" :supplement-msg="helpSupplementMsg" :phone-msg="claimPhoneMsg" @supplement="supplementHelp" @save-phone="saveClaimPhone" @help-action="helpAction" @complete="completeHelp" @block="blockClaim" @compare="compareOpen = true" @ignore="ignoreNotice" @withdraw="withdrawHelpClaim" @remove="removeHelpClaim" @restore="restoreHelpClaim" @unblock="unblockClaim" @privacy="helpPrivacy">
+      <NoticeHelp v-else-if="branch === 'help'" :notice="selected" :supplementing="helpSupplementing" :phone-saving="claimPhoneSaving" :supplement-msg="helpSupplementMsg" :phone-msg="claimPhoneMsg" @supplement="supplementHelp" @save-phone="saveClaimPhone" @help-action="helpAction" @complete="completeHelp" @block="blockClaim" @compare="compareOpen = true" @ignore="ignoreNotice" @withdraw="withdrawHelpClaim" @remove="removeHelpClaim" @restore="restoreHelpClaim" @unblock="unblockClaim" @privacy="helpPrivacy" @accept-gift="acceptGift">
         <template #chat>
-          <NoticeHelpChat v-if="selected.helpIsDonation && ['accepted','completed'].includes(selected.claimStatus)" :claim-id="selected.claimId" :closed="selected.claimStatus === 'completed'" />
+          <NoticeHelpChat v-if="selected.helpIsDonation && selected.helpGiftAccepted && ['accepted','completed'].includes(selected.claimStatus)" :claim-id="selected.claimId" :closed="selected.claimStatus === 'completed'" />
         </template>
       </NoticeHelp>
 

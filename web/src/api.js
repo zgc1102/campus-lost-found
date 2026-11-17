@@ -237,6 +237,9 @@ export const api = {
   helpClaimSend(id, text, clientMsgId) {
     return call('/help-claims/' + encodeURIComponent(id) + '/messages/send', { method: 'PATCH', body: JSON.stringify({ text, clientMsgId }), skipCacheClear: true })
   },
+  helpClaimAcceptGift(id) {
+    return call('/help-claims/' + encodeURIComponent(id) + '/accept-gift', { method: 'PATCH', body: '{}', skipCacheClear: true })
+  },
   helpClaimPrivacy(id, action) {
     return call('/help-claims/' + encodeURIComponent(id) + '/privacy', { method: 'PATCH', body: JSON.stringify({ action }), skipCacheClear: true })
   },

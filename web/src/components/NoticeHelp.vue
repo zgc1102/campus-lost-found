@@ -7,9 +7,12 @@ const props = defineProps({
   supplementMsg: { type: String, default: '' },
   phoneMsg: { type: String, default: '' }
 })
-const emit = defineEmits(['supplement', 'save-phone', 'help-action', 'complete', 'block', 'compare', 'ignore', 'withdraw', 'remove', 'restore', 'unblock', 'privacy'])
+const emit = defineEmits(['supplement', 'save-phone', 'help-action', 'complete', 'block', 'compare', 'ignore', 'withdraw', 'remove', 'restore', 'unblock', 'privacy', 'accept-gift'])
 const supp = ref('')
 const phone = ref('')
+function requestAcceptGift() {
+  if (window.confirm('确定接受对方赠与吗？确认后双方可以开始匿名沟通。')) emit('accept-gift')
+}
 function requestReject() {
   if (window.confirm('确定婉拒这条帮忙申请吗？婉拒后可以在已婉拒状态拉回。')) emit('help-action', 'rejected')
 }
@@ -55,6 +58,12 @@ function submitPhone() {
     <div v-if="notice.claimStatus" class="nd-state" style="margin-top:8px">{{ statusText(notice.claimStatus) }}</div>
     <div v-if="notice.helpNeedCount" class="nd-kv"><span>需要人数</span><b>{{ notice.helpNeedCount }} 人 · 已接受 {{ notice.helpAcceptedCount || 0 }} 人</b></div>
     <div v-if="notice.item?.askPrompt" class="nd-ask-prompt"><b>发布者希望你说明</b><span>{{ notice.item.askPrompt }}</span></div>
+    <div v-if="notice.helpIsDonation && notice.claimStatus === 'accepted' && !notice.helpGiftAccepted" class="nd-ask-prompt">
+      <b>赠与还未确认</b>
+      <span v-if="notice.isClaimant">发布者已经同意捐赠，请确认接受赠与后再开始匿名沟通。</span>
+      <span v-else>等待对方确认接受赠与后，匿名沟通才会开放。</span>
+      <div v-if="notice.isClaimant" class="nd-privacy-actions"><button type="button" @click="requestAcceptGift">接受赠与</button></div>
+    </div>
     <div v-if="notice.helpIsDonation && notice.helpPhonesHidden" class="nd-ask-prompt">
       <b>双方已同意不公开手机号</b><span>这次爱心捐赠通过匿名沟通完成，结束后也不会公开手机号。</span>
     </div>

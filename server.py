@@ -2886,6 +2886,7 @@ class Handler(BaseHTTPRequestHandler):
                             1 for c in claim_map.values()
                             if c.get("itemId") == it.get("id") and c.get("status") in ("accepted", "completed"))
                         row["helpIsDonation"] = it.get("helpCat") == "help_donate" or it.get("cat") == "help_donate"
+                        row["helpGiftAccepted"] = bool(cl.get("giftAccepted"))
                         row["helpPhonesHidden"] = bool(cl.get("phonesHidden"))
                         row["helpHideRequestByMe"] = cl.get("hidePhoneRequestBy") == (
                             "owner" if it.get("ownerToken") == owner else "claimer")
@@ -4002,6 +4003,8 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json({"error": "只有发布者能确认完成"}, 403)
                 if claim.get("status") != "accepted":
                     return self._json({"error": "只有进行中的帮忙才能完成"}, 409)
+                if (item.get("helpCat") == "help_donate" or item.get("cat") == "help_donate") and not claim.get("giftAccepted"):
+                    return self._json({"error": "请先确认接受赠与，再完成捐赠"}, 409)
                 claim["status"] = "completed"
                 claim["completedAt"] = now_ms()
                 claim["updatedAt"] = now_ms()
@@ -5126,6 +5129,8 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json({"error": "无权查看这条沟通"}, 403)
                 if claim.get("status") not in ("accepted", "completed"):
                     return self._json({"error": "接受帮忙后才能匿名沟通"}, 409)
+                if (item.get("helpCat") == "help_donate" or item.get("cat") == "help_donate") and not claim.get("giftAccepted"):
+                    return self._json({"error": "请先确认接受赠与，再开始匿名沟通"}, 409)
                 if is_send and claim.get("status") == "completed":
                     return self._json({"error": "这次沟通已经结束"}, 403)
                 if claim.get("blocked"):
@@ -5162,6 +5167,34 @@ class Handler(BaseHTTPRequestHandler):
                                item.get("id"), claim.get("id"))
                     save_notices(notices)
                 return self._json({"ok": True, "message": msg, "duplicate": False})
+
+        if path.startswith("/api/help-claims/") and path.endswith("/accept-gift"):
+            owner = self._owner()
+            claim_id = path[len("/api/help-claims/"):-len("/accept-gift")]
+            with LOCK:
+                tasks = load_help_tasks()
+                claim = next((c for c in tasks if c.get("id") == claim_id), None)
+                if not claim:
+                    return self._json({"error": "帮忙申请不存在"}, 404)
+                item = next((x for x in load_items() if x.get("id") == claim.get("itemId")), None)
+                if not item:
+                    return self._json({"error": "求助不存在"}, 404)
+                if item.get("helpCat") != "help_donate" and item.get("cat") != "help_donate":
+                    return self._json({"error": "只有爱心捐赠需要确认接受赠与"}, 403)
+                if claim.get("from") != owner:
+                    return self._json({"error": "只有申请人能确认接受赠与"}, 403)
+                if claim.get("status") != "accepted":
+                    return self._json({"error": "发布者同意后才能接受赠与"}, 409)
+                claim["giftAccepted"] = True
+                claim["giftAcceptedAt"] = now_ms()
+                claim["updatedAt"] = now_ms()
+                save_help_tasks(tasks)
+                notices = load_notices()
+                add_notice(notices, item.get("ownerToken"), "help_gift_accepted",
+                           "对方已确认接受你的《%s》赠与，可以匿名沟通了" % (item.get("title") or ""),
+                           item.get("id"), claim.get("id"))
+                save_notices(notices)
+            return self._json({"ok": True})
 
         if path.startswith("/api/help-claims/") and path.endswith("/privacy"):
             owner = self._owner()
