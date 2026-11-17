@@ -89,7 +89,7 @@ async function submitHelp() {
   goState.value = ''
   try {
     await api.claim(selected.value.id, { message: goMsg.value.trim(), contact: goPhone.value.trim() })
-    goState.value = '已告诉对方，等 TA 确认'
+    goState.value = isDonation(selected.value) ? '已提交赠与申请，等发布者确认' : '已告诉对方，等 TA 确认'
   } catch (e) {
     goState.value = e.message || '发送失败'
   } finally {
