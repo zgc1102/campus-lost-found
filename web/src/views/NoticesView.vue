@@ -127,7 +127,27 @@ function groupOf(n) {
   if (n.type === 'pickup' || n.report) return 'tag'
   return 'system'
 }
-const visibleItems = computed(() => tab.value === 'all' ? items.value : items.value.filter((n) => groupOf(n) === tab.value))
+const visibleItems = computed(() => {
+  const filtered = tab.value === 'all' ? items.value : items.value.filter((n) => groupOf(n) === tab.value)
+  const grouped = new Map()
+  for (const n of filtered) {
+    const key = n.claimId ? 'claim:' + n.claimId
+      : (n.reportId || n.report?.id) ? 'report:' + (n.reportId || n.report.id)
+      : 'item:' + (n.itemId || n.id) + '|' + (n.type || '')
+    const current = grouped.get(key)
+    if (!current) {
+      grouped.set(key, { ...n, stackCount: 1 })
+    } else {
+      current.stackCount += 1
+      current.read = current.read && n.read
+      if ((n.at || 0) >= (current.at || 0)) {
+        const count = current.stackCount
+        grouped.set(key, { ...n, stackCount: count })
+      }
+    }
+  }
+  return [...grouped.values()]
+})
 function groupUnread(id) {
   return items.value.filter((n) => !n.read && (id === 'all' || groupOf(n) === id)).length
 }
@@ -183,9 +203,13 @@ onUnmounted(() => {
   window.removeEventListener('focus', refreshWhenVisible)
 })
 async function readAll() {
-  await api.readNotices()
   items.value = items.value.map((x) => ({ ...x, read: true }))
   unread.value = 0
+  try {
+    await api.readNotices()
+  } catch (e) {
+    await load(true)
+  }
 }
 function typeLabel(t, itemType = '', donation = false) {
   if (itemType === 'help') {
@@ -503,6 +527,19 @@ async function unblockReport() {
     await refreshSelected()
   } catch (e) {
     actionMsg.value = e.message || '解除屏蔽失败'
+  }
+}
+async function endClaimTalk() {
+  const rid = selected.value?.claimId
+  if (!rid) return
+  try {
+    await api.claimCancel(rid)
+    selected.value.claimStatus = 'canceled'
+    selected.value.itemStatus = 'approved'
+    actionMsg.value = '已结束沟通，物品回到发布中，其他申请仍然保留'
+    await refreshSelected()
+  } catch (e) {
+    actionMsg.value = e.message || '结束沟通失败'
   }
 }
 async function restoreClaim() {
@@ -877,7 +914,7 @@ function fmt(ts) {
           :style="n.read ? 'opacity:.7' : ''"
           @click="openNotice(n)"
         >
-          <div class="mh">{{ typeLabel(n.type, n.itemType, n.helpIsDonation) }}</div>
+          <div class="mh">{{ typeLabel(n.type, n.itemType, n.helpIsDonation) }}<span v-if="n.stackCount > 1" class="stack-count">共 {{ n.stackCount }} 条</span></div>
           <div class="mmeta">{{ n.text }}</div>
           <div v-if="n.type === 'claim' && n.claimId" class="mmeta" style="color:var(--purple)">
             {{ n.itemType === 'help' ? (n.helpIsDonation ? '看看对方想不想要这份捐赠 →' : '看看对方能怎么帮你 →') : '点这里查看对方填了什么，与自己那条对比 →' }}
@@ -911,7 +948,7 @@ function fmt(ts) {
         </template>
       </NoticePickup>
 
-      <NoticeClaim v-else-if="branch === 'claim'" :notice="selected" :image-busy="claimImageBusy" :image-error="claimImageError" @claim-action="claimAction" @reveal="askRevealPhone('claim')" @block="blockClaim" @compare="compareOpen = true" @ignore="ignoreNotice" @supplement="supplementClaim" @supplement-image="supplementClaimImage" @pickup-code="generatePickupCode" @restore="restoreClaim" @unblock="unblockClaim">
+      <NoticeClaim v-else-if="branch === 'claim'" :notice="selected" :image-busy="claimImageBusy" :image-error="claimImageError" @claim-action="claimAction" @reveal="askRevealPhone('claim')" @block="blockClaim" @compare="compareOpen = true" @ignore="ignoreNotice" @supplement="supplementClaim" @supplement-image="supplementClaimImage" @pickup-code="generatePickupCode" @restore="restoreClaim" @unblock="unblockClaim" @end-talk="endClaimTalk">
         <template #chat>
           <NoticeChat :messages="chat" :outbox="outbox" :side="chatSide" :loading="chatLoading" :error="chatError" :blocked="chatBlocked" :blocked-by="blockedBy" :closed="chatClosed" placeholder="回复对方，不需要暴露手机号" @send="sendChat" @retry="retryOutbox" @refresh="refreshChat" />
         </template>
@@ -1268,4 +1305,7 @@ function fmt(ts) {
 </style>
 <style scoped>
 .score-warn { margin:4px 0; padding:5px 7px; border-radius:6px; background:#FFF8E8; border:1px solid #F0D9A8; color:#8A5A12 !important; }
+</style>
+<style scoped>
+.stack-count { float:right; font-size:8px; font-weight:400; color:#8E7FA3; background:#F4EEFB; border-radius:5px; padding:1px 5px; }
 </style>

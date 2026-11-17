@@ -4331,6 +4331,8 @@ class Handler(BaseHTTPRequestHandler):
                 item = next((x for x in load_items() if x.get("id") == claim.get("itemId")), None)
                 if not item:
                     return self._json({"error": "物品不存在"}, 404)
+                if item.get("status") == "claimed" and claim.get("status") not in ("accepted", "completed"):
+                    return self._json({"error": "发布者已选择其他申请人沟通"}, 403)
                 side = "owner" if item.get("ownerToken") == owner else "claimer" if claim.get("from") == owner else ""
                 if not side:
                     return self._json({"error": "无权查看这条沟通"}, 403)
@@ -5126,6 +5128,8 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json({"error": "求助不存在"}, 404)
                 if item.get("helpCat") != "help_donate" and item.get("cat") != "help_donate":
                     return self._json({"error": "只有爱心捐赠支持匿名沟通"}, 403)
+                if item.get("status") == "claimed" and claim.get("status") not in ("accepted", "completed"):
+                    return self._json({"error": "发布者已选择其他申请人沟通"}, 403)
                 side = "owner" if item.get("ownerToken") == owner else "claimer" if claim.get("from") == owner else ""
                 if not side:
                     return self._json({"error": "无权查看这条沟通"}, 403)
@@ -5595,7 +5599,7 @@ class Handler(BaseHTTPRequestHandler):
                 others = []
                 if status == "accepted":
                     if in_help:
-                        need = max(1, int(item.get("needCount") or 1))
+                        need = 1 if (item.get("helpCat") == "help_donate" or item.get("cat") == "help_donate") else max(1, int(item.get("needCount") or 1))
                         accepted_now = [c for c in tasks
                                         if c.get("itemId") == claim.get("itemId")
                                         and c.get("status") in ("accepted", "completed")]
@@ -5603,16 +5607,11 @@ class Handler(BaseHTTPRequestHandler):
                             return self._json({"error": "需要的帮忙人数已经够了"}, 400)
                         item["status"] = "claimed" if len(accepted_now) >= need else "approved"
                     else:
+                        if item.get("status") == "claimed":
+                            return self._json({"error": "你已经确认了其他申请人，请先结束当前沟通"}, 409)
                         item["status"] = "claimed"
-                        # 同一个物品的其他待处理申请自动关闭，不能让它们一直挂着
-                        for c2 in claims:
-                            if (c2.get("itemId") == claim.get("itemId")
-                                    and c2.get("id") != claim.get("id")
-                                    and c2.get("status") == "pending"):
-                                c2["status"] = "rejected"
-                                c2["rejectReason"] = "物品已被其他人认领"
-                                c2["updatedAt"] = now_ms()
-                                others.append(c2)
+                        # 保留其他待处理申请：结束当前沟通后仍可选择他们
+                        others = []
                 if in_help:
                     save_help_tasks(tasks)
                 else:
@@ -5634,6 +5633,10 @@ class Handler(BaseHTTPRequestHandler):
                         add_notice(notices, c2.get("from"), "rejected",
                                    "《%s》已被其他同学认领，感谢你的申请" % (item.get("title") or ""),
                                    item.get("id"))
+                    add_notice(notices, item.get("ownerToken"),
+                               "help_confirmed" if in_help else "claim_confirmed",
+                               "你已确认与对方沟通《%s》，其他人暂不能继续沟通" % (item.get("title") or ""),
+                               item.get("id"), claim.get("id"))
                 elif status == "need_more":
                     claim["needImage"] = need_image
                     add_notice(notices, claim.get("from"), "need_more",
