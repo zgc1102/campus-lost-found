@@ -130,13 +130,14 @@ function reviewText(r) {
   <slot name="chat" />
   <div class="nd-actions">
     <template v-if="(notice.isPublisher || notice.item?.isMine) && notice.claimId && (!notice.claimStatus || ['pending','need_more'].includes(notice.claimStatus))">
-      <button type="button" class="btn" @click="$emit('claim-action', 'accepted')">通过认领并公布双方手机号</button>
+      <button type="button" class="btn" @click="$emit('claim-action', 'accepted')">确认与 TA 沟通并公布手机号</button>
       <button type="button" class="btn ghost" :disabled="notice.claimStatus === 'need_more'" @click="$emit('claim-action', 'need_more', true)">{{ notice.claimStatus === 'need_more' ? '已请求补充图片' : '请补充图片' }}</button>
       <button type="button" class="btn ghost" @click="requestReject">拒绝</button>
       <button v-if="notice.canBlockClaim" type="button" class="btn ghost" @click="requestBlock">屏蔽对方</button>
     </template>
     <button v-if="(notice.isPublisher || notice.item?.isMine) && notice.claimStatus === 'rejected'" type="button" class="btn ghost" @click="requestRestore">拉回申请</button>
     <button v-if="(notice.isPublisher || notice.item?.isMine) && notice.claimStatus === 'accepted'" type="button" class="btn ghost" @click="requestEndTalk">结束与 TA 的沟通</button>
+    <div v-if="(notice.isPublisher || notice.item?.isMine) && ['pending','need_more'].includes(notice.claimStatus)" class="nd-exchange-tip">确认与其中一人沟通后，其他人暂时不能继续沟通；结束后物品会回到发布中，可以重新选择。</div>
     <button v-if="notice.isClaimant && ['pending','accepted'].includes(notice.claimStatus)" type="button" class="btn ghost" @click="requestEndTalk">{{ notice.claimStatus === 'pending' ? '撤回申请' : '结束与 TA 的沟通' }}</button>
     <button v-if="notice.claimBlockedByMe" type="button" class="btn ghost" @click="$emit('unblock')">解除屏蔽</button>
     <button v-if="notice.item" type="button" class="btn ghost" @click="$emit('compare')">查看匹配报告</button>

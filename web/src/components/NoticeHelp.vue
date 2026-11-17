@@ -114,7 +114,7 @@ function submitPhone() {
   </div>
   <div class="nd-actions">
     <template v-if="(notice.isPublisher || notice.item?.isMine) && notice.claimId && ['pending','need_more'].includes(notice.claimStatus)">
-      <button type="button" class="btn" @click="$emit('help-action', 'accepted')">{{ notice.helpIsDonation ? '同意赠与并公布双方手机号' : '接受并公布双方手机号' }}</button>
+      <button type="button" class="btn" @click="$emit('help-action', 'accepted')">{{ notice.helpIsDonation ? '同意赠与并确认沟通' : '确认与 TA 沟通并公布手机号' }}</button>
       <button type="button" class="btn ghost" :disabled="notice.claimStatus === 'need_more'" @click="$emit('help-action', 'need_more')">{{ notice.claimStatus === 'need_more' ? '已请求补充' : '请补充说明' }}</button>
       <button type="button" class="btn ghost" @click="requestReject">{{ notice.helpIsDonation ? '婉拒赠与' : '婉拒' }}</button>
       <button v-if="notice.canBlockClaim" type="button" class="btn ghost" @click="requestBlock">屏蔽对方</button>
@@ -123,6 +123,7 @@ function submitPhone() {
     <button v-if="(notice.isPublisher || notice.item?.isMine) && notice.claimId && notice.claimStatus === 'accepted'" type="button" class="btn ghost" @click="requestRemove">{{ notice.helpIsDonation ? '结束与 TA 的捐赠沟通' : '结束与 TA 的沟通' }}</button>
     <button v-if="(notice.isPublisher || notice.item?.isMine) && ['rejected','removed'].includes(notice.claimStatus)" type="button" class="btn ghost" @click="requestRestore">拉回申请</button>
     <button v-if="notice.claimBlockedByMe" type="button" class="btn ghost" @click="$emit('unblock')">解除屏蔽</button>
+    <div v-if="(notice.isPublisher || notice.item?.isMine) && ['pending','need_more'].includes(notice.claimStatus)" class="nd-exchange-tip">确认与其中一人沟通后，其他人暂时不能继续沟通；结束后可以重新选择。</div>
     <button v-if="notice.isClaimant && notice.claimId && ['pending','accepted'].includes(notice.claimStatus)" type="button" class="btn ghost" @click="requestWithdraw">撤回申请</button>
     <button v-if="notice.item" type="button" class="btn ghost" @click="$emit('compare')">查看匹配报告</button>
     <button type="button" class="btn ghost" @click="$emit('ignore')">忽略</button>
