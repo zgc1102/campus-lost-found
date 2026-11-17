@@ -28,6 +28,7 @@ from urllib.parse import unquote, urlparse, parse_qs
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 import moderation
+import chat_guard
 
 
 def load_dotenv(path=None):
@@ -2809,7 +2810,16 @@ class Handler(BaseHTTPRequestHandler):
             target_id = (qs.get("targetId") or [""])[0]
             if kind not in ("claim", "report", "help") or not target_id:
                 return self._json({"error": "参数不正确"}, 400)
-            return self._json({"ok": True, "state": moderation.status(kind, target_id, owner)})
+            state = moderation.status(kind, target_id, owner)
+            guard = chat_guard.status(kind, target_id, owner)
+            if guard.get("warning") or guard.get("active"):
+                state = {
+                    "active": bool(guard.get("active") or state.get("active")),
+                    "status": guard.get("status") or state.get("status"),
+                    "warning": guard.get("warning") or state.get("warning"),
+                    "reportId": guard.get("reportId") or state.get("reportId"),
+                }
+            return self._json({"ok": True, "state": state})
 
         if path == "/api/moderation/reports/mine":
             owner = self._owner()
@@ -2820,7 +2830,9 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/admin/moderation/reports":
             if not self._need_admin():
                 return
-            return self._json({"ok": True, "reports": moderation.admin_list(), "summary": moderation.summary()})
+            return self._json({"ok": True, "reports": moderation.admin_list(),
+                               "chatAlerts": chat_guard.admin_list(),
+                               "summary": moderation.summary()})
 
         if path == "/api/notices":
             owner = self._owner()
@@ -4417,6 +4429,11 @@ class Handler(BaseHTTPRequestHandler):
                                    "对方在匿名沟通里回复了你：" + text[:40],
                                    item.get("id"), claim.get("id"))
                         save_notices(notices)
+                    try:
+                        chat_guard.observe("claim", claim.get("id"), item.get("id"), side,
+                                           item.get("ownerToken"), text, claim.get("messages"))
+                    except Exception:
+                        pass
                 return self._json({"ok": True, "message": msg, "duplicate": False})
 
         if path.startswith("/api/reports/") and path.endswith("/reveal-phone"):
@@ -4524,6 +4541,12 @@ class Handler(BaseHTTPRequestHandler):
                     if notices:
                         notices[-1]["reportId"] = report_id
                 save_notices(notices)
+                try:
+                    chat_guard.observe("report", report_id, report.get("itemId"), side,
+                                       report.get("owner") if side == "finder" else report.get("finder"),
+                                       text, report.get("messages"))
+                except Exception:
+                    pass
             return self._json({"ok": True, "message": msg, "duplicate": False})
 
         if path.startswith("/api/reports/") and path.endswith("/contact"):
@@ -5300,6 +5323,11 @@ class Handler(BaseHTTPRequestHandler):
                                "爱心捐赠匿名沟通有新消息：" + text[:40],
                                item.get("id"), claim.get("id"))
                     save_notices(notices)
+                try:
+                    chat_guard.observe("help", claim.get("id"), item.get("id"), side,
+                                       item.get("ownerToken"), text, messages)
+                except Exception:
+                    pass
                 return self._json({"ok": True, "message": msg, "duplicate": False})
 
         if path.startswith("/api/help-claims/") and path.endswith("/accept-gift"):
@@ -6270,6 +6298,8 @@ def main():
     start_review_workers(2)
     moderation.init(BASE_DIR)
     moderation.start_worker()
+    chat_guard.init(BASE_DIR)
+    chat_guard.start_worker()
     pwd = ensure_admin_password()
     ips = lan_ips()
     primary = "http://%s:%d/" % (ips[0], port) if ips else None

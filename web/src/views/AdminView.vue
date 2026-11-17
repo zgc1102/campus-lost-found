@@ -21,6 +21,7 @@ const specials = ref([])
 const config = ref(null)
 const deployLog = ref([])
 const reports = ref([])
+const chatAlerts = ref([])
 const deploying = ref(false)
 const deployCountdown = ref(0)
 const deployMsg = ref('')
@@ -88,6 +89,7 @@ async function loadAll(silent = false) {
     config.value = cfg
     deployLog.value = Array.isArray(dep) ? dep : (dep.log ? String(dep.log).split('\n').filter(Boolean).map((x) => ({ text: x })) : (dep.items || dep.logs || []))
     reports.value = Array.isArray(reps?.reports) ? reps.reports : []
+    chatAlerts.value = Array.isArray(reps?.chatAlerts) ? reps.chatAlerts : []
   } catch (e) {
     error.value = e.message || '读取失败'
     if (e.status === 401 || /unauthorized|登录/i.test(String(e.message))) logout()
@@ -457,6 +459,20 @@ function statusClass(s) {
         <button type="button" class="ghost" @click="handleReport(r, 'dismissed')">驳回举报</button>
       </div>
       <div v-else-if="r.adminNote" class="report-detail">处理说明：{{ r.adminNote }}</div>
+    </div>
+  </div>
+
+  <div v-if="tab === 'reports'" class="panel" style="margin-top:14px">
+    <h3>实时聊天告警</h3>
+    <div v-if="!chatAlerts.length" class="reports-empty">还没有实时告警</div>
+    <div v-for="a in chatAlerts" :key="a.id" class="report-row">
+      <div class="report-head">
+        <b>{{ a.kind === 'help' ? '爱心捐赠' : a.kind === 'claim' ? '失物认领' : '拾光码' }}</b>
+        <span class="report-status">{{ a.status === 'reviewed' ? 'AI已复核' : 'AI审核中' }}</span>
+      </div>
+      <div class="report-meta">{{ new Date(a.createdAt).toLocaleString('zh-CN') }} · 命中：{{ (a.localHits || []).join('、') }}</div>
+      <div class="report-detail">消息：{{ a.text }}</div>
+      <div v-if="a.ai" class="report-ai">AI：{{ a.ai.verdict }} / 风险 {{ a.ai.risk }} · {{ a.ai.reason }}</div>
     </div>
   </div>
 

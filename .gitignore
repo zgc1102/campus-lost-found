@@ -45,5 +45,6 @@ tags.json
 tag_qr/
 moderation_reports.json
 moderation_audit.json
+chat_guard_alerts.json
 _local_server.py
 本地二维码*.png

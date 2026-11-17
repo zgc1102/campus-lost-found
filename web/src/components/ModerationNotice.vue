@@ -43,7 +43,7 @@ function closeWarning() {
 }
 onMounted(() => {
   load()
-  timer = setInterval(load, 8000)
+  timer = setInterval(load, 3000)
 })
 onUnmounted(() => { if (timer) clearInterval(timer) })
 watch(() => [props.kind, props.targetId], () => {
