@@ -304,15 +304,6 @@ function openNotice(n) {
   claimImageError.value = ''
   compareOpen.value = false
   targetOpen.value = false
-  const _reportId = n.reportId || n.report?.id
-  const _ct = (n.type === 'pickup' && _reportId)
-    ? { id: _reportId, kind: 'report' }
-    : (n.claimId && n.itemType !== 'help')
-      ? { id: n.claimId, kind: 'claim' }
-      : (_reportId ? { id: _reportId, kind: 'report' } : null)
-  chatKind.value = _ct?.kind || 'report'
-  chatTargetId.value = _ct?.id || ''
-  if (_ct) openChatForNotice(n, _ct)
   if (n.type === 'match') loadMyItems()
   if (!n.read) {
     n.read = true
