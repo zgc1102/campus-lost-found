@@ -20,6 +20,7 @@ const announcements = ref([])
 const specials = ref([])
 const config = ref(null)
 const deployLog = ref([])
+const reports = ref([])
 const deploying = ref(false)
 const deployCountdown = ref(0)
 const deployMsg = ref('')
@@ -48,6 +49,7 @@ const tabs = [
   ['phone', '号码白名单'],
   ['announce', '公告'],
   ['ai', '智能配置'],
+  ['reports', '举报记录'],
   ['deploy', '部署日志']
 ]
 
@@ -67,14 +69,15 @@ async function loadAll(silent = false) {
   if (!silent) loading.value = true
   error.value = ''
   try {
-    const [s, list, accs, anns, sp, cfg, dep] = await Promise.all([
+    const [s, list, accs, anns, sp, cfg, dep, reps] = await Promise.all([
       api.adminStats(token.value),
       api.adminItems(token.value),
       api.adminAccounts(token.value),
       api.adminAnnouncements(token.value),
       api.adminSpecialNumbers(token.value),
       api.adminConfig(token.value),
-      api.adminDeployLog(token.value)
+      api.adminDeployLog(token.value),
+      api.adminReports(token.value)
     ])
     stats.value = s
     statsAt.value = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
@@ -84,6 +87,7 @@ async function loadAll(silent = false) {
     specials.value = Array.isArray(sp) ? sp : []
     config.value = cfg
     deployLog.value = Array.isArray(dep) ? dep : (dep.log ? String(dep.log).split('\n').filter(Boolean).map((x) => ({ text: x })) : (dep.items || dep.logs || []))
+    reports.value = Array.isArray(reps?.reports) ? reps.reports : []
   } catch (e) {
     error.value = e.message || '读取失败'
     if (e.status === 401 || /unauthorized|登录/i.test(String(e.message))) logout()
@@ -111,6 +115,14 @@ async function login() {
 function logout() {
   token.value = ''
   sessionStorage.removeItem(TOKEN_KEY)
+}
+async function handleReport(r, status) {
+  const note = status === 'resolved' ? (window.prompt('处理说明（可留空）') || '') : ''
+  try {
+    const res = await api.adminReportUpdate(token.value, r.id, { status, note })
+    const idx = reports.value.findIndex((x) => x.id === r.id)
+    if (idx >= 0) reports.value[idx] = res.report
+  } catch (e) { error.value = e.message || '处理失败' }
 }
 
 async function review(it, status) {
@@ -424,7 +436,31 @@ function statusClass(s) {
             <button v-for="[id, name] in tabs" :key="id" type="button" :class="{ on: tab === id }" @click="tab = id">{{ name }}</button>
           </div>
 
-          <div v-if="tab === 'overview'" class="panel-grid">
+          <div v-if="tab === 'reports'" class="panel">
+    <h3>举报记录</h3>
+    <div v-if="!reports.length" class="reports-empty">还没有举报记录</div>
+    <div v-for="r in reports" :key="r.id" class="report-row">
+      <div class="report-head">
+        <b>{{ r.itemTitle || '匿名沟通' }}</b>
+        <span class="report-status">{{ ({pending:'待审核',reviewing:'AI审核中',reviewed:'待处理',resolved:'已处理',dismissed:'已驳回'})[r.status] || r.status }}</span>
+      </div>
+      <div class="report-meta">{{ r.reason }} · {{ r.kind === 'help' ? '爱心捐赠' : r.kind === 'claim' ? '失物认领' : '拾光码' }} · {{ new Date(r.createdAt).toLocaleString('zh-CN') }}</div>
+      <div v-if="r.detail" class="report-detail">举报说明：{{ r.detail }}</div>
+      <div v-if="r.ai" class="report-ai">
+        AI：{{ r.ai.verdict }} / 风险 {{ r.ai.risk }} · {{ r.ai.reason }}
+      </div>
+      <div class="report-msgs">
+        <div v-for="m in (r.messages || []).slice(-8)" :key="m.id || m.at">{{ m.from === 'owner' ? '发布者' : '申请人' }}：{{ m.text }}</div>
+      </div>
+      <div v-if="['pending','reviewing','reviewed'].includes(r.status)" class="report-actions">
+        <button type="button" @click="handleReport(r, 'resolved')">确认处理</button>
+        <button type="button" class="ghost" @click="handleReport(r, 'dismissed')">驳回举报</button>
+      </div>
+      <div v-else-if="r.adminNote" class="report-detail">处理说明：{{ r.adminNote }}</div>
+    </div>
+  </div>
+
+  <div v-if="tab === 'overview'" class="panel-grid">
             <div class="panel">
               <h3>内容分布</h3>
               <div class="bar-row" v-for="(n, k) in (stats?.byStatus || {})" :key="k">
@@ -740,4 +776,18 @@ textarea.field { min-height: 78px; resize: vertical; }
 
 <style scoped>
 .ov-time { font-size: 9px; color: #A99BB9; margin: -8px 0 12px; }
+</style>
+<style scoped>
+.reports-empty { font-size:11px; color:#8E7FA3; padding:12px 0; }
+.report-row { border-top:1px solid #F0E8FA; padding:11px 0; font-size:11px; }
+.report-head { display:flex; justify-content:space-between; gap:8px; align-items:center; }
+.report-head b { color:#3B1D63; font-size:12px; }
+.report-status { font-size:9px; color:#5B2A91; background:#F1E8FB; border-radius:5px; padding:2px 6px; }
+.report-meta { margin-top:3px; font-size:9px; color:#8E7FA3; }
+.report-detail { margin-top:4px; font-size:10px; color:#5C4B70; line-height:1.5; }
+.report-ai { margin-top:4px; font-size:9px; color:#7A4A12; background:#FFF8E8; border-radius:6px; padding:4px 6px; }
+.report-msgs { margin-top:5px; background:#FAF7FE; border-radius:7px; padding:6px; font-size:9px; line-height:1.6; color:#6F607F; }
+.report-actions { display:flex; gap:6px; margin-top:7px; }
+.report-actions button { border:0; background:#5B2A91; color:#fff; border-radius:6px; padding:4px 8px; font-family:inherit; font-size:9px; }
+.report-actions button.ghost { background:#fff; color:#5B2A91; border:1px solid #D9C8EE; }
 </style>

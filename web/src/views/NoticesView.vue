@@ -972,19 +972,19 @@ function fmt(ts) {
 
       <NoticePickup v-if="branch === 'pickup'" :notice="selected" @reveal="askRevealPhone('report')" @publish="publishReport" @block="blockReport" @close="closeReport" @ignore="ignoreNotice" @request-photo="requestPickupPhoto" @supplement-photo="supplementPickupPhoto" @reopen="reopenPickup" @unblock="unblockReport">
         <template #chat>
-          <NoticeReportChat :report-id="selected.report?.id || selected.reportId || ''" :closed="chatClosed" placeholder="回复捡到者，不需要暴露手机号" />
+          <NoticeReportChat :report-id="selected.report?.id || selected.reportId || ''" :item-title="selected.itemTitle || selected.item?.title || ''" :closed="chatClosed" placeholder="回复捡到者，不需要暴露手机号" />
         </template>
       </NoticePickup>
 
       <NoticeClaim v-else-if="branch === 'claim'" :notice="selected" :image-busy="claimImageBusy" :image-error="claimImageError" @claim-action="claimAction" @reveal="askRevealPhone('claim')" @block="blockClaim" @compare="compareOpen = true" @ignore="ignoreNotice" @supplement="supplementClaim" @supplement-image="supplementClaimImage" @pickup-code="generatePickupCode" @restore="restoreClaim" @unblock="unblockClaim" @end-talk="endClaimTalk" @finish-talk="finishClaim" @request-image="requestClaimImage">
         <template #chat>
-          <NoticeClaimChat :claim-id="selected.claimId || ''" :closed="chatClosed" placeholder="回复对方，不需要暴露手机号" />
+          <NoticeClaimChat :claim-id="selected.claimId || ''" :item-title="selected.itemTitle || selected.item?.title || ''" :closed="chatClosed" placeholder="回复对方，不需要暴露手机号" />
         </template>
       </NoticeClaim>
 
       <NoticeHelp v-else-if="branch === 'help'" :notice="selected" :supplementing="helpSupplementing" :phone-saving="claimPhoneSaving" :supplement-msg="helpSupplementMsg" :phone-msg="claimPhoneMsg" @supplement="supplementHelp" @save-phone="saveClaimPhone" @help-action="helpAction" @complete="completeHelp" @block="blockClaim" @compare="compareOpen = true" @ignore="ignoreNotice" @withdraw="withdrawHelpClaim" @remove="removeHelpClaim" @restore="restoreHelpClaim" @unblock="unblockClaim" @privacy="helpPrivacy" @accept-gift="acceptGift">
         <template #chat>
-          <NoticeHelpChat v-if="selected.helpIsDonation && ['pending','accepted','completed'].includes(selected.claimStatus)" :claim-id="selected.claimId" :closed="selected.claimStatus === 'completed'" />
+          <NoticeHelpChat :item-title="selected.itemTitle || selected.item?.title || ''" v-if="selected.helpIsDonation && ['pending','accepted','completed'].includes(selected.claimStatus)" :claim-id="selected.claimId" :closed="selected.claimStatus === 'completed'" />
         </template>
       </NoticeHelp>
 

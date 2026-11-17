@@ -198,6 +198,22 @@ export const api = {
   format(title, desc, place) {
     return call('/format', { method: 'POST', body: JSON.stringify({ title, desc, place }), skipCacheClear: true })
   },
+  submitReport(payload) {
+    return call('/moderation/reports', { method: 'POST', body: JSON.stringify(payload) })
+  },
+  myReports() {
+    return call('/moderation/reports/mine')
+  },
+  adminReports(token) {
+    return call('/admin/moderation/reports', { headers: { 'X-Admin-Token': token } })
+  },
+  adminReportUpdate(token, id, payload) {
+    return call('/admin/moderation/reports/' + encodeURIComponent(id), {
+      method: 'PATCH',
+      headers: { 'X-Admin-Token': token },
+      body: JSON.stringify(payload)
+    })
+  },
   notices() {
     return call('/notices')
   },

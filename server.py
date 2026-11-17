@@ -27,6 +27,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import unquote, urlparse, parse_qs
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+import moderation
 
 
 def load_dotenv(path=None):
@@ -2799,6 +2800,17 @@ class Handler(BaseHTTPRequestHandler):
             sent.sort(key=lambda x: x["createdAt"], reverse=True)
             return self._json({"received": received, "sent": sent})
 
+        if path == "/api/moderation/reports/mine":
+            owner = self._owner()
+            if not owner:
+                return self._json({"error": "缺少设备标识"}, 400)
+            return self._json({"ok": True, "reports": moderation.mine(owner)})
+
+        if path == "/api/admin/moderation/reports":
+            if not self._need_admin():
+                return
+            return self._json({"ok": True, "reports": moderation.admin_list(), "summary": moderation.summary()})
+
         if path == "/api/notices":
             owner = self._owner()
             with LOCK:
@@ -4824,6 +4836,83 @@ class Handler(BaseHTTPRequestHandler):
                 save_notices(notices)
             return self._json({"ok": True})
 
+        if path == "/api/moderation/reports":
+            owner = self._owner()
+            if not owner:
+                return self._json({"error": "缺少设备标识"}, 400)
+            body = self._read_body()
+            kind = str(body.get("kind") or "").strip()
+            target_id = str(body.get("targetId") or "").strip()
+            owner_title = ""
+            target_owner = ""
+            item_id = ""
+            claim_id = ""
+            messages = []
+            with LOCK:
+                items = load_items()
+                if kind == "claim":
+                    claim = next((c for c in load_claims() if c.get("id") == target_id), None)
+                    if not claim:
+                        return self._json({"error": "认领不存在"}, 404)
+                    item = next((x for x in items if x.get("id") == claim.get("itemId")), None)
+                    if not item:
+                        return self._json({"error": "物品不存在"}, 404)
+                    if owner not in (claim.get("from"), item.get("ownerToken")):
+                        return self._json({"error": "无权举报这条沟通"}, 403)
+                    target_owner = claim.get("from") if owner == item.get("ownerToken") else item.get("ownerToken")
+                    owner_title = item.get("title") or ""
+                    item_id = item.get("id") or ""
+                    claim_id = claim.get("id") or ""
+                    messages = claim.get("messages") or []
+                elif kind == "report":
+                    report = next((r for r in load_tag_reports() if r.get("id") == target_id), None)
+                    if not report:
+                        return self._json({"error": "拾光码上报不存在"}, 404)
+                    if owner not in (report.get("owner"), report.get("finder")):
+                        return self._json({"error": "无权举报这条沟通"}, 403)
+                    target_owner = report.get("owner") if owner == report.get("finder") else report.get("finder")
+                    owner_title = report.get("itemName") or ""
+                    item_id = report.get("itemId") or ""
+                    claim_id = report.get("claimId") or ""
+                    messages = report.get("messages") or []
+                elif kind == "help":
+                    claim = next((c for c in load_help_tasks() if c.get("id") == target_id), None)
+                    if not claim:
+                        return self._json({"error": "帮忙申请不存在"}, 404)
+                    item = next((x for x in items if x.get("id") == claim.get("itemId")), None)
+                    if not item:
+                        return self._json({"error": "求助不存在"}, 404)
+                    if owner not in (claim.get("from"), item.get("ownerToken")):
+                        return self._json({"error": "无权举报这条沟通"}, 403)
+                    target_owner = claim.get("from") if owner == item.get("ownerToken") else item.get("ownerToken")
+                    owner_title = item.get("title") or ""
+                    item_id = item.get("id") or ""
+                    claim_id = claim.get("id") or ""
+                    messages = claim.get("messages") or []
+                else:
+                    return self._json({"error": "举报类型不正确"}, 400)
+            snapshot = [{
+                "from": m.get("from"),
+                "text": m.get("text"),
+                "at": m.get("at"),
+                "id": m.get("id"),
+            } for m in (messages or [])[-60:]]
+            row = moderation.create({
+                "reporter": owner,
+                "targetOwner": target_owner,
+                "kind": kind,
+                "targetId": target_id,
+                "itemId": item_id,
+                "claimId": claim_id,
+                "itemTitle": owner_title,
+                "reason": body.get("reason"),
+                "detail": body.get("detail"),
+                "scope": body.get("scope"),
+                "messageId": body.get("messageId"),
+                "messages": snapshot,
+            })
+            return self._json({"ok": True, "report": row}, 201)
+
         if path == "/api/notices/read":
             owner = self._owner()
             with LOCK:
@@ -5532,6 +5621,17 @@ class Handler(BaseHTTPRequestHandler):
                 save_notices(notices)
             return self._json({"ok": True, "status": target})
 
+        if path.startswith("/api/admin/moderation/reports/"):
+            if not self._need_admin():
+                return
+            report_id = path[len("/api/admin/moderation/reports/"):]
+            body = self._read_body()
+            row = moderation.admin_update(report_id, str(body.get("status") or ""),
+                                          str(body.get("note") or ""), "admin")
+            if not row:
+                return self._json({"error": "举报不存在或状态不正确"}, 404)
+            return self._json({"ok": True, "report": row})
+
         if path.startswith("/api/claims/") and path.endswith("/request-image"):
             owner = self._owner()
             claim_id = path[len("/api/claims/"):-len("/request-image")]
@@ -6156,6 +6256,8 @@ def main():
         return
 
     start_review_workers(2)
+    moderation.init(BASE_DIR)
+    moderation.start_worker()
     pwd = ensure_admin_password()
     ips = lan_ips()
     primary = "http://%s:%d/" % (ips[0], port) if ips else None

@@ -1,10 +1,12 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { api } from '../api'
+import ReportDialog from './ReportDialog.vue'
 
 const props = defineProps({
   claimId: { type: String, default: '' },
   closed: { type: Boolean, default: false },
+  itemTitle: { type: String, default: '' },
   placeholder: { type: String, default: '回复对方，不需要暴露手机号' }
 })
 
@@ -16,6 +18,7 @@ const error = ref('')
 const side = ref('owner')
 const blocked = ref(false)
 const blockedBy = ref('')
+const showReport = ref(false)
 let refreshTimer = null
 
 function key(m) {
@@ -129,7 +132,10 @@ watch(() => props.claimId, () => {
 
 <template>
   <div class="cc-card">
-    <div class="cc-title">匿名沟通</div>
+    <div class="cc-head">
+      <div class="cc-title">匿名沟通</div>
+      <button type="button" class="cc-report" @click="showReport = true">举报</button>
+    </div>
     <div class="cc-safety">
       <b>安全提示</b>
       <span>平台不会索要验证码、支付密码，也不会要求转账、扫码付款或代付。对方若主动索要二维码、付款码、验证码，或让你先转账，请立即停止并举报。</span>
@@ -163,6 +169,7 @@ watch(() => props.claimId, () => {
       </div>
       <div v-else class="cc-closed">这次沟通已经结束，不能再发送新消息。</div>
     </template>
+    <ReportDialog v-if="showReport" kind="claim" :target-id="claimId" :item-title="itemTitle" @close="showReport = false" />
   </div>
 </template>
 
@@ -194,4 +201,8 @@ watch(() => props.claimId, () => {
 .cc-error button { border:1px solid #E7B9AE; background:#fff; color:#A23B2A; border-radius:7px; padding:3px 8px; font-family:inherit; font-size:9px; }
 .cc-empty { font-size:9.5px; line-height:1.7; color:#6F607F; }
 .cc-closed { margin-top:8px; padding:8px 9px; border-radius:8px; background:#F3F0F7; font-size:9px; color:#7E6E92; }
+</style>
+<style scoped>
+.cc-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+.cc-report { border:1px solid #E7D8F3; background:#fff; color:#8A6AA8; border-radius:6px; padding:3px 7px; font-family:inherit; font-size:8.5px; }
 </style>

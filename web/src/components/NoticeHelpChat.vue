@@ -1,8 +1,10 @@
-﻿<script setup>
+<script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { api } from '../api'
+import ReportDialog from './ReportDialog.vue'
 const props = defineProps({
   claimId: { type: String, default: '' },
+  itemTitle: { type: String, default: '' },
   closed: { type: Boolean, default: false }
 })
 const messages = ref([])
@@ -11,6 +13,7 @@ const loading = ref(false)
 const error = ref('')
 const outbox = ref([])
 const side = ref('')
+const showReport = ref(false)
 let refreshTimer = null
 function key(m) {
   return m.id || m.clientMsgId || `${m.from}|${m.at}|${m.text}`
@@ -95,7 +98,10 @@ watch(() => props.claimId, () => { messages.value = []; outbox.value = []; load(
 
 <template>
   <div class="hc-card">
-    <div class="hc-title">爱心捐赠 · 匿名沟通</div>
+    <div class="hc-head">
+      <div class="hc-title">爱心捐赠 · 匿名沟通</div>
+      <button type="button" class="hc-report" @click="showReport = true">举报</button>
+    </div>
     <div class="hc-hint">这里只用于沟通捐赠细节，不会自动公开手机号。</div>
     <div v-if="loading && !displayMessages.length" class="hc-empty">正在加载消息…</div>
     <div v-else-if="!displayMessages.length" class="hc-empty">还没有消息，可以先打个招呼。</div>
@@ -115,6 +121,7 @@ watch(() => props.claimId, () => { messages.value = []; outbox.value = []; load(
     </div>
     <button type="button" class="hc-refresh" :disabled="loading" @click="load">{{ loading ? '刷新中…' : '刷新消息' }}</button>
     <div class="hc-auto-hint">发送后会自动拉取对方的新消息（可能多条）；也可以点“刷新消息”手动获取。</div>
+    <ReportDialog v-if="showReport" kind="help" :target-id="claimId" :item-title="itemTitle" @close="showReport = false" />
   </div>
 </template>
 
@@ -143,4 +150,8 @@ watch(() => props.claimId, () => { messages.value = []; outbox.value = []; load(
 </style>
 <style scoped>
 .hc-auto-hint { margin-top:5px; font-size:8px; line-height:1.5; color:#8E7FA3; }
+</style>
+<style scoped>
+.hc-head { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.hc-report { border:1px solid #E7D8F3; background:#fff; color:#8A6AA8; border-radius:6px; padding:3px 7px; font-family:inherit; font-size:8.5px; }
 </style>
