@@ -34,12 +34,13 @@ const displayMessages = computed(() => {
   ]
   return rows.sort((a, b) => Number(a.at || 0) - Number(b.at || 0))
 })
-async function load(silent = false) {
+async function load(silent = false, incremental = false) {
   if (!props.claimId) return
   if (!silent) loading.value = true
   error.value = ''
   try {
-    const r = await api.helpClaimMessages(props.claimId)
+    const last = incremental && messages.value.length ? messages.value[messages.value.length - 1] : null
+    const r = await api.helpClaimMessages(props.claimId, last?.id || '', last?.at || 0)
     side.value = r.side || side.value
     const merged = new Map()
     for (const m of messages.value) merged.set(key(m), m)
@@ -55,7 +56,7 @@ async function load(silent = false) {
 }
 function scheduleRefresh() {
   if (refreshTimer) clearTimeout(refreshTimer)
-  refreshTimer = setTimeout(() => load(true), 350)
+  refreshTimer = setTimeout(() => load(true, true), 350)
 }
 function send() {
   const t = text.value.trim()

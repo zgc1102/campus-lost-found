@@ -351,13 +351,16 @@ async function openChatForNotice(n, target) {
     await loadChat(n.reportId || n.report.id, 'report')
   }
 }
-async function loadChat(rid, kind = 'report') {
+async function loadChat(rid, kind = 'report', incremental = false) {
   chatLoading.value = true
   chatError.value = ''
   chatKind.value = kind
   chatTargetId.value = rid
   try {
-    const r = kind === 'claim' ? await api.claimMessages(rid) : await api.reportMessages(rid)
+    const last = incremental && chat.value.length ? chat.value[chat.value.length - 1] : null
+    const r = kind === 'claim'
+      ? await api.claimMessages(rid, last?.id || '', last?.at || 0)
+      : await api.reportMessages(rid, last?.id || '', last?.at || 0)
     chatSide.value = r.side || 'owner'
     if (r.blocked) {
       chatBlocked.value = true
@@ -464,7 +467,7 @@ let chatRefreshTimer = null
 function scheduleChatRefresh() {
   if (chatRefreshTimer) clearTimeout(chatRefreshTimer)
   chatRefreshTimer = setTimeout(() => {
-    if (!chatLoading.value && chatTargetId.value) loadChat(chatTargetId.value, chatKind.value)
+    if (!chatLoading.value && chatTargetId.value) loadChat(chatTargetId.value, chatKind.value, true)
   }, 400)
 }
 async function refreshChat() {

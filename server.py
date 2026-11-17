@@ -4352,7 +4352,15 @@ class Handler(BaseHTTPRequestHandler):
                 if claim.get("status") in ("completed", "closed") and is_send:
                     return self._json({"error": "这次沟通已经结束，不能再发送消息"}, 403)
                 if not is_send:
-                    return self._json({"ok": True, "messages": claim.get("messages") or [], "side": side})
+                    body = self._read_body()
+                    try:
+                        after_at = int(body.get("afterAt") or 0)
+                    except Exception:
+                        after_at = 0
+                    msgs = claim.get("messages") or []
+                    if after_at:
+                        msgs = [m for m in msgs if int(m.get("at") or 0) >= after_at]
+                    return self._json({"ok": True, "messages": msgs, "side": side})
                 body = self._read_body()
                 text = str(body.get("text") or "").strip()[:200]
                 client_msg_id = str(body.get("clientMsgId") or "").strip()[:80]
@@ -4436,12 +4444,20 @@ class Handler(BaseHTTPRequestHandler):
             if not side:
                 return self._json({"error": "无权查看这条对话"}, 403)
             if not is_send:
+                body = self._read_body()
+                try:
+                    after_at = int(body.get("afterAt") or 0)
+                except Exception:
+                    after_at = 0
+                msgs = report.get("messages") or []
+                if after_at:
+                    msgs = [m for m in msgs if int(m.get("at") or 0) >= after_at]
                 if report.get("blocked"):
                     _blocker = report.get("blockedBy")
                     _blocked_side = "owner" if _blocker in ("owner", report.get("owner")) else "finder"
                     return self._json({"ok": True, "messages": [], "side": side,
                                        "blocked": True, "blockedBy": _blocked_side})
-                return self._json({"ok": True, "messages": report.get("messages") or [], "side": side})
+                return self._json({"ok": True, "messages": msgs, "side": side})
             if report.get("status") == "closed":
                 return self._json({"error": "这次沟通已经结束，不能再发送消息"}, 403)
             if report.get("blocked"):
@@ -5151,7 +5167,14 @@ class Handler(BaseHTTPRequestHandler):
                         return self._json({"ok": True, "messages": [], "side": side, "blocked": True, "blockedBy": _side})
                     return self._json({"error": "对方已屏蔽你，消息发送失败", "blocked": True}, 403)
                 if not is_send:
-                    return self._json({"ok": True, "messages": claim.get("messages") or [], "side": side})
+                    try:
+                        after_at = int((patch or {}).get("afterAt") or 0)
+                    except Exception:
+                        after_at = 0
+                    msgs = claim.get("messages") or []
+                    if after_at:
+                        msgs = [m for m in msgs if int(m.get("at") or 0) >= after_at]
+                    return self._json({"ok": True, "messages": msgs, "side": side})
                 body = patch
                 text = str(body.get("text") or "").strip()[:200]
                 client_msg_id = str(body.get("clientMsgId") or "").strip()[:80]

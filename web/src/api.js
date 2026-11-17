@@ -225,14 +225,14 @@ export const api = {
   reportBlock(id) {
     return call('/reports/' + encodeURIComponent(id) + '/block', { method: 'POST' })
   },
-  reportMessages(id) {
-    return call('/reports/' + encodeURIComponent(id) + '/messages/list', { method: 'POST', skipCacheClear: true })
+  reportMessages(id, after, afterAt) {
+    return call('/reports/' + encodeURIComponent(id) + '/messages/list', { method: 'POST', body: JSON.stringify({ after: after || '', afterAt: afterAt || 0 }), skipCacheClear: true })
   },
   reportSend(id, text, clientMsgId) {
     return call('/reports/' + encodeURIComponent(id) + '/messages/send', { method: 'POST', body: JSON.stringify({ text, clientMsgId }), skipCacheClear: true })
   },
-  helpClaimMessages(id) {
-    return call('/help-claims/' + encodeURIComponent(id) + '/messages/list', { method: 'PATCH', body: '{}', skipCacheClear: true })
+  helpClaimMessages(id, after, afterAt) {
+    return call('/help-claims/' + encodeURIComponent(id) + '/messages/list', { method: 'PATCH', body: JSON.stringify({ after: after || '', afterAt: afterAt || 0 }), skipCacheClear: true })
   },
   helpClaimSend(id, text, clientMsgId) {
     return call('/help-claims/' + encodeURIComponent(id) + '/messages/send', { method: 'PATCH', body: JSON.stringify({ text, clientMsgId }), skipCacheClear: true })
