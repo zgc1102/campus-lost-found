@@ -187,8 +187,30 @@ async function readAll() {
   items.value = items.value.map((x) => ({ ...x, read: true }))
   unread.value = 0
 }
-function typeLabel(t, itemType = '') {
+function typeLabel(t, itemType = '', donation = false) {
   if (itemType === 'help') {
+    if (donation) {
+      return ({
+        claim: '🎁 收到赠与申请',
+        accepted: '✅ 赠与申请已通过',
+        rejected: '❌ 赠与申请被婉拒',
+        need_more: '📝 赠与申请待补充',
+        done: '🎉 爱心捐赠已完成',
+        help_withdraw: '↩️ 申请人已撤回赠与申请',
+        help_removed: '🚪 发布者已结束捐赠沟通',
+        help_accepted: '✅ 赠与申请已通过',
+        help_rejected: '❌ 赠与申请被婉拒',
+        help_need_more: '📝 赠与申请待补充',
+        help_supplement: '💬 申请人补充了说明',
+        help_done: '🎉 爱心捐赠已完成',
+        help_restored: '↩️ 赠与申请已拉回',
+        help_message: '💬 爱心捐赠匿名消息',
+        help_privacy_request: '🔒 不公开手机号申请',
+        help_privacy_agreed: '🔒 双方同意不公开手机号',
+        help_privacy_cancel: '🔓 不公开手机号申请已取消',
+        help_gift_accepted: '🎁 对方已接受赠与'
+      })[t] || '爱心捐赠提醒'
+    }
     return ({
       claim: '🤝 收到帮忙申请',
       accepted: '✅ 帮忙申请已通过',
@@ -732,9 +754,10 @@ async function helpAction(status) {
   try {
     await api.helpClaimAction(selected.value.claimId, { status })
     selected.value.claimStatus = status
-    actionMsg.value = status === 'accepted' ? '已接受帮忙，完成后记得点「完成帮助」'
+    actionMsg.value = status === 'accepted'
+      ? (selected.value.helpIsDonation ? '已同意赠与，记得请对方确认接受赠与' : '已接受帮忙，完成后记得点「完成帮助」')
       : status === 'need_more' ? '已请对方补充说明'
-      : '已婉拒这次帮忙'
+      : (selected.value.helpIsDonation ? '已婉拒这次赠与申请' : '已婉拒这次帮忙')
     await refreshSelected()
   } catch (e) { actionMsg.value = e.message || '操作失败' }
 }
@@ -800,7 +823,7 @@ async function completeHelp() {
   try {
     await api.helpClaimComplete(selected.value.claimId)
     selected.value.claimStatus = 'completed'
-    actionMsg.value = '已完成这次爱心帮助'
+    actionMsg.value = selected.value.helpIsDonation ? '已完成这次爱心捐赠' : '已完成这次爱心帮助'
     await refreshSelected()
   } catch (e) { actionMsg.value = e.message || '确认失败' }
 }
@@ -854,10 +877,10 @@ function fmt(ts) {
           :style="n.read ? 'opacity:.7' : ''"
           @click="openNotice(n)"
         >
-          <div class="mh">{{ typeLabel(n.type, n.itemType) }}</div>
+          <div class="mh">{{ typeLabel(n.type, n.itemType, n.helpIsDonation) }}</div>
           <div class="mmeta">{{ n.text }}</div>
           <div v-if="n.type === 'claim' && n.claimId" class="mmeta" style="color:var(--purple)">
-            {{ n.itemType === 'help' ? '看看对方能怎么帮你 →' : '点这里查看对方填了什么，与自己那条对比 →' }}
+            {{ n.itemType === 'help' ? (n.helpIsDonation ? '看看对方想不想要这份捐赠 →' : '看看对方能怎么帮你 →') : '点这里查看对方填了什么，与自己那条对比 →' }}
           </div>
           <div class="mmeta">{{ fmt(n.at) }}</div>
         </div>
@@ -875,7 +898,7 @@ function fmt(ts) {
       <div class="nd-hero" :class="'nd-hero-' + (selected.type || 'system')">
         <div class="nd-hero-icon">{{ selected.type === 'pickup' ? '🔖' : selected.itemType === 'help' ? '🤝' : '🔔' }}</div>
         <div class="nd-hero-main">
-          <div class="nd-kicker">{{ typeLabel(selected.type, selected.itemType) }}</div>
+          <div class="nd-kicker">{{ typeLabel(selected.type, selected.itemType, selected.helpIsDonation) }}</div>
           <h2>{{ selected.report?.itemName || selected.itemTitle || '通知详情' }}</h2>
           <div class="nd-time">{{ fmt(selected.at) }}</div>
         </div>

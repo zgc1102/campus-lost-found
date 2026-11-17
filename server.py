@@ -2724,6 +2724,8 @@ class Handler(BaseHTTPRequestHandler):
                     "kind": c.get("kind") or "claim",
                     "itemTitle": it.get("title") or "",
                     "itemType": it.get("type") or "",
+                    "helpCat": it.get("helpCat") or it.get("cat") or "",
+                    "helpIsDonation": (it.get("helpCat") or it.get("cat")) == "help_donate",
                     "itemStatus": it.get("status") or "",
                     "message": c.get("message") or "",
                     "history": c.get("history") or [],

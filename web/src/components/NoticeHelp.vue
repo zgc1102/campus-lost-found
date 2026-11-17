@@ -14,21 +14,24 @@ function requestAcceptGift() {
   if (window.confirm('确定接受对方赠与吗？确认后双方可以开始匿名沟通。')) emit('accept-gift')
 }
 function requestReject() {
-  if (window.confirm('确定婉拒这条帮忙申请吗？婉拒后可以在已婉拒状态拉回。')) emit('help-action', 'rejected')
+  if (window.confirm(props.notice.helpIsDonation ? '确定婉拒这条赠与申请吗？' : '确定婉拒这条帮忙申请吗？婉拒后可以在已婉拒状态拉回。')) emit('help-action', 'rejected')
 }
 function requestBlock() {
-  if (window.confirm('确定屏蔽这位帮忙人吗？屏蔽后不能再联系。')) emit('block')
+  if (window.confirm(props.notice.helpIsDonation ? '确定屏蔽这位申请人吗？屏蔽后不能再联系。' : '确定屏蔽这位帮忙人吗？屏蔽后不能再联系。')) emit('block')
 }
 function requestRemove() {
-  if (window.confirm('确定结束与 TA 的沟通吗？结束后名额会空出，可以再拉回。')) emit('remove')
+  if (window.confirm(props.notice.helpIsDonation ? '确定结束与 TA 的捐赠沟通吗？' : '确定结束与 TA 的沟通吗？结束后名额会空出，可以再拉回。')) emit('remove')
 }
 function requestWithdraw() {
-  if (window.confirm('确定撤回这条帮忙申请吗？撤回后名额会空出。')) emit('withdraw')
+  if (window.confirm(props.notice.helpIsDonation ? '确定撤回这条赠与申请吗？' : '确定撤回这条帮忙申请吗？撤回后名额会空出。')) emit('withdraw')
 }
 function requestRestore() {
   if (window.confirm('确定把这条申请拉回来吗？')) emit('restore')
 }
 function statusText(s) {
+  if (props.notice.helpIsDonation) {
+    return ({ pending: '待确认', accepted: props.notice.helpGiftAccepted ? '已接受赠与' : '待接受赠与', completed: '已完成捐赠', rejected: '已婉拒', need_more: '待补充', canceled: '已取消', withdrawn: '已撤回', removed: '已结束' })[s] || s || ''
+  }
   return ({ pending: '待处理', accepted: '进行中', completed: '已完成', rejected: '已婉拒', need_more: '待补充', canceled: '已取消', withdrawn: '已撤回', removed: '已结束' })[s] || s || ''
 }
 function submitSupp() {
@@ -47,7 +50,7 @@ function submitPhone() {
 
 <template>
   <div class="nd-card nd-help-card">
-    <div class="nd-card-title">帮忙说明</div>
+    <div class="nd-card-title">{{ notice.helpIsDonation ? '赠与申请' : '帮忙说明' }}</div>
     <div class="nd-message">{{ notice.claimMessage || notice.text }}</div>
     <div v-if="notice.claimAi" class="nd-ai-check">
       <b>信息对比度：{{ notice.claimAi.confidence }}%</b>
@@ -56,7 +59,7 @@ function submitPhone() {
       <div v-if="notice.claimAi.points?.length" class="nd-ai-points"><i v-for="p in notice.claimAi.points" :key="p">{{ p }}</i></div>
     </div>
     <div v-if="notice.claimStatus" class="nd-state" style="margin-top:8px">{{ statusText(notice.claimStatus) }}</div>
-    <div v-if="notice.helpNeedCount" class="nd-kv"><span>需要人数</span><b>{{ notice.helpNeedCount }} 人 · 已接受 {{ notice.helpAcceptedCount || 0 }} 人</b></div>
+    <div v-if="notice.helpNeedCount && !notice.helpIsDonation" class="nd-kv"><span>需要人数</span><b>{{ notice.helpNeedCount }} 人 · 已接受 {{ notice.helpAcceptedCount || 0 }} 人</b></div>
     <div v-if="notice.item?.askPrompt" class="nd-ask-prompt"><b>发布者希望你说明</b><span>{{ notice.item.askPrompt }}</span></div>
     <div v-if="notice.helpIsDonation && notice.claimStatus === 'accepted' && !notice.helpGiftAccepted" class="nd-ask-prompt">
       <b>赠与还未确认</b>
@@ -91,15 +94,15 @@ function submitPhone() {
       <button type="button" :disabled="supplementing" @click="submitSupp">{{ supplementing ? '提交中…' : '提交补充' }}</button>
       <div v-if="supplementMsg" class="nd-phone-msg">{{ supplementMsg }}</div>
     </div>
-    <div v-else-if="notice.claimStatus === 'need_more'" class="nd-exchange-tip">已请帮忙人补充说明，等对方提交后会自动回到待处理。</div>
+    <div v-else-if="notice.claimStatus === 'need_more'" class="nd-exchange-tip">已请{{ notice.helpIsDonation ? '申请人' : '帮忙人' }}补充说明，等对方提交后会自动回到待处理。</div>
     <div class="nd-kv" style="margin-top:8px"><span>发布者手机号</span><b>{{ notice.helpPhonesHidden ? '双方同意不公开' : (notice.ownerContact || (notice.item?.contact?.phone ? '已留手机号（通过后显示完整）' : '还没留手机号')) }}</b></div>
-    <div class="nd-kv"><span>帮忙人手机号</span><b>{{ notice.helpPhonesHidden ? '双方同意不公开' : (notice.item?.isMine ? (notice.claimContact || '还没留手机号') : (notice.claimContact ? '已留手机号' : '还没留手机号')) }}</b></div>
+    <div class="nd-kv"><span>{{ notice.helpIsDonation ? '申请人手机号' : '帮忙人手机号' }}</span><b>{{ notice.helpPhonesHidden ? '双方同意不公开' : (notice.item?.isMine ? (notice.claimContact || '还没留手机号') : (notice.claimContact ? '已留手机号' : '还没留手机号')) }}</b></div>
     <div v-if="notice.item?.isMine && !notice.ownerContact && !notice.item?.contact?.phone && !notice.helpPhonesHidden" class="nd-phone-fill">
-      <p>你是发布者。留手机号后，接受帮忙时双方才能互相联系。</p>
+      <p>你是发布者。留手机号后，{{ notice.helpIsDonation ? '同意赠与' : '接受帮忙' }}时双方才能互相联系。</p>
       <div class="nd-phone-row"><input v-model="phone" maxlength="20" placeholder="补充你的手机号"><button type="button" :disabled="phoneSaving" @click="submitPhone">{{ phoneSaving ? '保存中…' : '补充手机号' }}</button></div>
     </div>
     <div v-if="notice.isClaimant && !notice.claimContact && !notice.helpPhonesHidden" class="nd-phone-fill">
-      <p>你还没有预留手机号，发布者无法接受帮忙，也无法公布双方手机号。</p>
+      <p>你还没有预留手机号，{{ notice.helpIsDonation ? '发布者无法确认赠与' : '发布者无法接受帮忙' }}，也无法公布双方手机号。</p>
       <div class="nd-phone-row"><input v-model="phone" maxlength="20" placeholder="补充你的手机号"><button type="button" :disabled="phoneSaving" @click="submitPhone">{{ phoneSaving ? '保存中…' : '补充手机号' }}</button></div>
     </div>
     <div v-if="notice.helpPhonesHidden" class="nd-exchange-tip">双方已同意不公开手机号，可通过匿名沟通完成捐赠。</div>
@@ -111,13 +114,13 @@ function submitPhone() {
   </div>
   <div class="nd-actions">
     <template v-if="(notice.isPublisher || notice.item?.isMine) && notice.claimId && ['pending','need_more'].includes(notice.claimStatus)">
-      <button type="button" class="btn" @click="$emit('help-action', 'accepted')">接受并公布双方手机号</button>
-      <button type="button" class="btn ghost" :disabled="notice.claimStatus === 'need_more'" @click="$emit('help-action', 'need_more')">{{ notice.claimStatus === 'need_more' ? '已请求补充' : '请补充' }}</button>
-      <button type="button" class="btn ghost" @click="requestReject">婉拒</button>
+      <button type="button" class="btn" @click="$emit('help-action', 'accepted')">{{ notice.helpIsDonation ? '同意赠与并公布双方手机号' : '接受并公布双方手机号' }}</button>
+      <button type="button" class="btn ghost" :disabled="notice.claimStatus === 'need_more'" @click="$emit('help-action', 'need_more')">{{ notice.claimStatus === 'need_more' ? '已请求补充' : '请补充说明' }}</button>
+      <button type="button" class="btn ghost" @click="requestReject">{{ notice.helpIsDonation ? '婉拒赠与' : '婉拒' }}</button>
       <button v-if="notice.canBlockClaim" type="button" class="btn ghost" @click="requestBlock">屏蔽对方</button>
     </template>
-    <button v-if="(notice.isPublisher || notice.item?.isMine) && notice.claimId && notice.claimStatus === 'accepted'" type="button" class="btn" @click="$emit('complete')">完成帮助</button>
-    <button v-if="(notice.isPublisher || notice.item?.isMine) && notice.claimId && notice.claimStatus === 'accepted'" type="button" class="btn ghost" @click="requestRemove">结束与 TA 的沟通</button>
+    <button v-if="(notice.isPublisher || notice.item?.isMine) && notice.claimId && notice.claimStatus === 'accepted'" type="button" class="btn" @click="$emit('complete')">{{ notice.helpIsDonation ? '完成捐赠' : '完成帮助' }}</button>
+    <button v-if="(notice.isPublisher || notice.item?.isMine) && notice.claimId && notice.claimStatus === 'accepted'" type="button" class="btn ghost" @click="requestRemove">{{ notice.helpIsDonation ? '结束与 TA 的捐赠沟通' : '结束与 TA 的沟通' }}</button>
     <button v-if="(notice.isPublisher || notice.item?.isMine) && ['rejected','removed'].includes(notice.claimStatus)" type="button" class="btn ghost" @click="requestRestore">拉回申请</button>
     <button v-if="notice.claimBlockedByMe" type="button" class="btn ghost" @click="$emit('unblock')">解除屏蔽</button>
     <button v-if="notice.isClaimant && notice.claimId && ['pending','accepted'].includes(notice.claimStatus)" type="button" class="btn ghost" @click="requestWithdraw">撤回申请</button>

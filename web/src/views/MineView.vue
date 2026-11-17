@@ -108,7 +108,7 @@ async function completeClaim(c) {
   if (c.itemType === 'help') {
     try {
       await api.helpClaimComplete(c.id)
-      successMsg.value = '已完成帮助'
+      successMsg.value = isDonation(c) ? '已完成捐赠' : '已完成帮助'
       await load(true)
     } catch (e) {
       authMsg.value = e.message || '确认失败'
@@ -160,8 +160,11 @@ async function submitCode() {
 function claimStatus(s) {
   return ({ pending: '待确认', accepted: '已通过', completed: '已完成', rejected: '已拒绝', need_more: '待补充', closed: '已结束' })[s] || s
 }
+function isDonation(c) {
+  return c && (c.helpCat === 'help_donate' || c.helpIsDonation)
+}
 function claimLabel(c) {
-  if (c.itemType === 'help') return '爱心求助 · ' + (c.kind === 'help' ? '帮忙申请' : '求助')
+  if (c.itemType === 'help') return isDonation(c) ? '爱心捐赠 · 赠与申请' : ('爱心求助 · ' + (c.kind === 'help' ? '帮忙申请' : '求助'))
   if (c.kind === 'found') return '失物招领 · 捡到线索'
   if (c.itemType === 'lost') return '失物招领 · 寻物启事'
   return '失物招领 · 认领申请'
@@ -278,22 +281,22 @@ function fmt(ts) {
       </div>
 
       <div v-if="helpClaims.length" style="margin:12px 0">
-        <div class="sectitle">帮忙申请</div>
+        <div class="sectitle">帮忙 / 赠与申请</div>
         <div v-for="c in helpClaims" :key="c.id" class="mini claim-click" @click="openClaim(c)">
           <div class="mh">{{ c.itemTitle }}<span class="st">{{ claimStatus(c.status) }}</span></div>
           <div class="mtype">{{ claimLabel(c) }}</div>
           <div class="mmeta">{{ c.message }}</div>
           <div v-if="c.status === 'accepted'" class="mact">
-            <button type="button" class="btn" @click="completeClaim(c)">完成帮助</button>
+            <button type="button" class="btn" @click="completeClaim(c)">{{ isDonation(c) ? '完成捐赠' : '完成帮助' }}</button>
           </div>
           <div v-else-if="c.status === 'pending'" class="mact">
-            <button type="button" class="btn" @click="actClaim(c, 'accepted')">接受帮忙</button>
-            <button type="button" class="btn ghost" @click="actClaim(c, 'need_more')">请补充</button>
-            <button type="button" class="btn ghost" @click="actClaim(c, 'rejected')">婉拒</button>
+            <button type="button" class="btn" @click="actClaim(c, 'accepted')">{{ isDonation(c) ? '同意赠与' : '接受帮忙' }}</button>
+            <button type="button" class="btn ghost" @click="actClaim(c, 'need_more')">请补充说明</button>
+            <button type="button" class="btn ghost" @click="actClaim(c, 'rejected')">{{ isDonation(c) ? '婉拒赠与' : '婉拒' }}</button>
           </div>
           <div v-else-if="c.status === 'need_more'" class="mact">
-            <button type="button" class="btn" @click="actClaim(c, 'accepted')">接受帮忙</button>
-            <button type="button" class="btn ghost" @click="actClaim(c, 'rejected')">婉拒</button>
+            <button type="button" class="btn" @click="actClaim(c, 'accepted')">{{ isDonation(c) ? '同意赠与' : '接受帮忙' }}</button>
+            <button type="button" class="btn ghost" @click="actClaim(c, 'rejected')">{{ isDonation(c) ? '婉拒赠与' : '婉拒' }}</button>
           </div>
         </div>
       </div>

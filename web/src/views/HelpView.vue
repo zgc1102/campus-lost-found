@@ -78,10 +78,13 @@ function openDetail(it) {
 function aiLabel(d) {
   return d === 'approve' ? '建议通过' : d === 'reject' ? '建议驳回' : '建议复核'
 }
+function isDonation(x) {
+  return (x?.helpCat || x?.cat) === 'help_donate'
+}
 async function submitHelp() {
   if (!selected.value) return
   if (!goPhone.value.trim()) { goState.value = '请先留下手机号，方便对方联系你'; return }
-  if (goMsg.value.trim().length < 2) { goState.value = '说一句你能怎么帮'; return }
+  if (goMsg.value.trim().length < 2) { goState.value = isDonation(selected.value) ? '说一句你想要这个物品' : '说一句你能怎么帮'; return }
   going.value = true
   goState.value = ''
   try {
@@ -145,7 +148,7 @@ async function submitHelp() {
             <div v-if="chips(it).length" class="chips"><span v-for="c in chips(it)" :key="c" class="chip">{{ c }}</span></div>
             <div class="row">
               <span class="meta">📍 {{ it.place || '未填写地点' }} · {{ fmt(it.createdAt) }}</span>
-              <button v-if="it.status === 'approved'" type="button" class="btn" @click.stop="openDetail(it)">我来帮忙</button>
+              <button v-if="it.status === 'approved'" type="button" class="btn" @click.stop="openDetail(it)">{{ isDonation(it) ? '我想要' : '我来帮忙' }}</button>
               <span v-else class="help-state">{{ it.status === 'closed' ? '已结束' : '进行中' }}</span>
             </div>
           </div>
@@ -169,13 +172,13 @@ async function submitHelp() {
       <div class="sa" style="margin-top:8px">📍 {{ selected.place || '未填写地点' }}</div>
       <div class="sa" style="margin-top:8px">联系方式：{{ (selected.contact && selected.contact.phone) || '对方确认后可见' }}</div>
       <div v-if="selected.status !== 'approved'" class="sa" style="margin-top:10px;color:var(--sub)">
-        这条求助{{ selected.status === 'closed' ? '已经结束' : '已经有人帮忙，正在进行中' }}。
+        {{ isDonation(selected) ? (selected.status === 'closed' ? '这次捐赠已经结束。' : '已经有同学申请，等待发布者确认。') : ('这条求助' + (selected.status === 'closed' ? '已经结束' : '已经有人帮忙，正在进行中') + '。') }}
       </div>
       <div v-if="selected.askPrompt" class="sa" style="margin-top:8px;background:#F8F4FD;border:1px solid #EADFF5;border-radius:9px;padding:8px">
         <b>发布者希望你说明：</b>{{ selected.askPrompt }}
       </div>
       <template v-else>
-        <textarea v-model="goMsg" maxlength="120" placeholder="说一句你能怎么帮，例如：我明天上午可以带过去" style="width:100%;box-sizing:border-box;margin-top:10px;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:11px;padding:10px;font-family:inherit;font-size:11px;min-height:64px"></textarea>
+        <textarea v-model="goMsg" maxlength="120" :placeholder="isDonation(selected) ? '说一句你想要这个物品，例如：我正需要这个台灯，今天可以来取' : '说一句你能怎么帮，例如：我明天上午可以带过去'" style="width:100%;box-sizing:border-box;margin-top:10px;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:11px;padding:10px;font-family:inherit;font-size:11px;min-height:64px"></textarea>
         <input v-model="goPhone" maxlength="20" placeholder="你的手机号（必填，对方确认后可见）" style="width:100%;box-sizing:border-box;margin-top:7px;background:#F8F4FD;border:1px solid #EDE3F8;border-radius:11px;padding:10px;font-family:inherit;font-size:11px">
         <div v-if="goState" class="sa" style="margin-top:6px">{{ goState }}</div>
         <button type="button" class="btn" style="width:100%;margin-top:12px" :disabled="going" @click="submitHelp">{{ going ? '发送中…' : '发送' }}</button>

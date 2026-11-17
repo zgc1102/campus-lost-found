@@ -137,7 +137,7 @@ async function submit() {
         </div>
         <div class="tip-small">手机号会在列表里脱敏显示；对方确认后再给完整联系方式。</div>
       </div>
-      <div class="hp-sec">
+      <div v-if="active !== 'help_donate'" class="hp-sec">
         <label>需要几位同学帮忙</label>
         <select v-model.number="form.needCount">
           <option v-for="n in 10" :key="n" :value="n">{{ n }} 人</option>
@@ -147,7 +147,7 @@ async function submit() {
       <div class="hp-sec">
         <label>希望对方重点说明（选填）</label>
         <textarea v-model="form.askPrompt" maxlength="200" placeholder="例如：请说明住在哪栋公寓、哪些时间段方便，方便核对时间"></textarea>
-        <div class="tip-small">申请人和帮忙人会在通知里看到这段说明。</div>
+        <div class="tip-small">{{ active === 'help_donate' ? '申请人会在通知里看到这段说明。' : '申请人和帮忙人会在通知里看到这段说明。' }}</div>
       </div>
       <div class="hp-sec">
         <label>照片（选填）</label>
