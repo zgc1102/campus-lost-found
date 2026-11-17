@@ -2,10 +2,11 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { api, clearApiCache } from '../api'
 import CountUp from '../components/CountUp.vue'
-import NoticeChat from '../components/NoticeChat.vue'
 import NoticePickup from '../components/NoticePickup.vue'
 import NoticeClaim from '../components/NoticeClaim.vue'
 import NoticeHelp from '../components/NoticeHelp.vue'
+import NoticeClaimChat from '../components/NoticeClaimChat.vue'
+import NoticeReportChat from '../components/NoticeReportChat.vue'
 import NoticeHelpChat from '../components/NoticeHelpChat.vue'
 import NoticeSystem from '../components/NoticeSystem.vue'
 
@@ -58,7 +59,7 @@ const branch = computed(() => {
 const chatClosed = computed(() => {
   const s = selected.value
   if (!s) return false
-  if (s.type === 'pickup') return s.report?.status === 'closed'
+  if (s.report) return s.report.status === 'closed'
   if (s.claimId) return ['completed', 'closed', 'rejected'].includes(s.claimStatus)
   return false
 })
@@ -980,13 +981,13 @@ function fmt(ts) {
 
       <NoticePickup v-if="branch === 'pickup'" :notice="selected" @reveal="askRevealPhone('report')" @publish="publishReport" @block="blockReport" @close="closeReport" @ignore="ignoreNotice" @request-photo="requestPickupPhoto" @supplement-photo="supplementPickupPhoto" @reopen="reopenPickup" @unblock="unblockReport">
         <template #chat>
-          <NoticeChat :messages="chat" :outbox="outbox" :side="chatSide" :loading="chatLoading" :error="chatError" :blocked="chatBlocked" :blocked-by="blockedBy" :closed="chatClosed" placeholder="回复捡到者，不需要暴露手机号" @send="sendChat" @retry="retryOutbox" @refresh="refreshChat" />
+          <NoticeReportChat :report-id="selected.report?.id || selected.reportId || ''" :closed="chatClosed" placeholder="回复捡到者，不需要暴露手机号" />
         </template>
       </NoticePickup>
 
       <NoticeClaim v-else-if="branch === 'claim'" :notice="selected" :image-busy="claimImageBusy" :image-error="claimImageError" @claim-action="claimAction" @reveal="askRevealPhone('claim')" @block="blockClaim" @compare="compareOpen = true" @ignore="ignoreNotice" @supplement="supplementClaim" @supplement-image="supplementClaimImage" @pickup-code="generatePickupCode" @restore="restoreClaim" @unblock="unblockClaim" @end-talk="endClaimTalk" @finish-talk="finishClaim" @request-image="requestClaimImage">
         <template #chat>
-          <NoticeChat :messages="chat" :outbox="outbox" :side="chatSide" :loading="chatLoading" :error="chatError" :blocked="chatBlocked" :blocked-by="blockedBy" :closed="chatClosed" placeholder="回复对方，不需要暴露手机号" @send="sendChat" @retry="retryOutbox" @refresh="refreshChat" />
+          <NoticeClaimChat :claim-id="selected.claimId || ''" :closed="chatClosed" placeholder="回复对方，不需要暴露手机号" />
         </template>
       </NoticeClaim>
 
