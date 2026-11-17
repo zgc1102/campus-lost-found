@@ -2855,7 +2855,13 @@ class Handler(BaseHTTPRequestHandler):
                     row["itemTitle"] = it.get("title") or ""
                     row["itemStatus"] = it.get("status") or ""
                     row["item"] = public_item(it, owner)
-                cl = claim_map.get(n.get("claimId"))
+                if not n.get("claimId") and n.get("type") in ("accepted", "done") and n.get("itemId"):
+                    _legacy_claim = next((c for c in claim_map.values()
+                                          if c.get("itemId") == n.get("itemId")
+                                          and c.get("from") == owner), None)
+                    if _legacy_claim:
+                        row["claimId"] = _legacy_claim.get("id")
+                cl = claim_map.get(row.get("claimId") or n.get("claimId"))
                 if cl:
                     row["isPublisher"] = bool(it and it.get("ownerToken") == owner)
                     row["isClaimant"] = bool(cl.get("from") == owner)
@@ -5657,12 +5663,12 @@ class Handler(BaseHTTPRequestHandler):
                     if claim.get("kind") == "found":
                         add_notice(notices, claim.get("from"), "accepted",
                                    "失主已确认你捡到的《%s》，对方电话：%s" % (item.get("title") or "", phone),
-                                   item.get("id"))
+                                   item.get("id"), claim.get("id"))
                     else:
                         text_acc = ("求助者已接受你的帮忙《%s》，可以开始联系了" % (item.get("title") or "")
                                     if claim.get("kind") == "help"
                                     else "你申请的《%s》已通过，发布者电话：%s" % (item.get("title") or "", phone))
-                        add_notice(notices, claim.get("from"), "accepted", text_acc, item.get("id"))
+                        add_notice(notices, claim.get("from"), "accepted", text_acc, item.get("id"), claim.get("id"))
                     for c2 in others:
                         add_notice(notices, c2.get("from"), "rejected",
                                    "《%s》已被其他同学认领，感谢你的申请" % (item.get("title") or ""),
