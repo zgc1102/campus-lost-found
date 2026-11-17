@@ -7,7 +7,7 @@ const props = defineProps({
   imageBusy: { type: Boolean, default: false },
   imageError: { type: String, default: '' }
 })
-const emit = defineEmits(['claim-action', 'reveal', 'block', 'compare', 'ignore', 'supplement', 'supplement-image', 'pickup-code', 'restore', 'unblock', 'end-talk'])
+const emit = defineEmits(['claim-action', 'reveal', 'block', 'compare', 'ignore', 'supplement', 'supplement-image', 'pickup-code', 'restore', 'unblock', 'end-talk', 'finish-talk'])
 const supp = ref('')
 const imageMsg = ref('')
 const imagePreview = ref('')
@@ -42,8 +42,13 @@ function requestRestore() {
   }
 }
 function requestEndTalk() {
-  if (window.confirm('确定结束与 TA 的沟通吗？结束后物品会回到发布中，等待其他人申请。')) {
+  if (window.confirm('确定撤回这条申请吗？撤回后物品会回到发布中，其他申请仍然保留。')) {
     emit('end-talk')
+  }
+}
+function requestFinishTalk() {
+  if (window.confirm('确定结束本次认领吗？结束后不能恢复，也不会回到发布中。如果物品不是你的，请重新发布一条失物招领。')) {
+    emit('finish-talk')
   }
 }
 function submitSupp() {
@@ -136,9 +141,11 @@ function reviewText(r) {
       <button v-if="notice.canBlockClaim" type="button" class="btn ghost" @click="requestBlock">屏蔽对方</button>
     </template>
     <button v-if="(notice.isPublisher || notice.item?.isMine) && notice.claimStatus === 'rejected'" type="button" class="btn ghost" @click="requestRestore">拉回申请</button>
-    <button v-if="(notice.isPublisher || notice.item?.isMine) && notice.claimStatus === 'accepted'" type="button" class="btn ghost" @click="requestEndTalk">结束与 TA 的沟通</button>
+    <button v-if="(notice.isPublisher || notice.item?.isMine) && notice.claimStatus === 'accepted'" type="button" class="btn ghost" @click="requestFinishTalk">结束本次认领</button>
+    <div v-if="notice.claimStatus === 'accepted'" class="nd-exchange-tip">线下见面发现物品不是你的？请结束本次认领后重新发布。进入沟通后不能单方面取消回到发布中。</div>
     <div v-if="(notice.isPublisher || notice.item?.isMine) && ['pending','need_more'].includes(notice.claimStatus)" class="nd-exchange-tip">确认与其中一人沟通后，其他人暂时不能继续沟通；结束后物品会回到发布中，可以重新选择。</div>
-    <button v-if="notice.isClaimant && ['pending','accepted'].includes(notice.claimStatus)" type="button" class="btn ghost" @click="requestEndTalk">{{ notice.claimStatus === 'pending' ? '撤回申请' : '结束与 TA 的沟通' }}</button>
+    <button v-if="notice.isClaimant && notice.claimStatus === 'pending'" type="button" class="btn ghost" @click="requestEndTalk">撤回申请</button>
+    <button v-if="notice.isClaimant && notice.claimStatus === 'accepted'" type="button" class="btn ghost" @click="requestFinishTalk">结束本次认领</button>
     <button v-if="notice.claimBlockedByMe" type="button" class="btn ghost" @click="$emit('unblock')">解除屏蔽</button>
     <button v-if="notice.item" type="button" class="btn ghost" @click="$emit('compare')">查看匹配报告</button>
     <button type="button" class="btn ghost" @click="$emit('ignore')">忽略</button>

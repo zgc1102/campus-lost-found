@@ -441,6 +441,7 @@ async function sendOutbox(item) {
     if (r?.message) {
       if ((selected.value?.report?.id || selected.value?.claimId) === rid) appendChat(r.message)
       outbox.value = outbox.value.filter((x) => x.clientMsgId !== item.clientMsgId)
+      scheduleChatRefresh()
     } else {
       item.status = 'failed'
       item.error = '已发送，但未收到回执'
@@ -458,6 +459,13 @@ async function sendOutbox(item) {
 function retryOutbox(item) {
   if (!item || item.status === 'sending') return
   sendOutbox(item)
+}
+let chatRefreshTimer = null
+function scheduleChatRefresh() {
+  if (chatRefreshTimer) clearTimeout(chatRefreshTimer)
+  chatRefreshTimer = setTimeout(() => {
+    if (!chatLoading.value) refreshChat()
+  }, 400)
 }
 async function refreshChat() {
   if (chatLoading.value || !chatTargetId.value) return
@@ -527,6 +535,19 @@ async function unblockReport() {
     await refreshSelected()
   } catch (e) {
     actionMsg.value = e.message || '解除屏蔽失败'
+  }
+}
+async function finishClaim() {
+  const rid = selected.value?.claimId
+  if (!rid) return
+  try {
+    await api.claimFinish(rid)
+    selected.value.claimStatus = 'closed'
+    selected.value.itemStatus = 'closed'
+    actionMsg.value = '本次认领已结束。如果物品不是你的，请重新发布一条失物招领'
+    await refreshSelected()
+  } catch (e) {
+    actionMsg.value = e.message || '结束认领失败'
   }
 }
 async function endClaimTalk() {
@@ -948,7 +969,7 @@ function fmt(ts) {
         </template>
       </NoticePickup>
 
-      <NoticeClaim v-else-if="branch === 'claim'" :notice="selected" :image-busy="claimImageBusy" :image-error="claimImageError" @claim-action="claimAction" @reveal="askRevealPhone('claim')" @block="blockClaim" @compare="compareOpen = true" @ignore="ignoreNotice" @supplement="supplementClaim" @supplement-image="supplementClaimImage" @pickup-code="generatePickupCode" @restore="restoreClaim" @unblock="unblockClaim" @end-talk="endClaimTalk">
+      <NoticeClaim v-else-if="branch === 'claim'" :notice="selected" :image-busy="claimImageBusy" :image-error="claimImageError" @claim-action="claimAction" @reveal="askRevealPhone('claim')" @block="blockClaim" @compare="compareOpen = true" @ignore="ignoreNotice" @supplement="supplementClaim" @supplement-image="supplementClaimImage" @pickup-code="generatePickupCode" @restore="restoreClaim" @unblock="unblockClaim" @end-talk="endClaimTalk" @finish-talk="finishClaim">
         <template #chat>
           <NoticeChat :messages="chat" :outbox="outbox" :side="chatSide" :loading="chatLoading" :error="chatError" :blocked="chatBlocked" :blocked-by="blockedBy" :closed="chatClosed" placeholder="回复对方，不需要暴露手机号" @send="sendChat" @retry="retryOutbox" @refresh="refreshChat" />
         </template>

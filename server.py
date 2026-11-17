@@ -5502,6 +5502,38 @@ class Handler(BaseHTTPRequestHandler):
                 save_notices(notices)
             return self._json({"ok": True, "status": target})
 
+        if path.startswith("/api/claims/") and path.endswith("/finish"):
+            owner = self._owner()
+            claim_id = path[len("/api/claims/"):-len("/finish")]
+            with LOCK:
+                claims = load_claims()
+                claim = next((c for c in claims if c.get("id") == claim_id), None)
+                if not claim:
+                    return self._json({"error": "认领记录不存在"}, 404)
+                item = next((x for x in load_items() if x.get("id") == claim.get("itemId")), None)
+                if not item:
+                    return self._json({"error": "物品不存在"}, 404)
+                if owner not in (claim.get("from"), item.get("ownerToken")):
+                    return self._json({"error": "无权结束这条认领"}, 403)
+                if claim.get("status") != "accepted":
+                    return self._json({"error": "只有进行中的认领可以结束"}, 409)
+                claim["status"] = "closed"
+                claim["closedReason"] = "mismatch_or_meet_failed"
+                claim["closedAt"] = now_ms()
+                claim["updatedAt"] = now_ms()
+                item["status"] = "closed"
+                item["closedAt"] = now_ms()
+                item["updatedAt"] = now_ms()
+                save_claims(claims)
+                save_items(items)
+                notices = load_notices()
+                other = item.get("ownerToken") if owner == claim.get("from") else claim.get("from")
+                add_notice(notices, other, "claim_finished",
+                           "本次认领已结束。如果物品不是你的，请重新发布一条失物招领",
+                           item.get("id"), claim.get("id"))
+                save_notices(notices)
+            return self._json({"ok": True, "status": "closed"})
+
         if path.startswith("/api/claims/") and path.endswith("/cancel"):
             owner = self._owner()
             claim_id = path[len("/api/claims/"):-len("/cancel")]
@@ -5525,6 +5557,8 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json({"error": "无权取消这条申请"}, 403)
                 if claim.get("status") in ("completed", "closed", "canceled", "rejected"):
                     return self._json({"error": "这条申请已经结束"}, 409)
+                if claim.get("status") == "accepted":
+                    return self._json({"error": "已进入沟通，不能单方面取消；如果物品不符，请点击结束本次认领"}, 409)
                 was_accepted = claim.get("status") == "accepted"
                 claim["status"] = "canceled"
                 claim["canceledBy"] = owner
