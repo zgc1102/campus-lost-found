@@ -20,7 +20,6 @@ const steps = ref([])
 const detectiveSteps = ref([])
 const selectedMatch = ref(null)
 const fromPublished = ref(false)
-const visibleActions = computed(() => (detective.value?.actions || []).filter((a) => a && String(a.title || '').trim()))
 const detectiveLoading = ref(false)
 const detectiveStage = ref(0)
 const detectiveElapsed = ref(0)
@@ -29,7 +28,7 @@ const detectiveStageText = computed(() => ([
   '正在整理你给出的线索…',
   '正在匹配站内相似招领…',
   '正在统计高频区域…',
-  '正在生成下一步行动建议…'
+  '正在整理路线线索…'
 ][detectiveStage.value] || '正在推理…'))
 function radarSnapshot() {
   return {
@@ -256,11 +255,6 @@ function organizePublish() {
         <div class="dt-summary" style="margin-top:12px">{{ detective.summary }}</div>
         <div class="dt-tech"><span>智能体路线推理</span><span>校园地点知识库</span><span>工具调用</span></div>
         <div v-for="(s, i) in detectiveSteps" :key="'ds'+i" class="dt-step"><b>{{ toolLabel(s.tool) }}</b><span>{{ s.finding }}</span></div>
-        <div class="dt-title">建议按这个顺序找（{{ visibleActions.length }} 条）</div>
-        <div v-for="(a, i) in visibleActions" :key="i" class="dt-action" :style="{ animationDelay: (i * 0.12) + 's' }">
-          <span class="dt-num">{{ i + 1 }}</span>
-          <span class="dt-act-main"><b>{{ a.title }}</b><span>{{ a.detail }}</span></span>
-        </div>
         <template v-if="detective.hotspots && detective.hotspots.length">
           <div class="dt-title">高频区域 · 近7天与累计</div>
           <div class="rd-hot">

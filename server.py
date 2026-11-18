@@ -1911,10 +1911,9 @@ def agent_detective(item, items):
             {"tool": "read_item", "finding": item.get("place") or "未填写地点"},
             {"tool": "match", "finding": "比对 %d 条反向信息，命中 %d 条" % (len(items), len(matches))},
             {"tool": "hotspot", "finding": "计算校园高频区域"},
-            {"tool": "plan", "finding": "生成 %d 条行动建议" % len(final_actions)},
         ],
         "confidence": "高" if top_score >= 68 else ("中" if top_score >= 45 else "低"),
-        "summary": "按你给的地点和时间，先看匹配到的招领，再按下面的顺序找。",
+        "summary": "按你给的地点和时间，先看匹配到的招领，再结合高频区域自行核对。",
         "disclaimer": "以上是线索建议，不保证物品一定在这些位置；找到后请当面核对特征。",
     }
 
