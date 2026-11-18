@@ -45,13 +45,19 @@ def note_violation(owner, source, reason="", risk=0, report_id="", scope=""):
         return None
     data = _load()
     row = data.get(owner) or {"owner": owner, "events": []}
+    scope = str(scope or "")[:120]
+    last = (row.get("events") or [])[-1] if row.get("events") else None
+    # 同一个板块 10 分钟内只记一次，避免连续几句话被算成多次违规
+    if (last and last.get("scope") == scope
+            and _now() - int(last.get("at") or 0) < 10 * 60 * 1000):
+        return row
     row["events"].append({
         "at": _now(),
         "source": str(source or "")[:30],
         "reason": str(reason or "")[:200],
         "risk": max(0, min(100, int(risk or 0))),
         "reportId": str(report_id or "")[:64],
-        "scope": str(scope or "")[:120],
+        "scope": scope,
     })
     row["events"] = row["events"][-100:]
     data[owner] = row

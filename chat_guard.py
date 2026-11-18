@@ -213,9 +213,11 @@ def _process(alert_id):
         alert["ai"] = result
         alert["reviewedAt"] = _now()
         sender = alert.get("senderOwner") or ""
-        history = risk_profile.get_level(sender).get("level", "normal")
+        history = risk_profile.get_level(sender)
+        history_level = history.get("level", "normal")
+        history_count = int(history.get("count") or 0)
         decision = moderation_policy.decide(result.get("verdict"), result.get("risk"),
-                                            result.get("categories"), history,
+                                            result.get("categories"), history_level,
                                             alert.get("localHits"))
         alert["action"] = decision
         alert["status"] = decision.get("status") or "auto_safe"
@@ -230,9 +232,20 @@ def _process(alert_id):
                 pass
         if decision.get("action") in ("warn", "mute_chat"):
             alert["warningFor"] = sender
-            alert["warning"] = ("AI 检测到本次聊天内容存在违规风险，相关记录已保存。请立即停止不当言行。"
-                                if decision.get("action") == "warn"
-                                else "AI 检测到本次聊天内容存在严重违规风险，聊天已被暂停。相关记录已保存。")
+            label = {"claim": "失物招领", "report": "拾光码", "help": "爱心求助"}.get(alert.get("kind"), "聊天")
+            if decision.get("action") == "warn":
+                if history_count > 0:
+                    alert["warning"] = (
+                        "本次先提醒，不暂停聊天。你近 30 天在%s已有 %d 次不良记录；"
+                        "如再次严重违规，将暂停该板块聊天。" % (label, history_count)
+                    )
+                else:
+                    alert["warning"] = "本次先提醒，不暂停聊天。如再次出现严重违规，将暂停该板块聊天。"
+            else:
+                alert["warning"] = (
+                    "基于你近期在%s的 %d 次不良记录和本次严重违规，"
+                    "本次聊天已暂停。其他板块仍可使用。" % (label, history_count)
+                )
             alert["warningAt"] = _now()
             alert["counterpartFor"] = alert.get("targetOwner") or ""
             cats = "、".join((result.get("categories") or [])[:2])
@@ -246,7 +259,7 @@ def _process(alert_id):
                 risk_profile.note_violation(sender, "chat_guard",
                                             result.get("reason"), max(45, result.get("risk") or 0),
                                             alert.get("id"),
-                                            str(alert.get("kind") or "") + ":" + str(alert.get("targetId") or ""))
+                                            "module:" + str(alert.get("kind") or ""))
             except Exception:
                 pass
         for word in alert.get("localHits") or []:

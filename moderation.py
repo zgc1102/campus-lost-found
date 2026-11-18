@@ -206,9 +206,11 @@ def _process(report_id):
             return
         report["ai"] = result
         report["reviewedAt"] = _now()
-        history = risk_profile.get_level(report.get("targetOwner")).get("level", "normal")
+        history = risk_profile.get_level(report.get("targetOwner"))
+        history_level = history.get("level", "normal")
+        history_count = int(history.get("count") or 0)
         decision = moderation_policy.decide(result.get("verdict"), result.get("risk"),
-                                            result.get("categories"), history,
+                                            result.get("categories"), history_level,
                                             automatic=False)
         report["action"] = decision
         report["status"] = decision.get("status") or "auto_safe"
@@ -223,15 +225,25 @@ def _process(report_id):
                 pass
         if decision.get("action") in ("warn", "mute_chat"):
             report["warningFor"] = report.get("targetOwner") or ""
-            report["warning"] = ("AI 检测到本次聊天内容存在违规风险，相关记录已保存。请立即停止不当言行。"
-                                 if decision.get("action") == "warn"
-                                 else "AI 检测到本次聊天内容存在严重违规风险，聊天已被暂停。相关记录已保存。")
+            label = {"claim": "失物招领", "report": "拾光码", "help": "爱心求助"}.get(report.get("kind"), "聊天")
+            if decision.get("action") == "warn":
+                report["warning"] = (
+                    "本次举报由 AI 判定存在风险，先提醒，不暂停聊天。"
+                    + ("你近 30 天在%s已有 %d 次不良记录；" % (label, history_count) if history_count > 0 else "")
+                    + "如再次严重违规，将暂停该板块聊天。"
+                )
+            else:
+                report["warning"] = (
+                    "基于你近期在%s的 %d 次不良记录和本次严重违规，"
+                    "本次聊天已暂停。其他板块仍可使用。" % (label, history_count)
+                )
             report["warningAt"] = _now()
-        if result.get("verdict") == "violation" and int(result.get("risk") or 0) >= 70:
+        if decision.get("action") in ("warn", "mute_chat"):
             try:
                 risk_profile.note_violation(report.get("targetOwner"), "report",
-                                            result.get("reason"), result.get("risk"), report.get("id"),
-                                            str(report.get("kind") or "") + ":" + str(report.get("targetId") or ""))
+                                            result.get("reason"), max(45, result.get("risk") or 0),
+                                            report.get("id"),
+                                            "module:" + str(report.get("kind") or ""))
             except Exception:
                 pass
         _save(REPORT_FILE, rows)
