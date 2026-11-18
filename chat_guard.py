@@ -129,8 +129,9 @@ def _ai_review(alert):
     if not cfg["api_key"]:
         return None
     prompt = (
-        "你是校园失物招领平台的聊天安全审核员。判断下面聊天是否包含"
+        "你是校园失物招领平台的聊天安全审核员。只判断“当前消息”是否包含"
         "辱骂威胁、色情擦边、诈骗转账、广告刷屏、代考或其他违规。"
+        "历史对话只能用来理解当前这句话的语境，不能把历史违规重复算到当前正常消息上。"
         "只输出 JSON，不要解释："
         '{"verdict":"safe|suspicious|violation","risk":0-100,'
         '"categories":["..."],"reason":"不超过60字"}\n\n'
@@ -144,7 +145,7 @@ def _ai_review(alert):
         "response_format": {"type": "json_object"},
         "thinking": {"type": "disabled"},
         "messages": [
-            {"role": "system", "content": "你是严格但克制的校园安全审核员，只输出 JSON。"},
+            {"role": "system", "content": "你是严格但克制的校园安全审核员，只输出 JSON。只判断当前消息本身；历史对话只用于理解语境，不要因为历史消息已经处理过就重复判定当前正常消息违规。"},
             {"role": "user", "content": prompt},
         ],
     }
@@ -220,7 +221,7 @@ def _process(alert_id):
         alert["status"] = decision.get("status") or "auto_safe"
         if decision.get("mute_minutes"):
             try:
-                scope = str(alert.get("kind") or "") + ":" + str(alert.get("targetId") or "")
+                scope = "module:" + str(alert.get("kind") or "")
                 enforcement.mute_chat(sender, decision.get("mute_minutes"),
                                       decision.get("reason"), alert.get("id"), scope)
                 alert["mutedUntil"] = _now() + int(decision.get("mute_minutes")) * 60 * 1000

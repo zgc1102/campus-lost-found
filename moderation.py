@@ -214,7 +214,7 @@ def _process(report_id):
         report["status"] = decision.get("status") or "auto_safe"
         if decision.get("mute_minutes"):
             try:
-                scope = str(report.get("kind") or "") + ":" + str(report.get("targetId") or "")
+                scope = "module:" + str(report.get("kind") or "")
                 enforcement.mute_chat(report.get("targetOwner"), decision.get("mute_minutes"),
                                        decision.get("reason"), report.get("id"), scope)
                 report["mutedUntil"] = _now() + int(decision.get("mute_minutes")) * 60 * 1000

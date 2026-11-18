@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { api, clearApiCache } from '../api'
 import CountUp from '../components/CountUp.vue'
@@ -261,7 +261,8 @@ function typeLabel(t, itemType = '', donation = false) {
       pickup_photo_request: '📷 失主请你补充照片',
       pickup_photo_supplement: '📷 捡到者补充了照片',
       pickup_reopen: '🔓 拾光码上报已重新打开',
-  moderation_unmute: '🔓 聊天暂停已解除'
+  moderation_unmute: '🔓 聊天暂停已解除',
+  moderation_muted: '⏸ 聊天暂停通知'
     })[t] || '爱心求助提醒'
   }
   return ({
@@ -279,7 +280,8 @@ function typeLabel(t, itemType = '', donation = false) {
     pickup_photo_request: '📷 失主请你补充照片',
     pickup_photo_supplement: '📷 捡到者补充了照片',
     pickup_reopen: '🔓 拾光码上报已重新打开',
-  moderation_unmute: '🔓 聊天暂停已解除'
+  moderation_unmute: '🔓 聊天暂停已解除',
+  moderation_muted: '⏸ 聊天暂停通知'
   })[t] || '通知'
 }
 function openNotice(n) {

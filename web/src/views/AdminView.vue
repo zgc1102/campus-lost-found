@@ -125,6 +125,9 @@ function logout() {
   token.value = ''
   sessionStorage.removeItem(TOKEN_KEY)
 }
+function scopeLabel(scope) {
+  return ({ 'module:claim': '失物招领', 'module:report': '拾光码', 'module:help': '爱心求助' })[scope] || scope || '聊天'
+}
 async function adminUnmute(owner, scope = '') {
   if (!window.confirm('确定由管理员主动解除这个用户的聊天暂停吗？')) return
   try {
@@ -519,7 +522,7 @@ function statusClass(s) {
     <div v-if="!enforcements.length" class="reports-empty">还没有暂停记录</div>
     <div v-for="u in enforcements" :key="u.owner + ':' + u.scope" class="report-row">
       <div class="report-head"><b>{{ u.owner }}</b><span class="report-status">{{ u.mutedUntil > Date.now() ? '暂停中' : '已到期' }}</span></div>
-      <div class="report-meta">{{ u.scope }} · {{ u.reason }}</div>
+      <div class="report-meta">{{ scopeLabel(u.scope) }} · {{ u.reason }}</div>
       <div v-if="u.mutedUntil > Date.now()" class="report-actions">
         <button type="button" @click="adminUnmute(u.owner, u.scope)">管理员主动解除</button>
       </div>

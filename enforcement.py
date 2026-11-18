@@ -8,6 +8,7 @@ import time
 
 _BASE_DIR = "."
 FILE = "enforcement.json"
+NOTICE_FILE = "enforcement_notices.json"
 
 
 def init(base_dir):
@@ -15,13 +16,13 @@ def init(base_dir):
     _BASE_DIR = os.path.abspath(base_dir)
 
 
-def _path():
-    return os.path.join(_BASE_DIR, FILE)
+def _path(name):
+    return os.path.join(_BASE_DIR, name)
 
 
 def _load():
     try:
-        with open(_path(), "r", encoding="utf-8") as f:
+        with open(_path(FILE), "r", encoding="utf-8") as f:
             data = json.load(f)
             return data if isinstance(data, dict) else {}
     except Exception:
@@ -29,10 +30,10 @@ def _load():
 
 
 def _save(data):
-    tmp = _path() + ".tmp"
+    tmp = _path(FILE) + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
-    os.replace(tmp, _path())
+    os.replace(tmp, _path(FILE))
 
 
 def _now():
@@ -60,7 +61,43 @@ def mute_chat(owner, minutes, reason="", source="", scope="*"):
     }
     data[owner] = row
     _save(data)
+    label = {"module:claim": "失物招领", "module:report": "拾光码", "module:help": "爱心求助"}.get(scope, "聊天")
+    _queue_notice(owner, "你在%s的聊天因违规被暂停 %d 分钟；其他板块仍然可以使用。" % (label, int(minutes)))
     return row
+
+
+def _queue_notice(owner, text):
+    try:
+        rows = _load_notices()
+        rows.append({"owner": owner, "text": text, "at": _now()})
+        _save_notices(rows[-1000:])
+    except Exception:
+        pass
+
+
+def _load_notices():
+    try:
+        with open(_path(NOTICE_FILE), "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return data if isinstance(data, list) else []
+    except Exception:
+        return []
+
+
+def _save_notices(rows):
+    tmp = _path(NOTICE_FILE) + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(rows, f, ensure_ascii=False, indent=2)
+    os.replace(tmp, _path(NOTICE_FILE))
+
+
+def pop_notices(owner):
+    owner = str(owner or "").strip()[:64]
+    rows = _load_notices()
+    mine = [r for r in rows if r.get("owner") == owner]
+    if mine:
+        _save_notices([r for r in rows if r.get("owner") != owner])
+    return [str(r.get("text") or "") for r in mine if r.get("text")]
 
 
 def clear_mute(owner, scope=None):
@@ -77,7 +114,7 @@ def clear_mute(owner, scope=None):
     return row
 
 
-def check(owner, scope="*"):
+def check(owner, scope="*", module_scope=""):
     owner = str(owner or "").strip()[:64]
     row = _load().get(owner) or {}
     mutes = row.get("mutes") or {}
@@ -85,7 +122,11 @@ def check(owner, scope="*"):
     legacy_until = int(row.get("mutedUntil") or 0)
     if legacy_until > now:
         return False, "本次聊天已被暂停，%s 后可继续" % time.strftime("%m-%d %H:%M", time.localtime(legacy_until / 1000)), legacy_until
-    for key in (_scope(scope), "*"):
+    keys = [_scope(scope)]
+    if module_scope:
+        keys.append(_scope(module_scope))
+    keys.append("*")
+    for key in keys:
         item = mutes.get(key) or {}
         until = int(item.get("mutedUntil") or 0)
         if until > now:

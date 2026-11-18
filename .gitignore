@@ -48,6 +48,7 @@ moderation_audit.json
 chat_guard_alerts.json
 risk_profiles.json
 appeals.json
+enforcement_notices.json
 chat_lexicon.json
 chat_lexicon_candidates.json
 lexicon_miner_state.json
