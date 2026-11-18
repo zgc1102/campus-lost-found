@@ -20,6 +20,7 @@ import risk_profile
 import moderation_policy
 import enforcement
 import chat_lexicon
+import lexicon_lifecycle
 
 _LOCK = threading.Lock()
 _QUEUE = queue.Queue()
@@ -241,6 +242,14 @@ def _process(alert_id):
             try:
                 risk_profile.note_violation(sender, "chat_guard",
                                             result.get("reason"), max(45, result.get("risk") or 0), alert.get("id"))
+            except Exception:
+                pass
+        for word in alert.get("localHits") or []:
+            try:
+                if decision.get("action") == "none":
+                    lexicon_lifecycle.record_normal(word, alert.get("id"), result.get("reason"))
+                else:
+                    lexicon_lifecycle.record_violation(word, alert.get("id"), result.get("reason"))
             except Exception:
                 pass
         _save(rows)

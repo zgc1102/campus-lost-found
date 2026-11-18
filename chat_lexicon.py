@@ -8,6 +8,7 @@ import json
 import os
 import threading
 import time
+import lexicon_lifecycle
 
 _BASE_DIR = "."
 FILE = "chat_lexicon.json"
@@ -71,8 +72,10 @@ def load():
 def scan(text):
     data = load()
     t = str(text or "")
-    high = [w for w in data.get("high", []) if w and w in t]
-    mid = [w for w in data.get("mid", []) if w and w in t]
+    high = [w for w in data.get("high", [])
+            if w and w in t and not lexicon_lifecycle.is_suppressed(w)]
+    mid = [w for w in data.get("mid", [])
+           if w and w in t and not lexicon_lifecycle.is_suppressed(w)]
     return high + mid
 
 
@@ -113,9 +116,10 @@ def _apply_candidates():
 def monthly_check():
     data = load()
     last = int(data.get("updatedAt") or 0)
+    changed = lexicon_lifecycle.review()
     if time.time() * 1000 - last > 30 * 24 * 3600 * 1000:
         return _apply_candidates() or add_terms([], [], "monthly-empty")
-    return None
+    return changed
 
 
 def _worker():

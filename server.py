@@ -35,6 +35,7 @@ import enforcement
 import moderation_policy
 import appeals
 import chat_lexicon
+import lexicon_lifecycle
 import lexicon_miner
 
 
@@ -6377,6 +6378,7 @@ def main():
     appeals.init(BASE_DIR)
     appeals.start_worker()
     chat_lexicon.init(BASE_DIR)
+    lexicon_lifecycle.init(BASE_DIR)
     chat_lexicon.start_worker()
     lexicon_miner.init(BASE_DIR)
     lexicon_miner.start_worker()

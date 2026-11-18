@@ -16,10 +16,9 @@ def _has(categories, words):
 
 def decide(verdict, risk, categories=None, history_level="normal", local_hits=None):
     risk = max(0, min(100, int(risk or 0)))
-    hits = local_hits or []
     severe = _has(categories, SEVERE_CATEGORIES)
 
-    if verdict == "safe" and risk < RISK_WARN and not hits:
+    if verdict == "safe" and risk < RISK_WARN:
         return {
             "action": "none",
             "status": "auto_safe",

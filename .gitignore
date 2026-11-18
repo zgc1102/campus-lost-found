@@ -51,5 +51,7 @@ appeals.json
 chat_lexicon.json
 chat_lexicon_candidates.json
 lexicon_miner_state.json
+lexicon_lifecycle.json
+lexicon_lifecycle_log.json
 _local_server.py
 本地二维码*.png
