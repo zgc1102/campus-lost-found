@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { ref } from 'vue'
 
 const emit = defineEmits(['nav'])
@@ -101,7 +101,7 @@ function up(i) {
     </div>
 
     <div v-if="active" class="map-modal-backdrop" @click.self="active = null"></div>
-    <div v-if="active" class="sheet show">
+    <div v-if="active" class="sheet show map-sheet">
       <button type="button" class="sheet-x" @click="active = null">✕</button>
       <div class="big-thumb">
         <img v-if="photos[active.name] && !photoError" :src="photos[active.name]" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;border-radius:12px;background:linear-gradient(135deg,#EFE3D0,#DCC9EE)" @error="photoError = true">
@@ -124,4 +124,7 @@ function up(i) {
 
 <style scoped>
 .map-modal-backdrop { position:fixed; inset:0; z-index:19; background:rgba(12,6,22,.72); }
+</style>
+<style scoped>
+.sheet.show.map-sheet { box-shadow:none !important; clip-path:none !important; }
 </style>
