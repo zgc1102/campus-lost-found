@@ -34,6 +34,7 @@ import image_guard
 import enforcement
 import moderation_policy
 import appeals
+import chat_lexicon
 
 
 def load_dotenv(path=None):
@@ -4904,13 +4905,17 @@ class Handler(BaseHTTPRequestHandler):
             if not owner:
                 return self._json({"error": "缺少设备标识"}, 400)
             body = self._read_body()
+            rid = str(body.get("reportId") or "").strip()
+            aid = str(body.get("alertId") or rid).strip()
+            evidence = moderation.get(rid) or chat_guard.get(aid) or {}
             row, duplicate = appeals.create(
                 owner,
-                body.get("reportId"),
-                body.get("alertId") or body.get("reportId"),
+                rid,
+                aid,
                 body.get("reason"),
                 body.get("kind"),
                 body.get("targetId"),
+                evidence,
             )
             return self._json({"ok": True, "appeal": row, "duplicate": duplicate}, 201)
 
@@ -5710,21 +5715,17 @@ class Handler(BaseHTTPRequestHandler):
                 save_notices(notices)
             return self._json({"ok": True, "status": target})
 
+        if path.startswith("/api/admin/enforcement/unmute/"):
+            if not self._need_admin():
+                return
+            owner = path[len("/api/admin/enforcement/unmute/"):]
+            row = enforcement.clear_mute(owner)
+            return self._json({"ok": True, "owner": owner, "state": row or {}})
+
         if path.startswith("/api/admin/moderation/appeals/"):
             if not self._need_admin():
                 return
-            appeal_id = path[len("/api/admin/moderation/appeals/"):]
-            body = self._read_body()
-            row = appeals.admin_update(appeal_id, str(body.get("status") or ""),
-                                        str(body.get("note") or ""), "admin")
-            if not row:
-                return self._json({"error": "申诉不存在或状态不正确"}, 404)
-            if row.get("status") == "approved":
-                try:
-                    enforcement.clear_mute(row.get("owner"))
-                except Exception:
-                    pass
-            return self._json({"ok": True, "appeal": row})
+            return self._json({"error": "申诉由 AI 自动复核，管理员不能改写结果；只能主动解除暂停"}, 403)
 
         if path.startswith("/api/admin/moderation/reports/"):
             if not self._need_admin():
@@ -6365,6 +6366,9 @@ def main():
     risk_profile.init(BASE_DIR)
     enforcement.init(BASE_DIR)
     appeals.init(BASE_DIR)
+    appeals.start_worker()
+    chat_lexicon.init(BASE_DIR)
+    chat_lexicon.start_worker()
     moderation.init(BASE_DIR)
     moderation.start_worker()
     chat_guard.init(BASE_DIR)

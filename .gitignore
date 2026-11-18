@@ -48,5 +48,7 @@ moderation_audit.json
 chat_guard_alerts.json
 risk_profiles.json
 appeals.json
+chat_lexicon.json
+chat_lexicon_candidates.json
 _local_server.py
 本地二维码*.png

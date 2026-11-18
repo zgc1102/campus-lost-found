@@ -19,23 +19,13 @@ import urllib.request
 import risk_profile
 import moderation_policy
 import enforcement
+import chat_lexicon
 
 _LOCK = threading.Lock()
 _QUEUE = queue.Queue()
 _STARTED = False
 _BASE_DIR = "."
 ALERT_FILE = "chat_guard_alerts.json"
-
-_HIGH = (
-    "傻逼", "煞笔", "去死", "弄死你", "杀了你", "约炮", "裸照", "裸聊", "开房",
-    "包养", "代考", "替考", "代写", "卖答案", "扫码付款", "先转账", "验证码给我",
-    "操你", "草泥马", "你妈死了", "陪睡",
-)
-_MID = (
-    "滚", "废物", "脑残", "二百五", "贱", "恶心", "骚扰", "骂你",
-    "加微信", "私聊", "包夜", "多少钱", "蠢货", "混蛋", "王八蛋",
-    "神经病", "不要脸", "垃圾", "狗东西",
-)
 
 
 def init(base_dir):
@@ -80,10 +70,7 @@ def _context(messages):
 
 
 def local_hits(text):
-    t = str(text or "")
-    hits = [w for w in _HIGH if w in t]
-    hits += [w for w in _MID if w in t]
-    return hits
+    return chat_lexicon.scan(text)
 
 
 def _last_alert(kind, target_id):
@@ -120,6 +107,12 @@ def admin_list():
     with _LOCK:
         rows = _load()
     return rows[-300:][::-1]
+
+
+def get(alert_id):
+    with _LOCK:
+        rows = _load()
+    return next((r for r in rows if r.get("id") == alert_id), None)
 
 
 def _ai_config():

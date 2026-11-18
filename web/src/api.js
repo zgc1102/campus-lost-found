@@ -210,6 +210,13 @@ export const api = {
   myAppeals() {
     return call('/moderation/appeals/mine')
   },
+  adminUnmute(token, owner) {
+    return call('/admin/enforcement/unmute/' + encodeURIComponent(owner), {
+      method: 'PATCH',
+      headers: { 'X-Admin-Token': token },
+      body: '{}'
+    })
+  },
   adminAppeals(token) {
     return call('/admin/moderation/appeals', { headers: { 'X-Admin-Token': token } })
   },

@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { onUnmounted, ref } from 'vue'
 import { api } from '../api'
 
 const props = defineProps({
@@ -12,6 +12,32 @@ const reason = ref('')
 const busy = ref(false)
 const error = ref('')
 const done = ref(false)
+const maxPolls = ref(10)
+let pollTimer = null
+const resultText = ref('')
+
+async function pollResult() {
+  if (maxPolls.value <= 0) return
+  maxPolls.value -= 1
+  try {
+    const r = await api.myAppeals()
+    const row = (r?.appeals || [])[0]
+    if (!row) return
+    if (row.status === 'approved') {
+      resultText.value = 'AI 已通过申诉，聊天暂停已解除。'
+      if (pollTimer) clearInterval(pollTimer)
+    } else if (row.status === 'rejected') {
+      resultText.value = 'AI 复核后维持原处理：' + (row.ai?.reason || '')
+      if (pollTimer) clearInterval(pollTimer)
+    }
+  } catch (_) {}
+}
+
+function startPolling() {
+  if (pollTimer) clearInterval(pollTimer)
+  pollTimer = setInterval(pollResult, 2500)
+}
+onUnmounted(() => { if (pollTimer) clearInterval(pollTimer) })
 
 async function submit() {
   if (busy.value) return
@@ -30,6 +56,7 @@ async function submit() {
       targetId: props.targetId
     })
     done.value = true
+    startPolling()
     emit('submitted')
   } catch (e) {
     error.value = e.message || '申诉提交失败'
@@ -56,7 +83,9 @@ async function submit() {
         </div>
       </template>
       <template v-else>
-        <p class="ap-note">申诉记录已保存。管理员复核后，如果通过，会解除对应的聊天暂停。</p>
+        <p class="ap-note">申诉已提交，AI 正在自动复核。复核期间原处理仍然有效。</p>
+        <p v-if="resultText" class="ap-result">{{ resultText }}</p>
+        <p v-else class="ap-note">通常几秒内会返回结果，请稍候。</p>
         <button type="button" class="ap-primary" @click="emit('close')">知道了</button>
       </template>
     </div>
@@ -78,4 +107,7 @@ async function submit() {
 .ap-primary { border:0; background:#5B2A91; color:#fff; }
 .ap-primary:disabled { opacity:.55; }
 .ap-ghost { border:1px solid #D9C8EE; background:#fff; color:#5B2A91; }
+</style>
+<style scoped>
+.ap-result { margin:0 0 9px; padding:7px 8px; border-radius:8px; background:#EEF8F1; color:#2F7D46; font-size:10px; line-height:1.6; }
 </style>
