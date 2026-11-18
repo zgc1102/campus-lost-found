@@ -37,6 +37,7 @@ import appeals
 import chat_lexicon
 import lexicon_lifecycle
 import lexicon_miner
+import chat_escalation
 
 
 def load_dotenv(path=None):
@@ -6385,6 +6386,7 @@ def main():
     start_review_workers(2)
     risk_profile.init(BASE_DIR)
     enforcement.init(BASE_DIR)
+    chat_escalation.init(BASE_DIR)
     appeals.init(BASE_DIR)
     appeals.start_worker()
     chat_lexicon.init(BASE_DIR)

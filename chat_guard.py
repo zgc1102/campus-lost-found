@@ -21,6 +21,7 @@ import moderation_policy
 import enforcement
 import chat_lexicon
 import lexicon_lifecycle
+import chat_escalation
 
 _LOCK = threading.Lock()
 _QUEUE = queue.Queue()
@@ -219,11 +220,22 @@ def _process(alert_id):
         decision = moderation_policy.decide(result.get("verdict"), result.get("risk"),
                                             result.get("categories"), history_level,
                                             alert.get("localHits"))
+        escalation = None
+        if decision.get("action") in ("warn", "mute_chat"):
+            escalation = chat_escalation.record(sender, alert.get("kind"), alert.get("targetId"))
+            if escalation.get("action") in ("module", "platform"):
+                decision = {
+                    "action": "mute_chat",
+                    "status": "auto_limited",
+                    "reason": escalation.get("reason"),
+                    "mute_minutes": escalation.get("minutes") or 30,
+                    "escalated": escalation.get("action"),
+                }
         alert["action"] = decision
         alert["status"] = decision.get("status") or "auto_safe"
         if decision.get("mute_minutes"):
             try:
-                scope = "module:" + str(alert.get("kind") or "")
+                scope = "platform" if decision.get("escalated") == "platform" else "module:" + str(alert.get("kind") or "")
                 enforcement.mute_chat(sender, decision.get("mute_minutes"),
                                       decision.get("reason"), alert.get("id"), scope)
                 alert["mutedUntil"] = _now() + int(decision.get("mute_minutes")) * 60 * 1000
@@ -234,17 +246,26 @@ def _process(alert_id):
             alert["warningFor"] = sender
             label = {"claim": "失物招领", "report": "拾光码", "help": "爱心求助"}.get(alert.get("kind"), "聊天")
             if decision.get("action") == "warn":
+                strikes = (escalation or {}).get("strikes") or 1
                 if history_count > 0:
                     alert["warning"] = (
-                        "本次先提醒，不暂停聊天。你近 30 天在%s已有 %d 次不良记录；"
-                        "如再次严重违规，将暂停该板块聊天。" % (label, history_count)
+                        "本次是第 %d 次提醒，不暂停聊天。你近 30 天在%s已有 %d 次不良记录；"
+                        "再出现严重违规或连续违规，将暂停该板块，甚至全平台暂停。"
+                        % (strikes, label, history_count)
                     )
                 else:
-                    alert["warning"] = "本次先提醒，不暂停聊天。如再次出现严重违规，将暂停该板块聊天。"
+                    alert["warning"] = (
+                        "本次是第 %d 次提醒，不暂停聊天；普通提醒最多两次，"
+                        "连续多次或严重违规将升级暂停。" % strikes
+                    )
             else:
+                is_platform = decision.get("escalated") == "platform" or alert.get("muteScope") == "platform"
                 alert["warning"] = (
-                    "基于你近期在%s的 %d 次不良记录和本次严重违规，"
-                    "本次聊天已暂停。其他板块仍可使用。" % (label, history_count)
+                    "基于你近期在%s的 %d 次不良记录和本次严重违规，本次已升级为全平台暂停 2 小时。"
+                    % (label, history_count)
+                    if is_platform
+                    else "基于你近期在%s的 %d 次不良记录和本次严重违规，本次聊天已暂停；其他板块仍可使用。"
+                    % (label, history_count)
                 )
             alert["warningAt"] = _now()
             alert["counterpartFor"] = alert.get("targetOwner") or ""
@@ -260,6 +281,11 @@ def _process(alert_id):
                                             result.get("reason"), max(45, result.get("risk") or 0),
                                             alert.get("id"),
                                             "module:" + str(alert.get("kind") or ""))
+                if escalation and escalation.get("countAsTwo"):
+                    risk_profile.note_violation(sender, "chat_guard_escalation",
+                                                "连续违规升级", 90, alert.get("id"),
+                                                "module:" + str(alert.get("kind") or ""),
+                                                dedupe=False)
             except Exception:
                 pass
         for word in alert.get("localHits") or []:

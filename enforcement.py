@@ -97,8 +97,8 @@ def mute_chat(owner, minutes, reason="", source="", scope="*"):
     }
     data[owner] = row
     _save(data)
-    label = {"module:claim": "失物招领", "module:report": "拾光码", "module:help": "爱心求助"}.get(scope, "聊天")
-    _queue_notice(owner, "你在%s的聊天因违规被暂停 %d 分钟；其他板块仍然可以使用。" % (label, int(minutes)))
+    label = {"module:claim": "失物招领", "module:report": "拾光码", "module:help": "爱心求助", "platform": "全平台"}.get(scope, "聊天")
+    _queue_notice(owner, "你在%s的聊天因违规被暂停 %d 分钟；其他板块仍然可以使用。" % (label, int(minutes)) if scope != "platform" else "你的聊天功能因连续严重违规被全平台暂停 %d 分钟；可提交申诉。" % int(minutes))
     return row
 
 
@@ -162,6 +162,7 @@ def check(owner, scope="*", module_scope=""):
     keys = [_scope(scope)]
     if module_scope:
         keys.append(_scope(module_scope))
+    keys.append("platform")
     keys.append("*")
     for key in keys:
         item = mutes.get(key) or {}

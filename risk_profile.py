@@ -39,7 +39,7 @@ def _now():
     return int(time.time() * 1000)
 
 
-def note_violation(owner, source, reason="", risk=0, report_id="", scope=""):
+def note_violation(owner, source, reason="", risk=0, report_id="", scope="", dedupe=True):
     owner = str(owner or "").strip()[:64]
     if not owner:
         return None
@@ -48,7 +48,7 @@ def note_violation(owner, source, reason="", risk=0, report_id="", scope=""):
     scope = str(scope or "")[:120]
     last = (row.get("events") or [])[-1] if row.get("events") else None
     # 同一个板块 10 分钟内只记一次，避免连续几句话被算成多次违规
-    if (last and last.get("scope") == scope
+    if (dedupe and last and last.get("scope") == scope
             and _now() - int(last.get("at") or 0) < 10 * 60 * 1000):
         return row
     row["events"].append({

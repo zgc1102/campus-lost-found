@@ -126,7 +126,7 @@ function logout() {
   sessionStorage.removeItem(TOKEN_KEY)
 }
 function scopeLabel(scope) {
-  return ({ 'module:claim': '失物招领', 'module:report': '拾光码', 'module:help': '爱心求助' })[scope] || scope || '聊天'
+  return ({ 'module:claim': '失物招领', 'module:report': '拾光码', 'module:help': '爱心求助', platform: '全平台' })[scope] || scope || '聊天'
 }
 async function adminUnmute(owner, scope = '') {
   if (!window.confirm('确定由管理员主动解除这个用户的聊天暂停吗？')) return
