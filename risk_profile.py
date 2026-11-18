@@ -88,7 +88,8 @@ def is_watched(owner, hours=24):
     data = _load()
     row = data.get(owner) or {}
     cutoff = _now() - max(1, int(hours)) * 3600 * 1000
-    return any(int(e.get("at") or 0) >= cutoff for e in row.get("events") or [])
+    return any(int(e.get("at") or 0) >= cutoff and int(e.get("risk") or 0) >= 70
+               for e in row.get("events") or [])
 
 
 def admin_list():

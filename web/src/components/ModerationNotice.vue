@@ -21,6 +21,32 @@ let timer = null
 function seenKey(id) {
   return 'sg:moderation-warning:' + id
 }
+function cooldownKey() {
+  return 'sg:moderation-warning-at:' + props.kind + ':' + props.targetId
+}
+function recentWarning() {
+  try {
+    const at = Number(localStorage.getItem(cooldownKey()) || 0)
+    return at && Date.now() - at < 10 * 60 * 1000
+  } catch (_) {
+    return false
+  }
+}
+function markWarning() {
+  try { localStorage.setItem(cooldownKey(), String(Date.now())) } catch (_) {}
+}
+function counterpartKey() {
+  return 'sg:moderation-counterpart-at:' + props.kind + ':' + props.targetId
+}
+function recentCounterpart() {
+  try {
+    const at = Number(localStorage.getItem(counterpartKey()) || 0)
+    return at && Date.now() - at < 10 * 60 * 1000
+  } catch (_) { return false }
+}
+function markCounterpart() {
+  try { localStorage.setItem(counterpartKey(), String(Date.now())) } catch (_) {}
+}
 function apply(state) {
   active.value = Boolean(state?.active)
   status.value = state?.status || ''
@@ -30,12 +56,12 @@ function apply(state) {
   if (warning.value && reportId.value) {
     let seen = ''
     try { seen = localStorage.getItem(seenKey(reportId.value)) || '' } catch (_) {}
-    if (!seen) showWarning.value = true
+    if (!seen && !recentWarning()) showWarning.value = true
   }
   if (counterpartNotice.value && reportId.value) {
     let seen = ''
     try { seen = localStorage.getItem('sg:moderation-counterpart:' + reportId.value) || '' } catch (_) {}
-    if (!seen) showCounterpart.value = true
+    if (!seen && !recentCounterpart()) showCounterpart.value = true
   }
 }
 async function load() {
@@ -49,12 +75,14 @@ function closeWarning() {
   if (reportId.value) {
     try { localStorage.setItem(seenKey(reportId.value), '1') } catch (_) {}
   }
+  markWarning()
   showWarning.value = false
 }
 function closeCounterpart() {
   if (reportId.value) {
     try { localStorage.setItem('sg:moderation-counterpart:' + reportId.value, '1') } catch (_) {}
   }
+  markCounterpart()
   showCounterpart.value = false
 }
 onMounted(() => {
