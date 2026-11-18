@@ -33,6 +33,9 @@ import risk_profile
 import image_guard
 import enforcement
 import moderation_policy
+import appeals
+import chat_lexicon
+import lexicon_miner
 
 
 def load_dotenv(path=None):
@@ -2821,9 +2824,21 @@ class Handler(BaseHTTPRequestHandler):
                     "active": bool(guard.get("active") or state.get("active")),
                     "status": guard.get("status") or state.get("status"),
                     "warning": guard.get("warning") or state.get("warning"),
+                    "counterpartNotice": guard.get("counterpartNotice") or "",
                     "reportId": guard.get("reportId") or state.get("reportId"),
                 }
             return self._json({"ok": True, "state": state})
+
+        if path == "/api/moderation/appeals/mine":
+            owner = self._owner()
+            if not owner:
+                return self._json({"error": "缺少设备标识"}, 400)
+            return self._json({"ok": True, "appeals": appeals.mine(owner)})
+
+        if path == "/api/admin/moderation/appeals":
+            if not self._need_admin():
+                return
+            return self._json({"ok": True, "appeals": appeals.admin_list()})
 
         if path == "/api/moderation/reports/mine":
             owner = self._owner()
@@ -4886,6 +4901,25 @@ class Handler(BaseHTTPRequestHandler):
                 save_notices(notices)
             return self._json({"ok": True})
 
+        if path == "/api/moderation/appeals":
+            owner = self._owner()
+            if not owner:
+                return self._json({"error": "缺少设备标识"}, 400)
+            body = self._read_body()
+            rid = str(body.get("reportId") or "").strip()
+            aid = str(body.get("alertId") or rid).strip()
+            evidence = moderation.get(rid) or chat_guard.get(aid) or {}
+            row, duplicate = appeals.create(
+                owner,
+                rid,
+                aid,
+                body.get("reason"),
+                body.get("kind"),
+                body.get("targetId"),
+                evidence,
+            )
+            return self._json({"ok": True, "appeal": row, "duplicate": duplicate}, 201)
+
         if path == "/api/moderation/reports":
             owner = self._owner()
             if not owner:
@@ -5682,6 +5716,26 @@ class Handler(BaseHTTPRequestHandler):
                 save_notices(notices)
             return self._json({"ok": True, "status": target})
 
+        if path.startswith("/api/admin/enforcement/unmute/"):
+            if not self._need_admin():
+                return
+            owner = path[len("/api/admin/enforcement/unmute/"):]
+            row = enforcement.clear_mute(owner)
+            try:
+                with LOCK:
+                    notices = load_notices()
+                    add_notice(notices, owner, "moderation_unmute",
+                               "管理员已解除你的聊天暂停，可以继续沟通了", "", "")
+                    save_notices(notices)
+            except Exception:
+                pass
+            return self._json({"ok": True, "owner": owner, "state": row or {}})
+
+        if path.startswith("/api/admin/moderation/appeals/"):
+            if not self._need_admin():
+                return
+            return self._json({"error": "申诉由 AI 自动复核，管理员不能改写结果；只能主动解除暂停"}, 403)
+
         if path.startswith("/api/admin/moderation/reports/"):
             if not self._need_admin():
                 return
@@ -6320,6 +6374,12 @@ def main():
     start_review_workers(2)
     risk_profile.init(BASE_DIR)
     enforcement.init(BASE_DIR)
+    appeals.init(BASE_DIR)
+    appeals.start_worker()
+    chat_lexicon.init(BASE_DIR)
+    chat_lexicon.start_worker()
+    lexicon_miner.init(BASE_DIR)
+    lexicon_miner.start_worker()
     moderation.init(BASE_DIR)
     moderation.start_worker()
     chat_guard.init(BASE_DIR)

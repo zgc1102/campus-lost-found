@@ -19,23 +19,13 @@ import urllib.request
 import risk_profile
 import moderation_policy
 import enforcement
+import chat_lexicon
 
 _LOCK = threading.Lock()
 _QUEUE = queue.Queue()
 _STARTED = False
 _BASE_DIR = "."
 ALERT_FILE = "chat_guard_alerts.json"
-
-_HIGH = (
-    "傻逼", "煞笔", "去死", "弄死你", "杀了你", "约炮", "裸照", "裸聊", "开房",
-    "包养", "代考", "替考", "代写", "卖答案", "扫码付款", "先转账", "验证码给我",
-    "操你", "草泥马", "你妈死了", "陪睡",
-)
-_MID = (
-    "滚", "废物", "脑残", "二百五", "贱", "恶心", "骚扰", "骂你",
-    "加微信", "私聊", "包夜", "多少钱", "蠢货", "混蛋", "王八蛋",
-    "神经病", "不要脸", "垃圾", "狗东西",
-)
 
 
 def init(base_dir):
@@ -80,10 +70,7 @@ def _context(messages):
 
 
 def local_hits(text):
-    t = str(text or "")
-    hits = [w for w in _HIGH if w in t]
-    hits += [w for w in _MID if w in t]
-    return hits
+    return chat_lexicon.scan(text)
 
 
 def _last_alert(kind, target_id):
@@ -101,11 +88,17 @@ def status(kind, target_id, owner):
             and alert.get("warning")
             and alert.get("status") not in ("dismissed", "resolved")):
         warning = alert.get("warning")
+    notice = ""
+    if (alert.get("counterpartFor") == owner
+            and alert.get("counterpartNotice")
+            and alert.get("status") in ("auto_warned", "auto_limited")):
+        notice = alert.get("counterpartNotice")
     return {
         "active": alert.get("status") in ("reviewing", "reviewed",
                                           "auto_warned", "auto_limited"),
         "status": alert.get("status") or "",
         "warning": warning,
+        "counterpartNotice": notice,
         "reportId": alert.get("id") or "",
     }
 
@@ -114,6 +107,12 @@ def admin_list():
     with _LOCK:
         rows = _load()
     return rows[-300:][::-1]
+
+
+def get(alert_id):
+    with _LOCK:
+        rows = _load()
+    return next((r for r in rows if r.get("id") == alert_id), None)
 
 
 def _ai_config():
@@ -231,10 +230,17 @@ def _process(alert_id):
                                 if decision.get("action") == "warn"
                                 else "AI 检测到本次聊天内容存在严重违规风险，聊天已被暂停。相关记录已保存。")
             alert["warningAt"] = _now()
-        if result.get("verdict") == "violation" and int(result.get("risk") or 0) >= 70:
+            alert["counterpartFor"] = alert.get("targetOwner") or ""
+            cats = "、".join((result.get("categories") or [])[:2])
+            alert["counterpartNotice"] = (
+                "对方因严重聊天违规%s，已被暂停聊天。" % (("（" + cats + "）") if cats else "")
+                if decision.get("action") == "mute_chat"
+                else "对方因聊天言语不当，已被系统提醒。"
+            )
+        if decision.get("action") in ("warn", "mute_chat"):
             try:
                 risk_profile.note_violation(sender, "chat_guard",
-                                            result.get("reason"), result.get("risk"), alert.get("id"))
+                                            result.get("reason"), max(45, result.get("risk") or 0), alert.get("id"))
             except Exception:
                 pass
         _save(rows)

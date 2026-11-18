@@ -23,6 +23,8 @@ const deployLog = ref([])
 const reports = ref([])
 const chatAlerts = ref([])
 const riskProfiles = ref([])
+const appeals = ref([])
+const enforcements = ref([])
 const deploying = ref(false)
 const deployCountdown = ref(0)
 const deployMsg = ref('')
@@ -71,7 +73,7 @@ async function loadAll(silent = false) {
   if (!silent) loading.value = true
   error.value = ''
   try {
-    const [s, list, accs, anns, sp, cfg, dep, reps] = await Promise.all([
+    const [s, list, accs, anns, sp, cfg, dep, reps, aps] = await Promise.all([
       api.adminStats(token.value),
       api.adminItems(token.value),
       api.adminAccounts(token.value),
@@ -79,7 +81,8 @@ async function loadAll(silent = false) {
       api.adminSpecialNumbers(token.value),
       api.adminConfig(token.value),
       api.adminDeployLog(token.value),
-      api.adminReports(token.value)
+      api.adminReports(token.value),
+      api.adminAppeals(token.value)
     ])
     stats.value = s
     statsAt.value = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
@@ -92,6 +95,8 @@ async function loadAll(silent = false) {
     reports.value = Array.isArray(reps?.reports) ? reps.reports : []
     chatAlerts.value = Array.isArray(reps?.chatAlerts) ? reps.chatAlerts : []
     riskProfiles.value = Array.isArray(reps?.riskProfiles) ? reps.riskProfiles : []
+    appeals.value = Array.isArray(aps?.appeals) ? aps.appeals : []
+    enforcements.value = Array.isArray(reps?.enforcement) ? reps.enforcement : []
   } catch (e) {
     error.value = e.message || '读取失败'
     if (e.status === 401 || /unauthorized|登录/i.test(String(e.message))) logout()
@@ -127,6 +132,34 @@ async function handleReport(r, status) {
     const idx = reports.value.findIndex((x) => x.id === r.id)
     if (idx >= 0) reports.value[idx] = res.report
   } catch (e) { error.value = e.message || '处理失败' }
+}
+async function handleAppeal(a, status) {
+  const note = status === 'rejected' ? (window.prompt('驳回说明（可留空）') || '') : ''
+  try {
+    const res = await api.adminAppealUpdate(token.value, a.id, { status, note })
+    const idx = appeals.value.findIndex((x) => x.id === a.id)
+    if (idx >= 0) appeals.value[idx] = res.appeal
+  } catch (e) { error.value = e.message || '申诉处理失败' }
+}
+async function adminUnmute(owner) {
+  if (!window.confirm('确定由管理员主动解除这个用户的聊天暂停吗？')) return
+  try {
+    await api.adminUnmute(token.value, owner)
+    enforcements.value = enforcements.value.map((x) => x.owner === owner ? { ...x, mutedUntil: 0 } : x)
+  } catch (e) { error.value = e.message || '解除失败' }
+}
+function exportEnforcements() {
+  const lines = ['用户,暂停到,原因']
+  for (const x of enforcements.value) {
+    const until = x.mutedUntil ? new Date(x.mutedUntil).toLocaleString('zh-CN') : ''
+    lines.push([x.owner, until, String(x.reason || '').replaceAll(',', '，')].join(','))
+  }
+  const blob = new Blob(['\ufeff' + lines.join('\n')], { type: 'text/csv;charset=utf-8' })
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = '暂停聊天用户.csv'
+  a.click()
+  URL.revokeObjectURL(a.href)
 }
 
 async function review(it, status) {
@@ -487,6 +520,30 @@ function statusClass(s) {
     </div>
   </div>
 
+  <div v-if="tab === 'reports'" class="panel" style="margin-top:14px">
+    <h3>申诉</h3>
+    <div v-if="!appeals.length" class="reports-empty">还没有申诉</div>
+    <div v-for="a in appeals" :key="a.id" class="report-row">
+      <div class="report-head"><b>{{ a.owner }}</b><span class="report-status">{{ ({pending:'AI复核中',reviewing:'AI复核中',approved:'AI已通过',rejected:'AI已驳回'})[a.status] || a.status }}</span></div>
+      <div class="report-meta">{{ a.kind || '聊天' }} · {{ new Date(a.createdAt).toLocaleString('zh-CN') }}</div>
+      <div class="report-detail">{{ a.reason }}</div>
+      <div v-if="a.ai" class="report-ai">AI 复核：{{ a.ai.decision === 'approved' ? '通过' : '维持原处理' }} · {{ a.ai.reason }}</div>
+      <div v-if="a.status === 'reviewing'" class="report-meta">AI 复核中</div>
+    </div>
+  </div>
+
+  <div v-if="tab === 'reports'" class="panel" style="margin-top:14px">
+    <h3>暂停聊天用户 <button type="button" class="report-export" @click="exportEnforcements">导出 CSV</button></h3>
+    <div v-if="!enforcements.length" class="reports-empty">还没有暂停记录</div>
+    <div v-for="u in enforcements" :key="u.owner" class="report-row">
+      <div class="report-head"><b>{{ u.owner }}</b><span class="report-status">{{ u.mutedUntil > Date.now() ? '暂停中' : '已到期' }}</span></div>
+      <div class="report-meta">{{ u.reason }}</div>
+      <div v-if="u.mutedUntil > Date.now()" class="report-actions">
+        <button type="button" @click="adminUnmute(u.owner)">管理员主动解除</button>
+      </div>
+    </div>
+  </div>
+
   <div v-if="tab === 'overview'" class="panel-grid">
             <div class="panel">
               <h3>内容分布</h3>
@@ -817,4 +874,7 @@ textarea.field { min-height: 78px; resize: vertical; }
 .report-actions { display:flex; gap:6px; margin-top:7px; }
 .report-actions button { border:0; background:#5B2A91; color:#fff; border-radius:6px; padding:4px 8px; font-family:inherit; font-size:9px; }
 .report-actions button.ghost { background:#fff; color:#5B2A91; border:1px solid #D9C8EE; }
+</style>
+<style scoped>
+.report-export { float:right; border:1px solid #D9C8EE; background:#fff; color:#5B2A91; border-radius:6px; padding:4px 8px; font-family:inherit; font-size:9px; font-weight:400; }
 </style>
