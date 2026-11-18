@@ -5740,13 +5740,7 @@ class Handler(BaseHTTPRequestHandler):
         if path.startswith("/api/admin/moderation/reports/"):
             if not self._need_admin():
                 return
-            report_id = path[len("/api/admin/moderation/reports/"):]
-            body = self._read_body()
-            row = moderation.admin_update(report_id, str(body.get("status") or ""),
-                                          str(body.get("note") or ""), "admin")
-            if not row:
-                return self._json({"error": "举报不存在或状态不正确"}, 404)
-            return self._json({"ok": True, "report": row})
+            return self._json({"error": "举报由 AI 自动处理，管理员不能改写结论；只能处理暂停解除"}, 403)
 
         if path.startswith("/api/claims/") and path.endswith("/request-image"):
             owner = self._owner()

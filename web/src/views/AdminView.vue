@@ -125,22 +125,6 @@ function logout() {
   token.value = ''
   sessionStorage.removeItem(TOKEN_KEY)
 }
-async function handleReport(r, status) {
-  const note = status === 'resolved' ? (window.prompt('处理说明（可留空）') || '') : ''
-  try {
-    const res = await api.adminReportUpdate(token.value, r.id, { status, note })
-    const idx = reports.value.findIndex((x) => x.id === r.id)
-    if (idx >= 0) reports.value[idx] = res.report
-  } catch (e) { error.value = e.message || '处理失败' }
-}
-async function handleAppeal(a, status) {
-  const note = status === 'rejected' ? (window.prompt('驳回说明（可留空）') || '') : ''
-  try {
-    const res = await api.adminAppealUpdate(token.value, a.id, { status, note })
-    const idx = appeals.value.findIndex((x) => x.id === a.id)
-    if (idx >= 0) appeals.value[idx] = res.appeal
-  } catch (e) { error.value = e.message || '申诉处理失败' }
-}
 async function adminUnmute(owner) {
   if (!window.confirm('确定由管理员主动解除这个用户的聊天暂停吗？')) return
   try {
@@ -475,6 +459,7 @@ function statusClass(s) {
 
           <details v-if="tab === 'reports'" class="panel" open>
     <summary class="panel-summary"><h3>举报记录</h3></summary>
+    <div class="report-meta" style="margin-bottom:8px">举报由 AI 自动判定和处理；管理员只保留暂停解除权限。</div>
     <div v-if="!reports.length" class="reports-empty">还没有举报记录</div>
     <div v-for="r in reports" :key="r.id" class="report-row">
       <div class="report-head">
@@ -489,11 +474,7 @@ function statusClass(s) {
       <div class="report-msgs">
         <div v-for="m in (r.messages || []).slice(-8)" :key="m.id || m.at">{{ m.from === 'owner' ? '发布者' : '申请人' }}：{{ m.text }}</div>
       </div>
-      <div v-if="['pending','reviewing','reviewed'].includes(r.status)" class="report-actions">
-        <button type="button" @click="handleReport(r, 'resolved')">确认处理</button>
-        <button type="button" class="ghost" @click="handleReport(r, 'dismissed')">驳回举报</button>
-      </div>
-      <div v-else-if="r.adminNote" class="report-detail">处理说明：{{ r.adminNote }}</div>
+      <div v-if="r.adminNote" class="report-detail">处理说明：{{ r.adminNote }}</div>
     </div>
   </details>
 
