@@ -14,7 +14,7 @@ def _has(categories, words):
     return any(w in text for w in words)
 
 
-def decide(verdict, risk, categories=None, history_level="normal", local_hits=None):
+def decide(verdict, risk, categories=None, history_level="normal", local_hits=None, automatic=True):
     risk = max(0, min(100, int(risk or 0)))
     severe = _has(categories, SEVERE_CATEGORIES)
 
@@ -34,15 +34,23 @@ def decide(verdict, risk, categories=None, history_level="normal", local_hits=No
             "mute_minutes": 0,
         }
 
+    if not automatic and history_level == "normal":
+        return {
+            "action": "warn",
+            "status": "auto_warned",
+            "reason": "举报由 AI 判定存在风险，第一次先警告，不直接暂停聊天",
+            "mute_minutes": 0,
+        }
+
     if history_level == "restricted":
-        minutes = 7 * 24 * 60
-    elif history_level == "high":
         minutes = 24 * 60
-    else:
+    elif history_level == "high":
         minutes = 2 * 60
+    else:
+        minutes = 30
     return {
         "action": "mute_chat",
         "status": "auto_limited",
-        "reason": "AI 判断本次内容涉及严重违规，自动暂停聊天 %d 分钟" % minutes,
+        "reason": "AI 判断本次内容涉及严重违规，自动暂停本次聊天 %d 分钟" % minutes,
         "mute_minutes": minutes,
     }

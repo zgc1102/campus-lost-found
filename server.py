@@ -4409,7 +4409,7 @@ class Handler(BaseHTTPRequestHandler):
                 if claim.get("status") in ("completed", "closed") and is_send:
                     return self._json({"error": "这次沟通已经结束，不能再发送消息"}, 403)
                 if is_send:
-                    _ok_send, _mute_msg, _until = enforcement.check(owner)
+                    _ok_send, _mute_msg, _until = enforcement.check(owner, "claim:" + claim_id)
                     if not _ok_send:
                         return self._json({"error": _mute_msg, "mutedUntil": _until}, 403)
                 if not is_send:
@@ -4530,7 +4530,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"error": "这次沟通已经结束，不能再发送消息"}, 403)
             if report.get("blocked"):
                 return self._json({"error": "对方已屏蔽你，消息发送失败", "blocked": True}, 403)
-            _ok_send, _mute_msg, _until = enforcement.check(owner)
+            _ok_send, _mute_msg, _until = enforcement.check(owner, "report:" + report_id)
             if not _ok_send:
                 return self._json({"error": _mute_msg, "mutedUntil": _until}, 403)
             body = self._read_body()
@@ -5341,7 +5341,7 @@ class Handler(BaseHTTPRequestHandler):
                         return self._json({"ok": True, "messages": [], "side": side, "blocked": True, "blockedBy": _side})
                     return self._json({"error": "对方已屏蔽你，消息发送失败", "blocked": True}, 403)
                 if is_send:
-                    _ok_send, _mute_msg, _until = enforcement.check(owner)
+                    _ok_send, _mute_msg, _until = enforcement.check(owner, "help:" + claim_id)
                     if not _ok_send:
                         return self._json({"error": _mute_msg, "mutedUntil": _until}, 403)
                 if not is_send:
@@ -5721,7 +5721,9 @@ class Handler(BaseHTTPRequestHandler):
             if not self._need_admin():
                 return
             owner = path[len("/api/admin/enforcement/unmute/"):]
-            row = enforcement.clear_mute(owner)
+            qs = parse_qs(urlparse(self.path).query)
+            scope = (qs.get("scope") or [""])[0]
+            row = enforcement.clear_mute(owner, scope or None)
             try:
                 with LOCK:
                     notices = load_notices()

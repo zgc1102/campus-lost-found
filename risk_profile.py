@@ -39,7 +39,7 @@ def _now():
     return int(time.time() * 1000)
 
 
-def note_violation(owner, source, reason="", risk=0, report_id=""):
+def note_violation(owner, source, reason="", risk=0, report_id="", scope=""):
     owner = str(owner or "").strip()[:64]
     if not owner:
         return None
@@ -51,6 +51,7 @@ def note_violation(owner, source, reason="", risk=0, report_id=""):
         "reason": str(reason or "")[:200],
         "risk": max(0, min(100, int(risk or 0))),
         "reportId": str(report_id or "")[:64],
+        "scope": str(scope or "")[:120],
     })
     row["events"] = row["events"][-100:]
     data[owner] = row
@@ -77,18 +78,20 @@ def get_level(owner):
     return {"owner": owner, "level": level, "count": count, "highCount": len(high)}
 
 
-def needs_full_scan(owner):
-    if is_watched(owner):
+def needs_full_scan(owner, scope=""):
+    if is_watched(owner, scope):
         return True
     return get_level(owner).get("level") in ("high", "restricted")
 
 
-def is_watched(owner, hours=24):
+def is_watched(owner, scope="", hours=24):
     owner = str(owner or "").strip()[:64]
     data = _load()
     row = data.get(owner) or {}
     cutoff = _now() - max(1, int(hours)) * 3600 * 1000
-    return any(int(e.get("at") or 0) >= cutoff and int(e.get("risk") or 0) >= 70
+    return any(int(e.get("at") or 0) >= cutoff
+               and int(e.get("risk") or 0) >= 70
+               and (not scope or e.get("scope") == scope)
                for e in row.get("events") or [])
 
 

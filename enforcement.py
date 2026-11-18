@@ -1,6 +1,6 @@
 """用户措施执行模块（独立模块）。
 
-只负责执行“警告、暂停聊天、解除”等动作，并保存执行记录。
+按“具体聊天”执行暂停，避免一个聊天的违规影响其他聊天。
 """
 import json
 import os
@@ -39,39 +39,57 @@ def _now():
     return int(time.time() * 1000)
 
 
-def mute_chat(owner, minutes, reason="", source=""):
+def _scope(scope):
+    return str(scope or "*")[:120]
+
+
+def mute_chat(owner, minutes, reason="", source="", scope="*"):
     owner = str(owner or "").strip()[:64]
     if not owner:
         return None
     data = _load()
+    row = data.get(owner) or {"owner": owner, "mutes": {}}
+    row.setdefault("mutes", {})
+    scope = _scope(scope)
     until = _now() + max(1, int(minutes)) * 60 * 1000
-    row = data.get(owner) or {"owner": owner, "actions": []}
-    row["mutedUntil"] = until
-    row["reason"] = str(reason or "")[:200]
-    row["actions"] = (row.get("actions") or [])[-100:]
-    row["actions"].append({"at": _now(), "action": "mute_chat",
-                           "minutes": int(minutes), "reason": reason, "source": source})
+    row["mutes"][scope] = {
+        "mutedUntil": until,
+        "reason": str(reason or "")[:200],
+        "source": str(source or "")[:80],
+        "updatedAt": _now(),
+    }
     data[owner] = row
     _save(data)
     return row
 
 
-def clear_mute(owner):
+def clear_mute(owner, scope=None):
     owner = str(owner or "").strip()[:64]
     data = _load()
-    if owner in data:
-        data[owner]["mutedUntil"] = 0
-        data[owner]["reason"] = ""
-        _save(data)
-    return data.get(owner)
+    row = data.get(owner)
+    if not row:
+        return None
+    if scope is None:
+        row["mutes"] = {}
+    else:
+        row.get("mutes", {}).pop(_scope(scope), None)
+    _save(data)
+    return row
 
 
-def check(owner):
+def check(owner, scope="*"):
     owner = str(owner or "").strip()[:64]
     row = _load().get(owner) or {}
-    until = int(row.get("mutedUntil") or 0)
-    if until > _now():
-        return False, "本次聊天已被暂停，%s 后可继续" % time.strftime("%m-%d %H:%M", time.localtime(until / 1000)), until
+    mutes = row.get("mutes") or {}
+    now = _now()
+    legacy_until = int(row.get("mutedUntil") or 0)
+    if legacy_until > now:
+        return False, "本次聊天已被暂停，%s 后可继续" % time.strftime("%m-%d %H:%M", time.localtime(legacy_until / 1000)), legacy_until
+    for key in (_scope(scope), "*"):
+        item = mutes.get(key) or {}
+        until = int(item.get("mutedUntil") or 0)
+        if until > now:
+            return False, "本次聊天已被暂停，%s 后可继续" % time.strftime("%m-%d %H:%M", time.localtime(until / 1000)), until
     return True, "", 0
 
 
@@ -79,11 +97,13 @@ def admin_list():
     data = _load()
     rows = []
     for owner, row in data.items():
-        rows.append({
-            "owner": owner,
-            "mutedUntil": int(row.get("mutedUntil") or 0),
-            "reason": row.get("reason") or "",
-            "actions": (row.get("actions") or [])[-10:],
-        })
+        for scope, item in (row.get("mutes") or {}).items():
+            rows.append({
+                "owner": owner,
+                "scope": scope,
+                "mutedUntil": int(item.get("mutedUntil") or 0),
+                "reason": item.get("reason") or "",
+                "source": item.get("source") or "",
+            })
     rows.sort(key=lambda x: -int(x.get("mutedUntil") or 0))
     return rows[:300]

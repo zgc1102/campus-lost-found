@@ -208,14 +208,17 @@ def _process(report_id):
         report["reviewedAt"] = _now()
         history = risk_profile.get_level(report.get("targetOwner")).get("level", "normal")
         decision = moderation_policy.decide(result.get("verdict"), result.get("risk"),
-                                            result.get("categories"), history)
+                                            result.get("categories"), history,
+                                            automatic=False)
         report["action"] = decision
         report["status"] = decision.get("status") or "auto_safe"
         if decision.get("mute_minutes"):
             try:
+                scope = str(report.get("kind") or "") + ":" + str(report.get("targetId") or "")
                 enforcement.mute_chat(report.get("targetOwner"), decision.get("mute_minutes"),
-                                       decision.get("reason"), report.get("id"))
+                                       decision.get("reason"), report.get("id"), scope)
                 report["mutedUntil"] = _now() + int(decision.get("mute_minutes")) * 60 * 1000
+                report["muteScope"] = scope
             except Exception:
                 pass
         if decision.get("action") in ("warn", "mute_chat"):
@@ -227,7 +230,8 @@ def _process(report_id):
         if result.get("verdict") == "violation" and int(result.get("risk") or 0) >= 70:
             try:
                 risk_profile.note_violation(report.get("targetOwner"), "report",
-                                            result.get("reason"), result.get("risk"), report.get("id"))
+                                            result.get("reason"), result.get("risk"), report.get("id"),
+                                            str(report.get("kind") or "") + ":" + str(report.get("targetId") or ""))
             except Exception:
                 pass
         _save(REPORT_FILE, rows)

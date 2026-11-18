@@ -125,11 +125,12 @@ function logout() {
   token.value = ''
   sessionStorage.removeItem(TOKEN_KEY)
 }
-async function adminUnmute(owner) {
+async function adminUnmute(owner, scope = '') {
   if (!window.confirm('确定由管理员主动解除这个用户的聊天暂停吗？')) return
   try {
-    await api.adminUnmute(token.value, owner)
-    enforcements.value = enforcements.value.map((x) => x.owner === owner ? { ...x, mutedUntil: 0 } : x)
+    await api.adminUnmute(token.value, owner, scope)
+    enforcements.value = enforcements.value.map((x) => (x.owner === owner && (!scope || x.scope === scope))
+      ? { ...x, mutedUntil: 0 } : x)
   } catch (e) { error.value = e.message || '解除失败' }
 }
 function exportEnforcements() {
@@ -516,11 +517,11 @@ function statusClass(s) {
   <details v-if="tab === 'reports'" class="panel" style="margin-top:14px" open>
     <summary class="panel-summary"><h3>暂停聊天用户 <button type="button" class="report-export" @click.prevent.stop="exportEnforcements">导出 CSV</button></h3></summary>
     <div v-if="!enforcements.length" class="reports-empty">还没有暂停记录</div>
-    <div v-for="u in enforcements" :key="u.owner" class="report-row">
+    <div v-for="u in enforcements" :key="u.owner + ':' + u.scope" class="report-row">
       <div class="report-head"><b>{{ u.owner }}</b><span class="report-status">{{ u.mutedUntil > Date.now() ? '暂停中' : '已到期' }}</span></div>
-      <div class="report-meta">{{ u.reason }}</div>
+      <div class="report-meta">{{ u.scope }} · {{ u.reason }}</div>
       <div v-if="u.mutedUntil > Date.now()" class="report-actions">
-        <button type="button" @click="adminUnmute(u.owner)">管理员主动解除</button>
+        <button type="button" @click="adminUnmute(u.owner, u.scope)">管理员主动解除</button>
       </div>
     </div>
   </details>

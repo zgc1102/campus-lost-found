@@ -220,9 +220,11 @@ def _process(alert_id):
         alert["status"] = decision.get("status") or "auto_safe"
         if decision.get("mute_minutes"):
             try:
+                scope = str(alert.get("kind") or "") + ":" + str(alert.get("targetId") or "")
                 enforcement.mute_chat(sender, decision.get("mute_minutes"),
-                                      decision.get("reason"), alert.get("id"))
+                                      decision.get("reason"), alert.get("id"), scope)
                 alert["mutedUntil"] = _now() + int(decision.get("mute_minutes")) * 60 * 1000
+                alert["muteScope"] = scope
             except Exception:
                 pass
         if decision.get("action") in ("warn", "mute_chat"):
@@ -241,7 +243,9 @@ def _process(alert_id):
         if decision.get("action") in ("warn", "mute_chat"):
             try:
                 risk_profile.note_violation(sender, "chat_guard",
-                                            result.get("reason"), max(45, result.get("risk") or 0), alert.get("id"))
+                                            result.get("reason"), max(45, result.get("risk") or 0),
+                                            alert.get("id"),
+                                            str(alert.get("kind") or "") + ":" + str(alert.get("targetId") or ""))
             except Exception:
                 pass
         for word in alert.get("localHits") or []:
@@ -277,7 +281,7 @@ def start_worker():
 def observe(kind, target_id, item_id, from_side, target_owner, text, messages, sender_owner=""):
     """每条聊天消息调用；本地命中或高风险用户才进入 AI 队列。"""
     hits = local_hits(text)
-    forced = risk_profile.needs_full_scan(sender_owner)
+    forced = risk_profile.needs_full_scan(sender_owner, str(kind or "") + ":" + str(target_id or ""))
     if not hits and not forced:
         return None
     alert_id = "cg_" + uuid.uuid4().hex[:12]
