@@ -435,8 +435,16 @@ function statusChip(x) {
 function canClaim(x) {
   return !x.isMine && x.status === 'approved' && !['pending', 'accepted', 'completed'].includes(x.myClaim)
 }
+// 本页的 view 名与展示的内容类型相反：'lost' 页展示 'found' 内容。
+// 去发布页时传的是内容类型，因此在本页内单独维护这份对应关系。
+const PUBLISH_KIND_BY_PAGE = { lost: 'found', found: 'lost' }
+
+function publishKindForThisPage() {
+  return PUBLISH_KIND_BY_PAGE[props.type] || 'lost'
+}
+
 function openOldPublish() {
-  emit('publish', props.type)
+  emit('publish', publishKindForThisPage())
 }
 function openOldRadar() {
   emit('nav', 'radar')
