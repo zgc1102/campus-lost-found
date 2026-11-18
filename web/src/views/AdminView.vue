@@ -473,8 +473,8 @@ function statusClass(s) {
             <button v-for="[id, name] in tabs" :key="id" type="button" :class="{ on: tab === id }" @click="tab = id">{{ name }}</button>
           </div>
 
-          <div v-if="tab === 'reports'" class="panel">
-    <h3>举报记录</h3>
+          <details v-if="tab === 'reports'" class="panel" open>
+    <summary class="panel-summary"><h3>举报记录</h3></summary>
     <div v-if="!reports.length" class="reports-empty">还没有举报记录</div>
     <div v-for="r in reports" :key="r.id" class="report-row">
       <div class="report-head">
@@ -495,10 +495,10 @@ function statusClass(s) {
       </div>
       <div v-else-if="r.adminNote" class="report-detail">处理说明：{{ r.adminNote }}</div>
     </div>
-  </div>
+  </details>
 
-  <div v-if="tab === 'reports'" class="panel" style="margin-top:14px">
-    <h3>实时聊天告警</h3>
+  <details v-if="tab === 'reports'" class="panel" style="margin-top:14px" open>
+    <summary class="panel-summary"><h3>实时聊天告警</h3></summary>
     <div v-if="!chatAlerts.length" class="reports-empty">还没有实时告警</div>
     <div v-for="a in chatAlerts" :key="a.id" class="report-row">
       <div class="report-head">
@@ -509,19 +509,19 @@ function statusClass(s) {
       <div class="report-detail">消息：{{ a.text }}</div>
       <div v-if="a.ai" class="report-ai">AI：{{ a.ai.verdict }} / 风险 {{ a.ai.risk }} · {{ a.ai.reason }}</div>
     </div>
-  </div>
+  </details>
 
-  <div v-if="tab === 'reports'" class="panel" style="margin-top:14px">
-    <h3>高风险用户</h3>
+  <details v-if="tab === 'reports'" class="panel" style="margin-top:14px" open>
+    <summary class="panel-summary"><h3>高风险用户</h3></summary>
     <div v-if="!riskProfiles.length" class="reports-empty">还没有风险记录</div>
     <div v-for="u in riskProfiles" :key="u.owner" class="report-row">
       <div class="report-head"><b>{{ u.owner }}</b><span class="report-status">{{ u.level }}</span></div>
       <div class="report-meta">近 30 天违规 {{ u.count }} 次 · 高危 {{ u.highCount }} 次</div>
     </div>
-  </div>
+  </details>
 
-  <div v-if="tab === 'reports'" class="panel" style="margin-top:14px">
-    <h3>申诉</h3>
+  <details v-if="tab === 'reports'" class="panel" style="margin-top:14px" open>
+    <summary class="panel-summary"><h3>申诉</h3></summary>
     <div v-if="!appeals.length" class="reports-empty">还没有申诉</div>
     <div v-for="a in appeals" :key="a.id" class="report-row">
       <div class="report-head"><b>{{ a.owner }}</b><span class="report-status">{{ ({pending:'AI复核中',reviewing:'AI复核中',approved:'AI已通过',rejected:'AI已驳回'})[a.status] || a.status }}</span></div>
@@ -530,10 +530,10 @@ function statusClass(s) {
       <div v-if="a.ai" class="report-ai">AI 复核：{{ a.ai.decision === 'approved' ? '通过' : '维持原处理' }} · {{ a.ai.reason }}</div>
       <div v-if="a.status === 'reviewing'" class="report-meta">AI 复核中</div>
     </div>
-  </div>
+  </details>
 
-  <div v-if="tab === 'reports'" class="panel" style="margin-top:14px">
-    <h3>暂停聊天用户 <button type="button" class="report-export" @click="exportEnforcements">导出 CSV</button></h3>
+  <details v-if="tab === 'reports'" class="panel" style="margin-top:14px" open>
+    <summary class="panel-summary"><h3>暂停聊天用户 <button type="button" class="report-export" @click.prevent.stop="exportEnforcements">导出 CSV</button></h3></summary>
     <div v-if="!enforcements.length" class="reports-empty">还没有暂停记录</div>
     <div v-for="u in enforcements" :key="u.owner" class="report-row">
       <div class="report-head"><b>{{ u.owner }}</b><span class="report-status">{{ u.mutedUntil > Date.now() ? '暂停中' : '已到期' }}</span></div>
@@ -542,7 +542,7 @@ function statusClass(s) {
         <button type="button" @click="adminUnmute(u.owner)">管理员主动解除</button>
       </div>
     </div>
-  </div>
+  </details>
 
   <div v-if="tab === 'overview'" class="panel-grid">
             <div class="panel">
@@ -877,4 +877,11 @@ textarea.field { min-height: 78px; resize: vertical; }
 </style>
 <style scoped>
 .report-export { float:right; border:1px solid #D9C8EE; background:#fff; color:#5B2A91; border-radius:6px; padding:4px 8px; font-family:inherit; font-size:9px; font-weight:400; }
+</style>
+<style scoped>
+.panel-summary { list-style:none; cursor:pointer; display:flex; align-items:center; gap:8px; margin:0 0 12px; }
+.panel-summary::-webkit-details-marker { display:none; }
+.panel-summary::before { content:'▸'; color:#8B6BB0; font-size:13px; transition:transform .15s; }
+details[open] > .panel-summary::before { content:'▾'; }
+.panel-summary h3 { margin:0; flex:1; }
 </style>
