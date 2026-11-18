@@ -119,6 +119,7 @@ def _call_ai(report):
     payload = {
         "model": cfg["model"],
         "temperature": 0,
+        "thinking": {"type": "disabled"},
         "messages": [
             {"role": "system", "content": "你是严格但克制的校园平台安全审核员，只输出 JSON。"},
             {"role": "user", "content": prompt},

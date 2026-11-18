@@ -137,6 +137,7 @@ def _ai_review(alert):
         "temperature": 0,
         "max_tokens": 300,
         "response_format": {"type": "json_object"},
+        "thinking": {"type": "disabled"},
         "messages": [
             {"role": "system", "content": "你是严格但克制的校园安全审核员，只输出 JSON。"},
             {"role": "user", "content": prompt},
