@@ -17,6 +17,8 @@ import uuid
 import urllib.error
 import urllib.request
 import risk_profile
+import moderation_policy
+import enforcement
 
 _LOCK = threading.Lock()
 _QUEUE = queue.Queue()
@@ -100,7 +102,8 @@ def status(kind, target_id, owner):
             and alert.get("status") not in ("dismissed", "resolved")):
         warning = alert.get("warning")
     return {
-        "active": alert.get("status") in ("reviewing", "reviewed"),
+        "active": alert.get("status") in ("reviewing", "reviewed",
+                                          "auto_warned", "auto_limited"),
         "status": alert.get("status") or "",
         "warning": warning,
         "reportId": alert.get("id") or "",
@@ -206,14 +209,30 @@ def _process(alert_id):
         if not alert:
             return
         alert["ai"] = result
-        alert["status"] = "reviewed"
+        alert["ai"] = result
         alert["reviewedAt"] = _now()
-        if result.get("verdict") == "violation" and int(result.get("risk") or 0) >= 70:
-            alert["warningFor"] = alert.get("senderOwner") or alert.get("targetOwner") or ""
-            alert["warning"] = "AI 检测到本次聊天内容存在违规风险，相关记录已保存。请立即停止不当言行。"
-            alert["warningAt"] = _now()
+        sender = alert.get("senderOwner") or ""
+        history = risk_profile.get_level(sender).get("level", "normal")
+        decision = moderation_policy.decide(result.get("verdict"), result.get("risk"),
+                                            result.get("categories"), history)
+        alert["action"] = decision
+        alert["status"] = decision.get("status") or "auto_safe"
+        if decision.get("mute_minutes"):
             try:
-                risk_profile.note_violation(alert.get("senderOwner"), "chat_guard",
+                enforcement.mute_chat(sender, decision.get("mute_minutes"),
+                                      decision.get("reason"), alert.get("id"))
+                alert["mutedUntil"] = _now() + int(decision.get("mute_minutes")) * 60 * 1000
+            except Exception:
+                pass
+        if decision.get("action") in ("warn", "mute_chat"):
+            alert["warningFor"] = sender
+            alert["warning"] = ("AI 检测到本次聊天内容存在违规风险，相关记录已保存。请立即停止不当言行。"
+                                if decision.get("action") == "warn"
+                                else "AI 检测到本次聊天内容存在严重违规风险，聊天已被暂停。相关记录已保存。")
+            alert["warningAt"] = _now()
+        if result.get("verdict") == "violation" and int(result.get("risk") or 0) >= 70:
+            try:
+                risk_profile.note_violation(sender, "chat_guard",
                                             result.get("reason"), result.get("risk"), alert.get("id"))
             except Exception:
                 pass

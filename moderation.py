@@ -18,6 +18,8 @@ import uuid
 import urllib.error
 import urllib.request
 import risk_profile
+import moderation_policy
+import enforcement
 
 _LOCK = threading.Lock()
 _QUEUE = queue.Queue()
@@ -202,20 +204,34 @@ def _process(report_id):
         report = next((r for r in rows if r.get("id") == report_id), None)
         if not report:
             return
-        report["status"] = "reviewed"
         report["ai"] = result
         report["reviewedAt"] = _now()
-        if result.get("verdict") == "violation" and int(result.get("risk") or 0) >= 70:
+        history = risk_profile.get_level(report.get("targetOwner")).get("level", "normal")
+        decision = moderation_policy.decide(result.get("verdict"), result.get("risk"),
+                                            result.get("categories"), history)
+        report["action"] = decision
+        report["status"] = decision.get("status") or "auto_safe"
+        if decision.get("mute_minutes"):
+            try:
+                enforcement.mute_chat(report.get("targetOwner"), decision.get("mute_minutes"),
+                                       decision.get("reason"), report.get("id"))
+                report["mutedUntil"] = _now() + int(decision.get("mute_minutes")) * 60 * 1000
+            except Exception:
+                pass
+        if decision.get("action") in ("warn", "mute_chat"):
             report["warningFor"] = report.get("targetOwner") or ""
-            report["warning"] = "AI 检测到本次聊天内容存在违规风险，相关记录已保存。请立即停止不当言行。"
+            report["warning"] = ("AI 检测到本次聊天内容存在违规风险，相关记录已保存。请立即停止不当言行。"
+                                 if decision.get("action") == "warn"
+                                 else "AI 检测到本次聊天内容存在严重违规风险，聊天已被暂停。相关记录已保存。")
             report["warningAt"] = _now()
+        if result.get("verdict") == "violation" and int(result.get("risk") or 0) >= 70:
             try:
                 risk_profile.note_violation(report.get("targetOwner"), "report",
                                             result.get("reason"), result.get("risk"), report.get("id"))
             except Exception:
                 pass
         _save(REPORT_FILE, rows)
-    _audit(report_id, "ai_review", result.get("reason") or "")
+    _audit(report_id, "ai_review", (result.get("reason") or "") + " / " + (decision.get("status") or ""))
 
 
 def _worker():
@@ -285,7 +301,8 @@ def status(kind, target_id, owner):
             and report.get("status") not in ("dismissed", "resolved")):
         warning = report.get("warning")
     return {
-        "active": report.get("status") in ("pending", "reviewing", "reviewed"),
+        "active": report.get("status") in ("pending", "reviewing", "reviewed",
+                                            "auto_warned", "auto_limited"),
         "status": report.get("status") or "",
         "warning": warning,
         "reportId": report.get("id") or "",

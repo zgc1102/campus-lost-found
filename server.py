@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 清华校园拾光里 · 服务端 v4
@@ -31,6 +31,8 @@ import moderation
 import chat_guard
 import risk_profile
 import image_guard
+import enforcement
+import moderation_policy
 
 
 def load_dotenv(path=None):
@@ -2835,6 +2837,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._json({"ok": True, "reports": moderation.admin_list(),
                                "chatAlerts": chat_guard.admin_list(),
                                "riskProfiles": risk_profile.admin_list(),
+                               "enforcement": enforcement.admin_list(),
                                "summary": moderation.summary()})
 
         if path == "/api/notices":
@@ -4389,6 +4392,10 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json({"error": "对方已屏蔽你，消息发送失败", "blocked": True}, 403)
                 if claim.get("status") in ("completed", "closed") and is_send:
                     return self._json({"error": "这次沟通已经结束，不能再发送消息"}, 403)
+                if is_send:
+                    _ok_send, _mute_msg, _until = enforcement.check(owner)
+                    if not _ok_send:
+                        return self._json({"error": _mute_msg, "mutedUntil": _until}, 403)
                 if not is_send:
                     body = self._read_body()
                     try:
@@ -4507,6 +4514,9 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"error": "这次沟通已经结束，不能再发送消息"}, 403)
             if report.get("blocked"):
                 return self._json({"error": "对方已屏蔽你，消息发送失败", "blocked": True}, 403)
+            _ok_send, _mute_msg, _until = enforcement.check(owner)
+            if not _ok_send:
+                return self._json({"error": _mute_msg, "mutedUntil": _until}, 403)
             body = self._read_body()
             text = str(body.get("text") or "").strip()[:200]
             client_msg_id = str(body.get("clientMsgId") or "").strip()[:80]
@@ -5295,6 +5305,10 @@ class Handler(BaseHTTPRequestHandler):
                         _side = "owner" if _blocker == item.get("ownerToken") else "claimer"
                         return self._json({"ok": True, "messages": [], "side": side, "blocked": True, "blockedBy": _side})
                     return self._json({"error": "对方已屏蔽你，消息发送失败", "blocked": True}, 403)
+                if is_send:
+                    _ok_send, _mute_msg, _until = enforcement.check(owner)
+                    if not _ok_send:
+                        return self._json({"error": _mute_msg, "mutedUntil": _until}, 403)
                 if not is_send:
                     try:
                         after_at = int((patch or {}).get("afterAt") or 0)
@@ -6305,6 +6319,7 @@ def main():
 
     start_review_workers(2)
     risk_profile.init(BASE_DIR)
+    enforcement.init(BASE_DIR)
     moderation.init(BASE_DIR)
     moderation.start_worker()
     chat_guard.init(BASE_DIR)

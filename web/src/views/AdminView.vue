@@ -446,7 +446,7 @@ function statusClass(s) {
     <div v-for="r in reports" :key="r.id" class="report-row">
       <div class="report-head">
         <b>{{ r.itemTitle || '匿名沟通' }}</b>
-        <span class="report-status">{{ ({pending:'待审核',reviewing:'AI审核中',reviewed:'待处理',resolved:'已处理',dismissed:'已驳回'})[r.status] || r.status }}</span>
+        <span class="report-status">{{ ({pending:'AI排队中',reviewing:'AI审核中',reviewed:'AI已复核',auto_safe:'AI判定安全',auto_warned:'AI已警告',auto_limited:'AI已暂停聊天',resolved:'已处理',dismissed:'已驳回'})[r.status] || r.status }}</span>
       </div>
       <div class="report-meta">{{ r.reason }} · {{ r.kind === 'help' ? '爱心捐赠' : r.kind === 'claim' ? '失物认领' : '拾光码' }} · {{ new Date(r.createdAt).toLocaleString('zh-CN') }}</div>
       <div v-if="r.detail" class="report-detail">举报说明：{{ r.detail }}</div>
@@ -470,7 +470,7 @@ function statusClass(s) {
     <div v-for="a in chatAlerts" :key="a.id" class="report-row">
       <div class="report-head">
         <b>{{ a.kind === 'help' ? '爱心捐赠' : a.kind === 'claim' ? '失物认领' : '拾光码' }}</b>
-        <span class="report-status">{{ a.status === 'reviewed' ? 'AI已复核' : 'AI审核中' }}</span>
+        <span class="report-status">{{ ({reviewing:'AI审核中',reviewed:'AI已复核',auto_safe:'AI判定安全',auto_warned:'AI已警告',auto_limited:'AI已暂停聊天'})[a.status] || a.status }}</span>
       </div>
       <div class="report-meta">{{ new Date(a.createdAt).toLocaleString('zh-CN') }} · 命中：{{ (a.localHits || []).join('、') }}</div>
       <div class="report-detail">消息：{{ a.text }}</div>
