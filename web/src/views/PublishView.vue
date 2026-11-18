@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { api } from '../api'
+import PublishKindSwitch from '../components/PublishKindSwitch.vue'
 
 const props = defineProps({
   type: { type: String, default: 'lost' },
@@ -8,6 +9,14 @@ const props = defineProps({
   editItem: { type: Object, default: null }
 })
 const emit = defineEmits(['nav'])
+
+// 列表页的 view 名与内容类型相反：寻物(lost) 对应「寻物启事」页(found)。
+// 返回列表的去向由本页单独维护，不依赖列表页里的映射。
+const LIST_PAGE_BY_KIND = { lost: 'found', found: 'lost' }
+
+function listPageForKind(value) {
+  return LIST_PAGE_BY_KIND[value] || 'found'
+}
 
 const kind = ref(props.type)
 const helpCatLocal = ref(props.helpCat)
@@ -335,7 +344,7 @@ function askDetective() {
 <template>
   <section class="screen active" id="screen-publish">
     <div class="topbar">
-      <div class="back" @click="$emit('nav', isHelp ? 'help' : kind)">‹</div>
+      <div class="back" @click="$emit('nav', isHelp ? 'help' : listPageForKind(kind))">‹</div>
       <div class="t">{{ isHelp ? '发布爱心求助' : '发布启事' }}</div>
     </div>
 
@@ -351,10 +360,7 @@ function askDetective() {
       </div>
       <div class="warn-box">❗禁止发布现金、贵重物品、危险品、药品；虚假信息会被下架并限制发布权限。</div>
 
-      <div class="type-tab" style="margin-bottom:10px">
-        <div :class="{ active: kind === 'lost' }" @click="kind = 'lost'">我要寻物（东西丢了）</div>
-        <div :class="{ active: kind === 'found' }" @click="kind = 'found'">我要招领（捡到物品）</div>
-      </div>
+      <PublishKindSwitch v-model="kind" />
 
       <div v-if="isHelp" class="help-picker">
         <button v-for="c in helpCats" :key="c.id" type="button" :class="{ on: helpCatLocal === c.id }" @click="helpCatLocal = c.id">{{ c.name }}</button>
@@ -378,7 +384,7 @@ function askDetective() {
         <div class="big">✓</div>
         <h2>{{ result.status === 'approved' ? '已发布成功' : result.status === 'rejected' ? '内容被拦截' : '已提交，等待审核' }}</h2>
         <p>{{ result.rejectReason || '智能审核会先看文字和图片，通过后其他同学才能看到。' }}</p>
-        <button type="button" class="btn" style="width:100%" @click="$emit('nav', isHelp ? 'help' : kind)">返回列表</button>
+        <button type="button" class="btn" style="width:100%" @click="$emit('nav', isHelp ? 'help' : listPageForKind(kind))">返回列表</button>
         <button v-if="!isHelp && kind === 'lost' && result.status === 'approved'" type="button" class="btn ghost" style="width:100%;margin-top:8px" @click="askDetective">让 AI 侦探帮我找下一步</button>
       </div>
 
