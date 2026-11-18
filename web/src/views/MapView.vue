@@ -31,21 +31,21 @@ const photos = {
   '综合体育馆': '/web/assets/map/gym.jpg',
   '西门（主校门）': '/web/assets/map/tsinghuaroad.jpg',
   '观畴园（食堂）': '/web/assets/map/zijing.jpg',
-  '紫操': '/web/assets/map/zijing.jpg',
+  '紫操': '/web/assets/map/westgym.jpg',
   '图书馆（北馆）': '/web/assets/map/library.jpg',
   '校史馆': '/web/assets/map/newhall.jpg',
-  '清芬园（食堂）': '/web/assets/map/zijing.jpg',
-  '校医院': '/web/assets/map/tsinghuaroad.jpg',
-  '东门': '/web/assets/map/tsinghuaroad.jpg'
+  '清芬园（食堂）': '/web/assets/map/liujiao.jpg',
+  '校医院': '/web/assets/map/hospital.jpg',
+  '东门': '/web/assets/map/mainbuilding.jpg'
 }
 const photoNotes = {
   '西门（主校门）': '校园主干道实景参考，来源：清华大学官网公开组图',
   '观畴园（食堂）': '校园生活区实景参考，来源：清华大学官网公开组图',
-  '紫操': '紫荆生活区实景参考，来源：清华大学官网公开组图',
-  '校史馆': '校园建筑实景参考，来源：清华大学官网公开组图',
-  '清芬园（食堂）': '校园生活区实景参考，来源：清华大学官网公开组图',
-  '校医院': '校园道路实景参考，来源：清华大学官网公开组图',
-  '东门': '校园道路实景参考，来源：清华大学官网公开组图'
+  '紫操': '西体育馆与紫荆生活区实景参考，来源：清华大学官网公开组图',
+  '校史馆': '新清华学堂周边实景参考，来源：清华大学官网公开组图',
+  '清芬园（食堂）': '六教周边实景参考，来源：清华大学官网公开组图',
+  '校医院': '校医院官网实景图',
+  '东门': '主楼东侧实景参考，来源：清华大学官网公开组图'
 }
 function openSpot(s) {
   photoError.value = false
