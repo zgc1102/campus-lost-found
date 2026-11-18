@@ -14,6 +14,42 @@ NOTICE_FILE = "enforcement_notices.json"
 def init(base_dir):
     global _BASE_DIR
     _BASE_DIR = os.path.abspath(base_dir)
+    _migrate_legacy()
+
+
+def _kind_of_source(source):
+    for name in ("chat_guard_alerts.json", "moderation_reports.json"):
+        try:
+            with open(_path(name), "r", encoding="utf-8") as f:
+                rows = json.load(f)
+        except Exception:
+            continue
+        for row in rows:
+            if row.get("id") == source:
+                return row.get("kind") or ""
+    return ""
+
+
+def _migrate_legacy():
+    data = _load()
+    changed = False
+    for owner, row in data.items():
+        until = int(row.get("mutedUntil") or 0)
+        if not until:
+            continue
+        source = row.get("source") or ""
+        kind = _kind_of_source(source)
+        scope = "module:" + kind if kind in ("claim", "report", "help") else "legacy"
+        row.setdefault("mutes", {})[scope] = {
+            "mutedUntil": until,
+            "reason": row.get("reason") or "旧版全局暂停，已迁移",
+            "source": source,
+            "updatedAt": _now(),
+        }
+        row.pop("mutedUntil", None)
+        changed = True
+    if changed:
+        _save(data)
 
 
 def _path(name):
@@ -106,6 +142,7 @@ def clear_mute(owner, scope=None):
     row = data.get(owner)
     if not row:
         return None
+    row.pop("mutedUntil", None)
     if scope is None:
         row["mutes"] = {}
     else:
@@ -145,6 +182,14 @@ def admin_list():
                 "mutedUntil": int(item.get("mutedUntil") or 0),
                 "reason": item.get("reason") or "",
                 "source": item.get("source") or "",
+            })
+        if int(row.get("mutedUntil") or 0):
+            rows.append({
+                "owner": owner,
+                "scope": "legacy",
+                "mutedUntil": int(row.get("mutedUntil") or 0),
+                "reason": row.get("reason") or "",
+                "source": row.get("source") or "",
             })
     rows.sort(key=lambda x: -int(x.get("mutedUntil") or 0))
     return rows[:300]
