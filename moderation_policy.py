@@ -7,16 +7,21 @@ RISK_WARN = 40
 RISK_MUTE = 85
 
 SEVERE_CATEGORIES = ("色情", "色情擦边", "诈骗", "代考", "作弊", "威胁", "暴力")
+SEVERE_HITS = ("去死", "杀了你", "弄死你", "约炮", "裸照", "开房", "代考", "代写", "卖答案")
 
 
 def _has(categories, words):
-    text = "".join(str(x) for x in (categories or []))
-    return any(w in text for w in words)
+    values = {str(x).strip() for x in (categories or [])}
+    return any(w in values for w in words)
+
+
+def _severe(categories, local_hits):
+    return _has(categories, SEVERE_CATEGORIES) or any(w in (local_hits or []) for w in SEVERE_HITS)
 
 
 def decide(verdict, risk, categories=None, history_level="normal", local_hits=None, automatic=True):
     risk = max(0, min(100, int(risk or 0)))
-    severe = _has(categories, SEVERE_CATEGORIES)
+    severe = _severe(categories, local_hits)
 
     if verdict == "safe" and risk < RISK_WARN:
         return {
