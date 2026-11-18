@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { ref } from 'vue'
 
 const emit = defineEmits(['nav'])
@@ -22,13 +22,30 @@ const spots = [
   { name: '东门', icon: '🚪', x: 90, y: 46, desc: '东侧校门，临近东区教学科研楼群与主楼一带。' }
 ]
 const photos = {
-  '二校门': 'https://www.tsinghua.edu.cn/__local/1/63/BE/E6DAC008600170338C51AF67AA2_A30DA786_A857B.jpg',
-  '清华学堂': 'https://www.tsinghua.edu.cn/__local/E/CB/AB/4013FF557763C9195DBEE3C9E23_4AEC7F2F_B0999.jpg',
-  '大礼堂': 'https://www.tsinghua.edu.cn/__local/4/08/64/830C8E47DF858F512AC2BF7A400_F226E486_A08D2.jpg',
-  '老图书馆': 'https://www.tsinghua.edu.cn/__local/3/E7/C3/20330133B5ADFF11BED6AC2A2A6_91145F8C_9B199.jpg',
-  '近春园（荷塘）': 'https://www.tsinghua.edu.cn/__local/0/DB/2D/DBA5A25DA78C44ED8C2DE6C1A10_2423BADD_1C3823.jpg',
-  '艺术博物馆': 'https://www.tsinghua.edu.cn/__local/0/E9/B5/123588172AED93BD0193C0D83FA_DED4F3EB_901C6.jpg',
-  '综合体育馆': 'https://www.tsinghua.edu.cn/__local/F/F9/68/A5A677B7D9B84F28D44A2452AFF_D369F59E_17F17B.jpg'
+  '二校门': '/web/assets/map/erxiaomen.jpg',
+  '清华学堂': '/web/assets/map/tsinghuaxuetang.jpg',
+  '大礼堂': '/web/assets/map/auditorium.jpg',
+  '老图书馆': '/web/assets/map/oldlibrary.jpg',
+  '近春园（荷塘）': '/web/assets/map/nearspring.jpg',
+  '艺术博物馆': '/web/assets/map/artmuseum.jpg',
+  '综合体育馆': '/web/assets/map/gym.jpg',
+  '西门（主校门）': '/web/assets/map/tsinghuaroad.jpg',
+  '观畴园（食堂）': '/web/assets/map/zijing.jpg',
+  '紫操': '/web/assets/map/zijing.jpg',
+  '图书馆（北馆）': '/web/assets/map/library.jpg',
+  '校史馆': '/web/assets/map/newhall.jpg',
+  '清芬园（食堂）': '/web/assets/map/zijing.jpg',
+  '校医院': '/web/assets/map/tsinghuaroad.jpg',
+  '东门': '/web/assets/map/tsinghuaroad.jpg'
+}
+const photoNotes = {
+  '西门（主校门）': '校园主干道实景参考，来源：清华大学官网公开组图',
+  '观畴园（食堂）': '校园生活区实景参考，来源：清华大学官网公开组图',
+  '紫操': '紫荆生活区实景参考，来源：清华大学官网公开组图',
+  '校史馆': '校园建筑实景参考，来源：清华大学官网公开组图',
+  '清芬园（食堂）': '校园生活区实景参考，来源：清华大学官网公开组图',
+  '校医院': '校园道路实景参考，来源：清华大学官网公开组图',
+  '东门': '校园道路实景参考，来源：清华大学官网公开组图'
 }
 function openSpot(s) {
   photoError.value = false
@@ -83,15 +100,16 @@ function up(i) {
       <div class="foot" style="text-align:center;color:var(--sub);font-size:11px;padding:14px 0;">地标位置参考清华园实际布局与公开地图修订（腾讯 / 百度 / 高德）；示意全图，非真实导航底图</div>
     </div>
 
+    <div v-if="active" class="map-modal-backdrop" @click.self="active = null"></div>
     <div v-if="active" class="sheet show">
       <button type="button" class="sheet-x" @click="active = null">✕</button>
       <div class="big-thumb">
-        <img v-if="photos[active.name] && !photoError" :src="photos[active.name]" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:12px;background:linear-gradient(135deg,#EFE3D0,#DCC9EE)" @error="photoError = true">
+        <img v-if="photos[active.name] && !photoError" :src="photos[active.name]" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;border-radius:12px;background:linear-gradient(135deg,#EFE3D0,#DCC9EE)" @error="photoError = true">
         <span v-else>📍</span>
       </div>
       <div class="sh">{{ active.name }}</div>
       <div class="sa">{{ active.desc }}</div>
-      <div class="sa" style="margin-top:8px">{{ photos[active.name] ? '📷 实景图来源：清华大学官网公开组图' : '📷 校园实景图（待补充，敬请期待）' }}</div>
+      <div class="sa" style="margin-top:8px">{{ photos[active.name] ? (photoNotes[active.name] || '📷 实景图来源：清华大学官网公开组图') : '📷 校园实景图（待补充，敬请期待）' }}</div>
 
     </div>
   </section>
@@ -104,3 +122,6 @@ function up(i) {
 .sheet.show { background:#fff; }
 </style>
 
+<style scoped>
+.map-modal-backdrop { position:fixed; inset:0; z-index:19; background:rgba(12,6,22,.72); }
+</style>
