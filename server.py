@@ -1913,7 +1913,7 @@ def agent_detective(item, items):
             {"tool": "hotspot", "finding": "计算校园高频区域"},
         ],
         "confidence": "高" if top_score >= 68 else ("中" if top_score >= 45 else "低"),
-        "summary": "按你给的地点和时间，先看匹配到的招领，再结合高频区域自行核对。",
+        "summary": "按你给的地点和时间，先看匹配到的招领，再按下面的顺序找。",
         "disclaimer": "以上是线索建议，不保证物品一定在这些位置；找到后请当面核对特征。",
     }
 
