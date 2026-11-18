@@ -9,6 +9,8 @@ import re
 import threading
 import time
 import urllib.request
+import lexicon_candidate
+import lexicon_shadow
 
 _BASE_DIR = "."
 STATE_FILE = "lexicon_miner_state.json"
@@ -18,6 +20,8 @@ CANDIDATE_FILE = "chat_lexicon_candidates.json"
 def init(base_dir):
     global _BASE_DIR
     _BASE_DIR = os.path.abspath(base_dir)
+    lexicon_candidate.init(_BASE_DIR)
+    lexicon_shadow.init(_BASE_DIR)
 
 
 def _path(name):
@@ -109,9 +113,15 @@ def mine():
         mid = [str(x).strip() for x in obj.get("mid", []) if 2 <= len(str(x).strip()) <= 8]
         if not high and not mid:
             return None
-        _save(CANDIDATE_FILE, {"high": high[:12], "mid": mid[:12], "at": _now()})
-        _save(STATE_FILE, {"lastAt": _now(), "high": len(high), "mid": len(mid)})
-        return {"high": high, "mid": mid}
+        ranked = lexicon_candidate.rank(high, mid)
+        approved, shadow_rejected = lexicon_shadow.evaluate(ranked)
+        approved["rejected"] = (ranked.get("rejected") or []) + shadow_rejected
+        approved["at"] = _now()
+        _save(CANDIDATE_FILE, approved)
+        _save(STATE_FILE, {"lastAt": _now(),
+                           "high": len(approved.get("high") or []),
+                           "mid": len(approved.get("mid") or [])})
+        return approved
     except Exception:
         return None
 
