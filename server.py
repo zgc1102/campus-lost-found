@@ -5732,8 +5732,10 @@ class Handler(BaseHTTPRequestHandler):
             scope = (qs.get("scope") or [""])[0]
             row = enforcement.clear_mute(owner, scope or None)
             try:
-                if scope:
+                if scope and scope != "legacy":
                     risk_profile.clear_scope(owner, scope)
+                else:
+                    risk_profile.clear_scope(owner)
             except Exception:
                 pass
             try:
