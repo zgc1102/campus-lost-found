@@ -148,6 +148,19 @@ async function adminUnmute(owner) {
     enforcements.value = enforcements.value.map((x) => x.owner === owner ? { ...x, mutedUntil: 0 } : x)
   } catch (e) { error.value = e.message || '解除失败' }
 }
+function exportEnforcements() {
+  const lines = ['用户,暂停到,原因']
+  for (const x of enforcements.value) {
+    const until = x.mutedUntil ? new Date(x.mutedUntil).toLocaleString('zh-CN') : ''
+    lines.push([x.owner, until, String(x.reason || '').replaceAll(',', '，')].join(','))
+  }
+  const blob = new Blob(['\ufeff' + lines.join('\n')], { type: 'text/csv;charset=utf-8' })
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = '暂停聊天用户.csv'
+  a.click()
+  URL.revokeObjectURL(a.href)
+}
 
 async function review(it, status) {
   if (status === 'rejected' || status === 'removed') {
@@ -520,7 +533,7 @@ function statusClass(s) {
   </div>
 
   <div v-if="tab === 'reports'" class="panel" style="margin-top:14px">
-    <h3>暂停聊天用户</h3>
+    <h3>暂停聊天用户 <button type="button" class="report-export" @click="exportEnforcements">导出 CSV</button></h3>
     <div v-if="!enforcements.length" class="reports-empty">还没有暂停记录</div>
     <div v-for="u in enforcements" :key="u.owner" class="report-row">
       <div class="report-head"><b>{{ u.owner }}</b><span class="report-status">{{ u.mutedUntil > Date.now() ? '暂停中' : '已到期' }}</span></div>
@@ -861,4 +874,7 @@ textarea.field { min-height: 78px; resize: vertical; }
 .report-actions { display:flex; gap:6px; margin-top:7px; }
 .report-actions button { border:0; background:#5B2A91; color:#fff; border-radius:6px; padding:4px 8px; font-family:inherit; font-size:9px; }
 .report-actions button.ghost { background:#fff; color:#5B2A91; border:1px solid #D9C8EE; }
+</style>
+<style scoped>
+.report-export { float:right; border:1px solid #D9C8EE; background:#fff; color:#5B2A91; border-radius:6px; padding:4px 8px; font-family:inherit; font-size:9px; font-weight:400; }
 </style>

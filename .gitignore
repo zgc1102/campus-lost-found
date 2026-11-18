@@ -50,5 +50,6 @@ risk_profiles.json
 appeals.json
 chat_lexicon.json
 chat_lexicon_candidates.json
+lexicon_miner_state.json
 _local_server.py
 本地二维码*.png

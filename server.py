@@ -35,6 +35,7 @@ import enforcement
 import moderation_policy
 import appeals
 import chat_lexicon
+import lexicon_miner
 
 
 def load_dotenv(path=None):
@@ -5720,6 +5721,14 @@ class Handler(BaseHTTPRequestHandler):
                 return
             owner = path[len("/api/admin/enforcement/unmute/"):]
             row = enforcement.clear_mute(owner)
+            try:
+                with LOCK:
+                    notices = load_notices()
+                    add_notice(notices, owner, "moderation_unmute",
+                               "管理员已解除你的聊天暂停，可以继续沟通了", "", "")
+                    save_notices(notices)
+            except Exception:
+                pass
             return self._json({"ok": True, "owner": owner, "state": row or {}})
 
         if path.startswith("/api/admin/moderation/appeals/"):
@@ -6369,6 +6378,8 @@ def main():
     appeals.start_worker()
     chat_lexicon.init(BASE_DIR)
     chat_lexicon.start_worker()
+    lexicon_miner.init(BASE_DIR)
+    lexicon_miner.start_worker()
     moderation.init(BASE_DIR)
     moderation.start_worker()
     chat_guard.init(BASE_DIR)
