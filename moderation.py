@@ -315,6 +315,12 @@ def admin_list():
     return rows[-300:][::-1]
 
 
+def get(report_id):
+    with _LOCK:
+        rows = _load(REPORT_FILE, [])
+    return next((r for r in rows if r.get("id") == report_id), None)
+
+
 def admin_update(report_id, status, note="", actor=""):
     if status not in ("resolved", "dismissed", "reviewing"):
         return None
