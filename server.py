@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 清华校园拾光里 · 服务端 v4
@@ -30,6 +30,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 import moderation
 import chat_guard
 import risk_profile
+import image_guard
 
 
 def load_dotenv(path=None):
@@ -3400,7 +3401,7 @@ class Handler(BaseHTTPRequestHandler):
                 photo = compress_image_data(photo)
                 if len(photo) > 2_500_000:
                     return self._json({"error": "图片太大，请压缩后再上传"}, 400)
-                _mod = vision_moderate(photo)
+                _mod = image_guard.moderate(photo)
                 if not _mod.get("ok"):
                     return self._json({"error": "图片审核服务暂时不可用，请稍后再试"}, 503)
                 if not _mod.get("safe", True) and float(_mod.get("confidence") or 0) >= 0.6:
@@ -4163,7 +4164,7 @@ class Handler(BaseHTTPRequestHandler):
             image = compress_image_data(image)
             if len(image) > 2_500_000:
                 return self._json({"error": "图片太大，请压缩后再上传"}, 400)
-            _mod = vision_moderate(image)
+            _mod = image_guard.moderate(image)
             if not _mod.get("ok"):
                 return self._json({"error": "图片审核服务暂时不可用，请稍后再试"}, 503)
             if not _mod.get("safe", True) and float(_mod.get("confidence") or 0) >= 0.6:
@@ -4658,7 +4659,7 @@ class Handler(BaseHTTPRequestHandler):
             image = compress_image_data(image)
             if len(image) > 2_500_000:
                 return self._json({"error": "图片太大，请压缩后再上传"}, 400)
-            _mod = vision_moderate(image)
+            _mod = image_guard.moderate(image)
             if not _mod.get("ok"):
                 return self._json({"error": "图片审核服务暂时不可用，请稍后再试"}, 503)
             if not _mod.get("safe", True) and float(_mod.get("confidence") or 0) >= 0.6:
