@@ -204,6 +204,22 @@ export const api = {
   reportStatus(kind, targetId) {
     return call('/moderation/status?kind=' + encodeURIComponent(kind) + '&targetId=' + encodeURIComponent(targetId), { skipCacheClear: true })
   },
+  submitAppeal(payload) {
+    return call('/moderation/appeals', { method: 'POST', body: JSON.stringify(payload) })
+  },
+  myAppeals() {
+    return call('/moderation/appeals/mine')
+  },
+  adminAppeals(token) {
+    return call('/admin/moderation/appeals', { headers: { 'X-Admin-Token': token } })
+  },
+  adminAppealUpdate(token, id, payload) {
+    return call('/admin/moderation/appeals/' + encodeURIComponent(id), {
+      method: 'PATCH',
+      headers: { 'X-Admin-Token': token },
+      body: JSON.stringify(payload)
+    })
+  },
   myReports() {
     return call('/moderation/reports/mine')
   },

@@ -33,6 +33,7 @@ import risk_profile
 import image_guard
 import enforcement
 import moderation_policy
+import appeals
 
 
 def load_dotenv(path=None):
@@ -2826,6 +2827,17 @@ class Handler(BaseHTTPRequestHandler):
                 }
             return self._json({"ok": True, "state": state})
 
+        if path == "/api/moderation/appeals/mine":
+            owner = self._owner()
+            if not owner:
+                return self._json({"error": "缺少设备标识"}, 400)
+            return self._json({"ok": True, "appeals": appeals.mine(owner)})
+
+        if path == "/api/admin/moderation/appeals":
+            if not self._need_admin():
+                return
+            return self._json({"ok": True, "appeals": appeals.admin_list()})
+
         if path == "/api/moderation/reports/mine":
             owner = self._owner()
             if not owner:
@@ -4887,6 +4899,21 @@ class Handler(BaseHTTPRequestHandler):
                 save_notices(notices)
             return self._json({"ok": True})
 
+        if path == "/api/moderation/appeals":
+            owner = self._owner()
+            if not owner:
+                return self._json({"error": "缺少设备标识"}, 400)
+            body = self._read_body()
+            row, duplicate = appeals.create(
+                owner,
+                body.get("reportId"),
+                body.get("alertId") or body.get("reportId"),
+                body.get("reason"),
+                body.get("kind"),
+                body.get("targetId"),
+            )
+            return self._json({"ok": True, "appeal": row, "duplicate": duplicate}, 201)
+
         if path == "/api/moderation/reports":
             owner = self._owner()
             if not owner:
@@ -5683,6 +5710,22 @@ class Handler(BaseHTTPRequestHandler):
                 save_notices(notices)
             return self._json({"ok": True, "status": target})
 
+        if path.startswith("/api/admin/moderation/appeals/"):
+            if not self._need_admin():
+                return
+            appeal_id = path[len("/api/admin/moderation/appeals/"):]
+            body = self._read_body()
+            row = appeals.admin_update(appeal_id, str(body.get("status") or ""),
+                                        str(body.get("note") or ""), "admin")
+            if not row:
+                return self._json({"error": "申诉不存在或状态不正确"}, 404)
+            if row.get("status") == "approved":
+                try:
+                    enforcement.clear_mute(row.get("owner"))
+                except Exception:
+                    pass
+            return self._json({"ok": True, "appeal": row})
+
         if path.startswith("/api/admin/moderation/reports/"):
             if not self._need_admin():
                 return
@@ -6321,6 +6364,7 @@ def main():
     start_review_workers(2)
     risk_profile.init(BASE_DIR)
     enforcement.init(BASE_DIR)
+    appeals.init(BASE_DIR)
     moderation.init(BASE_DIR)
     moderation.start_worker()
     chat_guard.init(BASE_DIR)

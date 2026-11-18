@@ -23,6 +23,7 @@ const deployLog = ref([])
 const reports = ref([])
 const chatAlerts = ref([])
 const riskProfiles = ref([])
+const appeals = ref([])
 const deploying = ref(false)
 const deployCountdown = ref(0)
 const deployMsg = ref('')
@@ -71,7 +72,7 @@ async function loadAll(silent = false) {
   if (!silent) loading.value = true
   error.value = ''
   try {
-    const [s, list, accs, anns, sp, cfg, dep, reps] = await Promise.all([
+    const [s, list, accs, anns, sp, cfg, dep, reps, aps] = await Promise.all([
       api.adminStats(token.value),
       api.adminItems(token.value),
       api.adminAccounts(token.value),
@@ -79,7 +80,8 @@ async function loadAll(silent = false) {
       api.adminSpecialNumbers(token.value),
       api.adminConfig(token.value),
       api.adminDeployLog(token.value),
-      api.adminReports(token.value)
+      api.adminReports(token.value),
+      api.adminAppeals(token.value)
     ])
     stats.value = s
     statsAt.value = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
@@ -92,6 +94,7 @@ async function loadAll(silent = false) {
     reports.value = Array.isArray(reps?.reports) ? reps.reports : []
     chatAlerts.value = Array.isArray(reps?.chatAlerts) ? reps.chatAlerts : []
     riskProfiles.value = Array.isArray(reps?.riskProfiles) ? reps.riskProfiles : []
+    appeals.value = Array.isArray(aps?.appeals) ? aps.appeals : []
   } catch (e) {
     error.value = e.message || '读取失败'
     if (e.status === 401 || /unauthorized|登录/i.test(String(e.message))) logout()
@@ -127,6 +130,14 @@ async function handleReport(r, status) {
     const idx = reports.value.findIndex((x) => x.id === r.id)
     if (idx >= 0) reports.value[idx] = res.report
   } catch (e) { error.value = e.message || '处理失败' }
+}
+async function handleAppeal(a, status) {
+  const note = status === 'rejected' ? (window.prompt('驳回说明（可留空）') || '') : ''
+  try {
+    const res = await api.adminAppealUpdate(token.value, a.id, { status, note })
+    const idx = appeals.value.findIndex((x) => x.id === a.id)
+    if (idx >= 0) appeals.value[idx] = res.appeal
+  } catch (e) { error.value = e.message || '申诉处理失败' }
 }
 
 async function review(it, status) {
@@ -484,6 +495,20 @@ function statusClass(s) {
     <div v-for="u in riskProfiles" :key="u.owner" class="report-row">
       <div class="report-head"><b>{{ u.owner }}</b><span class="report-status">{{ u.level }}</span></div>
       <div class="report-meta">近 30 天违规 {{ u.count }} 次 · 高危 {{ u.highCount }} 次</div>
+    </div>
+  </div>
+
+  <div v-if="tab === 'reports'" class="panel" style="margin-top:14px">
+    <h3>申诉</h3>
+    <div v-if="!appeals.length" class="reports-empty">还没有申诉</div>
+    <div v-for="a in appeals" :key="a.id" class="report-row">
+      <div class="report-head"><b>{{ a.owner }}</b><span class="report-status">{{ ({pending:'待处理',approved:'已通过',rejected:'已驳回'})[a.status] || a.status }}</span></div>
+      <div class="report-meta">{{ a.kind || '聊天' }} · {{ new Date(a.createdAt).toLocaleString('zh-CN') }}</div>
+      <div class="report-detail">{{ a.reason }}</div>
+      <div v-if="a.status === 'pending'" class="report-actions">
+        <button type="button" @click="handleAppeal(a, 'approved')">通过并解除暂停</button>
+        <button type="button" class="ghost" @click="handleAppeal(a, 'rejected')">驳回</button>
+      </div>
     </div>
   </div>
 

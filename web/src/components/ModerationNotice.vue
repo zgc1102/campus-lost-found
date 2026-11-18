@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { api } from '../api'
+import AppealDialog from './AppealDialog.vue'
 
 const props = defineProps({
   kind: { type: String, required: true },
@@ -14,6 +15,7 @@ const counterpartNotice = ref('')
 const reportId = ref('')
 const showWarning = ref(false)
 const showCounterpart = ref(false)
+const showAppeal = ref(false)
 let timer = null
 
 function seenKey(id) {
@@ -82,8 +84,10 @@ watch(() => [props.kind, props.targetId], () => {
       <p>{{ warning }}</p>
       <p class="mn-sub">本次记录已保存到安全审核记录。如有异议，可通过平台申诉。</p>
       <button type="button" @click="closeWarning">我已知晓</button>
+      <button type="button" class="mn-appeal" @click="showAppeal = true">申诉</button>
     </div>
   </div>
+  <AppealDialog v-if="showAppeal" :report-id="reportId" :kind="kind" :target-id="targetId" @close="showAppeal = false" />
   <div v-if="showCounterpart" class="mn-overlay" @click.self="closeCounterpart">
     <div class="mn-card">
       <div class="mn-kicker">安全提醒</div>
@@ -106,4 +110,7 @@ watch(() => [props.kind, props.targetId], () => {
 .mn-card p { margin:0 0 7px; font-size:10px; line-height:1.7; color:#5C4B70; }
 .mn-card .mn-sub { color:#8E7FA3; font-size:9px; }
 .mn-card button { width:100%; margin-top:9px; border:0; background:#5B2A91; color:#fff; border-radius:8px; padding:8px; font-family:inherit; font-size:10px; }
+</style>
+<style scoped>
+.mn-card button.mn-appeal { margin-top:6px; background:#fff; color:#5B2A91; border:1px solid #D9C8EE; }
 </style>
