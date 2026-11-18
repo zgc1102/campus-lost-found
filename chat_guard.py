@@ -214,7 +214,8 @@ def _process(alert_id):
         sender = alert.get("senderOwner") or ""
         history = risk_profile.get_level(sender).get("level", "normal")
         decision = moderation_policy.decide(result.get("verdict"), result.get("risk"),
-                                            result.get("categories"), history)
+                                            result.get("categories"), history,
+                                            alert.get("localHits"))
         alert["action"] = decision
         alert["status"] = decision.get("status") or "auto_safe"
         if decision.get("mute_minutes"):
