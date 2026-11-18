@@ -833,9 +833,10 @@ async function claimAction(status, needImage = false) {
   try {
     await api.claimAction(selected.value.claimId, { status, image: !!needImage })
     selected.value.claimStatus = status
+    if (needImage) selected.value.claimNeedImage = true
     actionMsg.value = status === 'accepted' ? '已通过认领，双方手机号可以交换'
-      : status === 'need_more' ? '已请对方补充线索'
-      : '已拒绝这次认领'
+      : status === 'need_more' ? '已请对方补充图片，等待对方上传'
+        : '已拒绝这次认领'
     await refreshSelected()
   } catch (e) {
     actionMsg.value = e.message || '操作失败'

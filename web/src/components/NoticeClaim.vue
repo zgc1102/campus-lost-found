@@ -123,6 +123,9 @@ function reviewText(r) {
       <img :src="notice.claimImage" alt="补充图片" title="双击查看大图" style="max-width:100%;max-height:220px;border-radius:9px;border:1px solid #EADFF5;cursor:zoom-in" @dblclick="openImage">
       <div v-if="reviewText(notice.claimImageReview)" class="nd-review">{{ reviewText(notice.claimImageReview) }}</div>
     </div>
+    <div v-if="(notice.isPublisher || notice.item?.isMine) && (notice.claimNeedImage || notice.claimStatus === 'need_more')" class="nd-exchange-tip" style="color:#5B2A91">
+      已请求对方补充图片，等待对方上传；上传后会自动显示在这里。
+    </div>
     <div v-if="notice.isClaimant && (notice.claimNeedImage || notice.claimStatus === 'need_more')" class="nd-phone-fill upload-box">
       <p>辛苦你上传一张物品照片，方便发布者核对，谢谢配合。</p>
       <p class="upload-tip">建议选择 2MB 以内的 JPG / PNG 照片，系统会自动压缩，不用手动处理。</p>
