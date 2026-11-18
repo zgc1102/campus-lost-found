@@ -2821,6 +2821,7 @@ class Handler(BaseHTTPRequestHandler):
                     "active": bool(guard.get("active") or state.get("active")),
                     "status": guard.get("status") or state.get("status"),
                     "warning": guard.get("warning") or state.get("warning"),
+                    "counterpartNotice": guard.get("counterpartNotice") or "",
                     "reportId": guard.get("reportId") or state.get("reportId"),
                 }
             return self._json({"ok": True, "state": state})

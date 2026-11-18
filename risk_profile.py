@@ -78,7 +78,17 @@ def get_level(owner):
 
 
 def needs_full_scan(owner):
+    if is_watched(owner):
+        return True
     return get_level(owner).get("level") in ("high", "restricted")
+
+
+def is_watched(owner, hours=24):
+    owner = str(owner or "").strip()[:64]
+    data = _load()
+    row = data.get(owner) or {}
+    cutoff = _now() - max(1, int(hours)) * 3600 * 1000
+    return any(int(e.get("at") or 0) >= cutoff for e in row.get("events") or [])
 
 
 def admin_list():

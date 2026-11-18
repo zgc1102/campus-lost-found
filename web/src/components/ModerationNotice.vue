@@ -10,8 +10,10 @@ const props = defineProps({
 const active = ref(false)
 const status = ref('')
 const warning = ref('')
+const counterpartNotice = ref('')
 const reportId = ref('')
 const showWarning = ref(false)
+const showCounterpart = ref(false)
 let timer = null
 
 function seenKey(id) {
@@ -21,11 +23,17 @@ function apply(state) {
   active.value = Boolean(state?.active)
   status.value = state?.status || ''
   warning.value = state?.warning || ''
+  counterpartNotice.value = state?.counterpartNotice || ''
   reportId.value = state?.reportId || ''
   if (warning.value && reportId.value) {
     let seen = ''
     try { seen = localStorage.getItem(seenKey(reportId.value)) || '' } catch (_) {}
     if (!seen) showWarning.value = true
+  }
+  if (counterpartNotice.value && reportId.value) {
+    let seen = ''
+    try { seen = localStorage.getItem('sg:moderation-counterpart:' + reportId.value) || '' } catch (_) {}
+    if (!seen) showCounterpart.value = true
   }
 }
 async function load() {
@@ -41,6 +49,12 @@ function closeWarning() {
   }
   showWarning.value = false
 }
+function closeCounterpart() {
+  if (reportId.value) {
+    try { localStorage.setItem('sg:moderation-counterpart:' + reportId.value, '1') } catch (_) {}
+  }
+  showCounterpart.value = false
+}
 onMounted(() => {
   load()
   timer = setInterval(load, 3000)
@@ -50,6 +64,8 @@ watch(() => [props.kind, props.targetId], () => {
   active.value = false
   warning.value = ''
   showWarning.value = false
+  counterpartNotice.value = ''
+  showCounterpart.value = false
   load()
 })
 </script>
@@ -66,6 +82,15 @@ watch(() => [props.kind, props.targetId], () => {
       <p>{{ warning }}</p>
       <p class="mn-sub">本次记录已保存到安全审核记录。如有异议，可通过平台申诉。</p>
       <button type="button" @click="closeWarning">我已知晓</button>
+    </div>
+  </div>
+  <div v-if="showCounterpart" class="mn-overlay" @click.self="closeCounterpart">
+    <div class="mn-card">
+      <div class="mn-kicker">安全提醒</div>
+      <h3>对方已被系统处理</h3>
+      <p>{{ counterpartNotice }}</p>
+      <p class="mn-sub">你不需要再回应对方的违规内容。如果有需要，可以结束这次沟通并重新选择。</p>
+      <button type="button" @click="closeCounterpart">我已知晓</button>
     </div>
   </div>
 </template>

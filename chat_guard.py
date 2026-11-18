@@ -101,11 +101,17 @@ def status(kind, target_id, owner):
             and alert.get("warning")
             and alert.get("status") not in ("dismissed", "resolved")):
         warning = alert.get("warning")
+    notice = ""
+    if (alert.get("counterpartFor") == owner
+            and alert.get("counterpartNotice")
+            and alert.get("status") in ("auto_warned", "auto_limited")):
+        notice = alert.get("counterpartNotice")
     return {
         "active": alert.get("status") in ("reviewing", "reviewed",
                                           "auto_warned", "auto_limited"),
         "status": alert.get("status") or "",
         "warning": warning,
+        "counterpartNotice": notice,
         "reportId": alert.get("id") or "",
     }
 
@@ -231,10 +237,17 @@ def _process(alert_id):
                                 if decision.get("action") == "warn"
                                 else "AI 检测到本次聊天内容存在严重违规风险，聊天已被暂停。相关记录已保存。")
             alert["warningAt"] = _now()
-        if result.get("verdict") == "violation" and int(result.get("risk") or 0) >= 70:
+            alert["counterpartFor"] = alert.get("targetOwner") or ""
+            cats = "、".join((result.get("categories") or [])[:2])
+            alert["counterpartNotice"] = (
+                "对方因严重聊天违规%s，已被暂停聊天。" % (("（" + cats + "）") if cats else "")
+                if decision.get("action") == "mute_chat"
+                else "对方因聊天言语不当，已被系统提醒。"
+            )
+        if decision.get("action") in ("warn", "mute_chat"):
             try:
                 risk_profile.note_violation(sender, "chat_guard",
-                                            result.get("reason"), result.get("risk"), alert.get("id"))
+                                            result.get("reason"), max(45, result.get("risk") or 0), alert.get("id"))
             except Exception:
                 pass
         _save(rows)
