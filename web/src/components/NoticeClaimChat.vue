@@ -157,7 +157,7 @@ watch(() => props.claimId, () => {
         <span>
           <template v-if="m.status === 'failed'">! {{ m.text }}</template>
           <template v-else>{{ m.text }}</template>
-          <em class="cc-time">{{ m.pending ? (m.status === 'failed' ? '发送失败，点此重试' : '正在发布中…') : timeOf(m.at) }}</em>
+          <em class="cc-time">{{ m.pending ? (m.status === 'failed' ? (m.error || '发送失败，点此重试') : '正在发布中…') : timeOf(m.at) }}</em>
         </span>
         <button v-if="m.status === 'failed'" type="button" class="cc-retry" @click="retry(m)">重试</button>
       </div>

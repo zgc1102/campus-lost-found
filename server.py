@@ -5732,6 +5732,11 @@ class Handler(BaseHTTPRequestHandler):
             scope = (qs.get("scope") or [""])[0]
             row = enforcement.clear_mute(owner, scope or None)
             try:
+                if scope:
+                    risk_profile.clear_scope(owner, scope)
+            except Exception:
+                pass
+            try:
                 with LOCK:
                     notices = load_notices()
                     add_notice(notices, owner, "moderation_unmute",

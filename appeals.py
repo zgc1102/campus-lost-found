@@ -16,6 +16,7 @@ import urllib.error
 import urllib.request
 
 import enforcement
+import risk_profile
 
 _BASE_DIR = "."
 FILE = "appeals.json"
@@ -130,7 +131,9 @@ def _process(appeal_id):
     _save(rows)
     if appeal.get("status") == "approved":
         try:
-            enforcement.clear_mute(appeal.get("owner"))
+            scope = "module:" + str(appeal.get("kind") or "")
+            enforcement.clear_mute(appeal.get("owner"), scope)
+            risk_profile.clear_scope(appeal.get("owner"), scope)
         except Exception:
             pass
 

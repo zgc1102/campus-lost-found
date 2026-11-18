@@ -95,6 +95,19 @@ def is_watched(owner, scope="", hours=24):
                for e in row.get("events") or [])
 
 
+def clear_scope(owner, scope=""):
+    owner = str(owner or "").strip()[:64]
+    data = _load()
+    row = data.get(owner)
+    if not row:
+        return
+    if scope:
+        row["events"] = [e for e in (row.get("events") or []) if e.get("scope") != scope]
+    else:
+        row["events"] = []
+    _save(data)
+
+
 def admin_list():
     data = _load()
     rows = []
