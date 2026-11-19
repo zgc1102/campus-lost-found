@@ -9,7 +9,7 @@
 ## 管理端
 
 - 地址：`https://shiguangli.work/admin`
-- 密码：`KSKBLZDJD`
+- 密码：评审时由团队单独提供（不写入公开文档）
 
 ## 演示入口
 

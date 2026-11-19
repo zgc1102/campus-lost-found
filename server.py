@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 清华校园拾光里 · 服务端 v4
@@ -38,6 +38,7 @@ import chat_lexicon
 import lexicon_lifecycle
 import lexicon_miner
 import chat_escalation
+import ai_budget
 
 
 def load_dotenv(path=None):
@@ -59,12 +60,29 @@ def load_dotenv(path=None):
 
 load_dotenv()
 DATA_FILE = os.path.join(BASE_DIR, "items.json")
-ADMIN_FILE = os.path.join(BASE_DIR, "admin.json")
-PASSWORD_FILE = os.path.join(BASE_DIR, "管理员密码.txt")
+PRIVATE_DIR = os.path.join(BASE_DIR, "private")
+os.makedirs(PRIVATE_DIR, exist_ok=True)
+# 旧版本把这些文件放在 Web 根目录，启动时迁到 private/，避免被静态服务器下载。
+for _old_name, _new_name in (
+    ("admin.json", "admin.json"),
+    ("管理员密码.txt", "管理员密码.txt"),
+    ("ai.json", "ai.json"),
+    ("ai.bak.json", "ai.bak.json"),
+):
+    _old = os.path.join(BASE_DIR, _old_name)
+    _new = os.path.join(PRIVATE_DIR, _new_name)
+    if os.path.isfile(_old) and not os.path.exists(_new):
+        try:
+            os.replace(_old, _new)
+        except Exception:
+            pass
+ADMIN_FILE = os.path.join(PRIVATE_DIR, "admin.json")
+PASSWORD_FILE = os.path.join(PRIVATE_DIR, "管理员密码.txt")
 LOCK = threading.Lock()
 START_TS = time.time()
 TOKENS = {}          # admin token -> expire ts
 TOKEN_TTL = 8 * 3600
+LOGIN_FAILS = {}     # ip -> [timestamp,...]
 
 PUBLIC_STATUS = ("approved", "claimed", "closed")
 ALLOWED_STATUS = ("pending", "approved", "rejected", "claimed", "closed", "removed", "hidden")
@@ -408,7 +426,7 @@ def ensure_admin_password():
     return pwd
 
 
-AI_FILE = os.path.join(BASE_DIR, "ai.json")
+AI_FILE = os.path.join(PRIVATE_DIR, "ai.json")
 
 AI_DEFAULT = {
     "enabled": False,
@@ -2431,6 +2449,22 @@ class Handler(BaseHTTPRequestHandler):
     def _owner(self):
         return (self.headers.get("X-Owner") or "").strip()[:64]
 
+    def _client_ip(self):
+        # Cloudflare/Nginx 会把真实来源放在第一个值；直连时退回 remote addr。
+        fwd = (self.headers.get("X-Forwarded-For") or "").split(",")[0].strip()
+        return (fwd or getattr(self, "client_address", ("", 0))[0] or "unknown")[:80]
+
+    def _ai_guard(self, bucket="ask"):
+        owner = self._owner()
+        if not owner:
+            self._json({"error": "缺少设备标识，请刷新页面"}, 401)
+            return False
+        ok, msg, retry = ai_budget.allow(self._client_ip(), owner, bucket)
+        if not ok:
+            self._json({"error": msg, "retryAfter": retry}, 429)
+            return False
+        return True
+
     def _is_admin(self):
         tok = (self.headers.get("X-Admin-Token") or "").strip()
         exp = TOKENS.get(tok)
@@ -3130,10 +3164,15 @@ class Handler(BaseHTTPRequestHandler):
                 "reject_threshold": int(cfg.get("reject_threshold") or 0),
             })
 
-        # 静态文件
+        # 静态文件：只允许前端构建目录和地图图片，绝不把项目根目录整体暴露。
         rel = path.lstrip("/")
         target = os.path.abspath(os.path.join(BASE_DIR, rel))
-        if rel and target.startswith(BASE_DIR + os.sep) and os.path.isfile(target):
+        _static_ok = (
+            rel in ("index.html", "用户端.html", "管理端.html")
+            or rel.startswith("web/")
+            or rel.startswith("map/")
+        )
+        if rel and _static_ok and target.startswith(BASE_DIR + os.sep) and os.path.isfile(target):
             return self._serve_path(target)
         if path == "/favicon.ico":
             return self._send(204)
@@ -3503,6 +3542,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._json({"ok": True, "reportId": report["id"]})
 
         if path == "/api/agent/radar":
+            if not self._ai_guard("agent"):
+                return
             body = self._read_body()
             item_id = str(body.get("itemId") or "")
             with LOCK:
@@ -3515,6 +3556,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(agent_radar(item, items))
 
         if path == "/api/agent/detective":
+            if not self._ai_guard("agent"):
+                return
             body = self._read_body()
             item_id = str(body.get("itemId") or "")
             route = str(body.get("route") or "")
@@ -3530,6 +3573,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(agent_detective_route(item, items, route, carry, last_seen))
 
         if path == "/api/agent/review":
+            if not self._ai_guard("agent"):
+                return
             owner = self._owner()
             body = self._read_body()
             item_id = str(body.get("itemId") or "")
@@ -3546,6 +3591,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(agent_review(item, claim))
 
         if path == "/api/agent/review/stream":
+            if not self._ai_guard("agent"):
+                return
             owner = self._owner()
             body = self._read_body()
             item_id = str(body.get("itemId") or "")
@@ -3581,6 +3628,8 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if path == "/api/ask/stream":
+            if not self._ai_guard("ask"):
+                return
             body = self._read_body()
             q = str(body.get("question") or "").strip()
             if len(q) < 2:
@@ -3607,6 +3656,8 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if path == "/api/ask":
+            if not self._ai_guard("ask"):
+                return
             body = self._read_body()
             q = str(body.get("question") or "").strip()
             if len(q) < 2:
@@ -3614,6 +3665,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(ask_kb(q))
 
         if path == "/api/vision/analyze":
+            if not self._ai_guard("vision"):
+                return
             body = self._read_body()
             img = str(body.get("image") or "")
             mime = str(body.get("mime") or "image/jpeg")
@@ -3721,14 +3774,24 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/login":
             body = self._read_body()
             pwd = str(body.get("password") or "")
+            _ip = self._client_ip()
+            _now = time.time()
+            _fails = [x for x in LOGIN_FAILS.get(_ip, []) if _now - x < 900]
+            if len(_fails) >= 8:
+                return self._json({"error": "登录尝试过多，请 15 分钟后再试"}, 429)
             if pwd and pwd == ensure_admin_password():
                 tok = uuid.uuid4().hex
-                TOKENS[tok] = time.time() + TOKEN_TTL
+                TOKENS[tok] = _now + TOKEN_TTL
+                LOGIN_FAILS.pop(_ip, None)
                 return self._json({"token": tok, "ttl": TOKEN_TTL})
+            _fails.append(_now)
+            LOGIN_FAILS[_ip] = _fails[-8:]
             time.sleep(0.8)
             return self._json({"error": "密码不对"}, 401)
 
         if path == "/api/precheck":
+            if not self._ai_guard("precheck"):
+                return
             owner = self._owner()
             if not owner:
                 return self._json({"error": "缺少设备标识"}, 400)
@@ -5198,6 +5261,16 @@ class Handler(BaseHTTPRequestHandler):
                 return
             body = self._read_body()
             cfg = load_ai_config()
+            requested_base = str(body.get("base_url") or "").strip()
+            if requested_base:
+                from urllib.parse import urlparse as _urlparse
+                _u = _urlparse(requested_base)
+                if _u.scheme != "https" or not _u.hostname:
+                    return self._json({"error": "测试地址必须是 https 地址"}, 400)
+                # 不允许把已保存的 Key 发到新的地址；换地址必须同时提供新 Key。
+                if (requested_base.rstrip("/") != str(cfg.get("base_url") or "").rstrip("/")
+                        and not body.get("api_key")):
+                    return self._json({"error": "更换接口地址时必须同时填写新的接口密钥"}, 400)
             for k in ("base_url", "api_key", "model"):
                 if body.get(k):
                     cfg[k] = body[k]
@@ -5208,6 +5281,11 @@ class Handler(BaseHTTPRequestHandler):
                 return
             body = self._read_body()
             cfg = load_ai_config()
+            requested_base = str(body.get("base_url") or "").strip()
+            if (requested_base
+                    and requested_base.rstrip("/") != str(cfg.get("base_url") or "").rstrip("/")
+                    and not body.get("api_key")):
+                return self._json({"error": "更换接口地址时必须同时填写新的接口密钥"}, 400)
             for k in ("enabled", "base_url", "api_key", "model", "auto_review",
                       "auto_approve", "approve_threshold", "auto_reject", "reject_threshold"):
                 if k in body:
@@ -6386,6 +6464,7 @@ def main():
     risk_profile.init(BASE_DIR)
     enforcement.init(BASE_DIR)
     chat_escalation.init(BASE_DIR)
+    ai_budget.init(BASE_DIR)
     appeals.init(BASE_DIR)
     appeals.start_worker()
     chat_lexicon.init(BASE_DIR)
