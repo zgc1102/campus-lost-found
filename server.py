@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 清华校园拾光里 · 服务端 v4
@@ -39,6 +39,7 @@ import lexicon_lifecycle
 import lexicon_miner
 import chat_escalation
 import ai_budget
+import ai_audit
 
 
 def load_dotenv(path=None):
@@ -617,6 +618,7 @@ def _post_chat(endpoint, payload, api_key, timeout=25):
     import urllib.error
     import urllib.request
 
+    started = time.time()
     req = urllib.request.Request(
         endpoint,
         data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
@@ -628,16 +630,29 @@ def _post_chat(endpoint, payload, api_key, timeout=25):
     )
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return json.loads(resp.read().decode("utf-8"))
+            data = json.loads(resp.read().decode("utf-8"))
+        try:
+            ai_audit.record(endpoint, payload, data, started, 200)
+        except Exception:
+            pass
+        return data
     except urllib.error.HTTPError as e:
         detail = ""
         try:
             detail = e.read().decode("utf-8", "ignore")[:200]
         except Exception:
             pass
+        try:
+            ai_audit.record(endpoint, payload, None, started, e.code, detail)
+        except Exception:
+            pass
         hint = AI_ERROR_HINTS.get(e.code, "调用失败")
         raise RuntimeError("HTTP %s · %s %s" % (e.code, hint, detail))
     except Exception as e:
+        try:
+            ai_audit.record(endpoint, payload, None, started, 0, str(e)[:120])
+        except Exception:
+            pass
         raise RuntimeError("网络错误：%s" % str(e)[:120])
 
 
@@ -3147,6 +3162,15 @@ class Handler(BaseHTTPRequestHandler):
             for x in items:
                 counts[x.get("status", "?")] = counts.get(x.get("status", "?"), 0) + 1
             return self._json({"total": len(items), "byStatus": counts})
+
+        if path == "/api/admin/ai/audit":
+            if not self._need_admin():
+                return
+            try:
+                limit = int((parse_qs(urlparse(self.path).query).get("limit") or ["100"])[0])
+            except Exception:
+                limit = 100
+            return self._json({"ok": True, "items": ai_audit.recent(limit)})
 
         if path == "/api/admin/ai/config":
             if not self._need_admin():
@@ -6465,6 +6489,7 @@ def main():
     enforcement.init(BASE_DIR)
     chat_escalation.init(BASE_DIR)
     ai_budget.init(BASE_DIR)
+    ai_audit.init(BASE_DIR)
     appeals.init(BASE_DIR)
     appeals.start_worker()
     chat_lexicon.init(BASE_DIR)
