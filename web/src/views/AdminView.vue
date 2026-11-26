@@ -8,6 +8,8 @@ const token = ref(sessionStorage.getItem(TOKEN_KEY) || '')
 localStorage.removeItem(TOKEN_KEY)
 const password = ref('')
 const loading = ref(false)
+const tabLoading = ref(false)
+const tabLoaded = ref({})
 const error = ref('')
 const tab = ref('all')
 const search = ref('')
@@ -74,41 +76,74 @@ const filteredItems = computed(() => {
 onMounted(() => { if (token.value) loadAll() })
 onUnmounted(() => { if (deployTimer) clearInterval(deployTimer) })
 
-async function loadAll(silent = false) {
+async function loadCore(silent = false) {
   if (!token.value) return
   if (!silent) loading.value = true
   error.value = ''
   try {
-    const [s, list, accs, anns, sp, cfg, dep, reps, aps] = await Promise.all([
+    const [s, list, cfg] = await Promise.all([
       api.adminStats(token.value),
       api.adminItems(token.value),
-      api.adminAccounts(token.value),
-      api.adminAnnouncements(token.value),
-      api.adminSpecialNumbers(token.value),
-      api.adminConfig(token.value),
-      api.adminDeployLog(token.value),
-      api.adminReports(token.value),
-      api.adminAppeals(token.value)
+      api.adminConfig(token.value)
     ])
     stats.value = s
     statsAt.value = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
     items.value = Array.isArray(list) ? list : []
-    accounts.value = Array.isArray(accs) ? accs : []
-    announcements.value = Array.isArray(anns) ? anns : []
-    specials.value = Array.isArray(sp) ? sp : []
     config.value = cfg
-    deployLog.value = Array.isArray(dep) ? dep : (dep.log ? String(dep.log).split('\n').filter(Boolean).map((x) => ({ text: x })) : (dep.items || dep.logs || []))
-    reports.value = Array.isArray(reps?.reports) ? reps.reports : []
-    chatAlerts.value = Array.isArray(reps?.chatAlerts) ? reps.chatAlerts : []
-    riskProfiles.value = Array.isArray(reps?.riskProfiles) ? reps.riskProfiles : []
-    appeals.value = Array.isArray(aps?.appeals) ? aps.appeals : []
-    enforcements.value = Array.isArray(reps?.enforcement) ? reps.enforcement : []
   } catch (e) {
     error.value = e.message || '读取失败'
     if (e.status === 401 || /unauthorized|登录/i.test(String(e.message))) logout()
   } finally {
     if (!silent) loading.value = false
   }
+}
+
+async function loadTab(id, force = false) {
+  if (!token.value) return
+  if (!force && tabLoaded.value[id]) return
+  if (!['users', 'phone', 'announce', 'reports', 'deploy'].includes(id)) {
+    tabLoaded.value[id] = true
+    return
+  }
+  tabLoading.value = true
+  try {
+    if (id === 'users') {
+      const data = await api.adminAccounts(token.value)
+      accounts.value = Array.isArray(data) ? data : []
+    } else if (id === 'phone') {
+      const data = await api.adminSpecialNumbers(token.value)
+      specials.value = Array.isArray(data) ? data : []
+    } else if (id === 'announce') {
+      const data = await api.adminAnnouncements(token.value)
+      announcements.value = Array.isArray(data) ? data : []
+    } else if (id === 'deploy') {
+      const dep = await api.adminDeployLog(token.value)
+      deployLog.value = Array.isArray(dep) ? dep : (dep.log ? String(dep.log).split('\n').filter(Boolean).map((x) => ({ text: x })) : (dep.items || dep.logs || []))
+    } else if (id === 'reports') {
+      const [reps, aps] = await Promise.all([api.adminReports(token.value), api.adminAppeals(token.value)])
+      reports.value = Array.isArray(reps?.reports) ? reps.reports : []
+      chatAlerts.value = Array.isArray(reps?.chatAlerts) ? reps.chatAlerts : []
+      riskProfiles.value = Array.isArray(reps?.riskProfiles) ? reps.riskProfiles : []
+      enforcements.value = Array.isArray(reps?.enforcement) ? reps.enforcement : []
+      appeals.value = Array.isArray(aps?.appeals) ? aps.appeals : []
+    }
+    tabLoaded.value[id] = true
+  } catch (e) {
+    error.value = e.message || '读取失败'
+    if (e.status === 401 || /unauthorized|登录/i.test(String(e.message))) logout()
+  } finally {
+    tabLoading.value = false
+  }
+}
+
+async function loadAll(silent = false) {
+  await loadCore(silent)
+  await loadTab(tab.value, true)
+}
+
+function selectTab(id) {
+  tab.value = id
+  loadTab(id)
 }
 
 async function login() {
@@ -119,6 +154,7 @@ async function login() {
     token.value = r.token
     sessionStorage.setItem(TOKEN_KEY, r.token)
     password.value = ''
+    tabLoaded.value = {}
     await loadAll(true)
   } catch (e) {
     error.value = e.message || '登录失败'
@@ -128,6 +164,7 @@ async function login() {
 }
 
 function logout() {
+  tabLoaded.value = {}
   token.value = ''
   sessionStorage.removeItem(TOKEN_KEY)
 }
@@ -464,8 +501,9 @@ function statusClass(s) {
           </div>
 
           <div class="admin-tabs">
-            <button v-for="[id, name] in tabs" :key="id" type="button" :class="{ on: tab === id }" @click="tab = id">{{ name }}</button>
+            <button v-for="[id, name] in tabs" :key="id" type="button" :class="{ on: tab === id }" @click="selectTab(id)">{{ name }}</button>
           </div>
+          <div v-if="tabLoading" class="admin-loading"><span class="spinner"></span><span>正在加载这个页面…</span></div>
 
           <details v-if="tab === 'reports'" class="panel" open>
     <summary class="panel-summary"><h3>举报记录</h3></summary>
