@@ -1,38 +1,31 @@
 <script setup>
-import { computed, defineAsyncComponent, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import HomeView from './views/HomeView.vue'
 import ListView from './views/ListView.vue'
 import HelpView from './views/HelpView.vue'
+import HelpPublishView from './views/HelpPublishView.vue'
+import PublishView from './views/PublishView.vue'
+import RadarView from './views/RadarView.vue'
+import MatchView from './views/MatchView.vue'
+import TagView from './views/TagView.vue'
+import TagScanView from './views/TagScanView.vue'
+import MineView from './views/MineView.vue'
+import GuideView from './views/GuideView.vue'
+import MapView from './views/MapView.vue'
+import AskView from './views/AskView.vue'
 import NoticesView from './views/NoticesView.vue'
-import LoadingState from './components/LoadingState.vue'
+import SearchView from './views/SearchView.vue'
+import StaticInfoView from './views/StaticInfoView.vue'
+import SuccessView from './views/SuccessView.vue'
+import ToolsView from './views/ToolsView.vue'
+import MemorialView from './views/MemorialView.vue'
+import FaqView from './views/FaqView.vue'
+import PhonesView from './views/PhonesView.vue'
+import InfoView from './views/InfoView.vue'
+import AdminView from './views/AdminView.vue'
 import BottomNav from './components/BottomNav.vue'
 import TourOverlay from './components/TourOverlay.vue'
 
-const asyncView = (loader) => defineAsyncComponent({
-  loader,
-  loadingComponent: LoadingState,
-  delay: 120
-})
-
-const HelpPublishView = asyncView(() => import('./views/HelpPublishView.vue'))
-const PublishView = asyncView(() => import('./views/PublishView.vue'))
-const RadarView = asyncView(() => import('./views/RadarView.vue'))
-const MatchView = asyncView(() => import('./views/MatchView.vue'))
-const TagView = asyncView(() => import('./views/TagView.vue'))
-const TagScanView = asyncView(() => import('./views/TagScanView.vue'))
-const MineView = asyncView(() => import('./views/MineView.vue'))
-const GuideView = asyncView(() => import('./views/GuideView.vue'))
-const MapView = asyncView(() => import('./views/MapView.vue'))
-const AskView = asyncView(() => import('./views/AskView.vue'))
-const SearchView = asyncView(() => import('./views/SearchView.vue'))
-const StaticInfoView = asyncView(() => import('./views/StaticInfoView.vue'))
-const SuccessView = asyncView(() => import('./views/SuccessView.vue'))
-const ToolsView = asyncView(() => import('./views/ToolsView.vue'))
-const MemorialView = asyncView(() => import('./views/MemorialView.vue'))
-const FaqView = asyncView(() => import('./views/FaqView.vue'))
-const PhonesView = asyncView(() => import('./views/PhonesView.vue'))
-const InfoView = asyncView(() => import('./views/InfoView.vue'))
-const AdminView = asyncView(() => import('./views/AdminView.vue'))
 const params = new URLSearchParams(location.search)
 const initial = params.get('view')
 const tagCode = ref(params.get('tag') || params.get('code') || '')
