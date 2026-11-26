@@ -219,7 +219,7 @@ export const api = {
     })
   },
   adminAppeals(token) {
-    return call('/admin/moderation/appeals', { headers: { 'X-Admin-Token': token } })
+    return call('/admin/moderation/appeals', { headers: { 'X-Admin-Token': token }, timeout: 60000 })
   },
   adminAppealUpdate(token, id, payload) {
     return call('/admin/moderation/appeals/' + encodeURIComponent(id), {
@@ -232,7 +232,7 @@ export const api = {
     return call('/moderation/reports/mine')
   },
   adminReports(token) {
-    return call('/admin/moderation/reports', { headers: { 'X-Admin-Token': token } })
+    return call('/admin/moderation/reports', { headers: { 'X-Admin-Token': token }, timeout: 60000 })
   },
   adminReportUpdate(token, id, payload) {
     return call('/admin/moderation/reports/' + encodeURIComponent(id), {
@@ -378,25 +378,25 @@ export const api = {
     return call('/login', { method: 'POST', body: JSON.stringify({ password }) })
   },
   adminItems(token) {
-    return call('/admin/items', { headers: { 'X-Admin-Token': token } })
+    return call('/admin/items', { headers: { 'X-Admin-Token': token }, timeout: 60000 })
   },
   adminStats(token) {
-    return call('/admin/stats', { headers: { 'X-Admin-Token': token } })
+    return call('/admin/stats', { headers: { 'X-Admin-Token': token }, timeout: 60000 })
   },
   adminConfig(token) {
-    return call('/admin/ai/config', { headers: { 'X-Admin-Token': token } })
+    return call('/admin/ai/config', { headers: { 'X-Admin-Token': token }, timeout: 60000 })
   },
   adminSaveConfig(body, token) {
     return call('/admin/ai/config', { method: 'POST', headers: { 'X-Admin-Token': token }, body: JSON.stringify(body) })
   },
   adminAccounts(token) {
-    return call('/admin/accounts', { headers: { 'X-Admin-Token': token } })
+    return call('/admin/accounts', { headers: { 'X-Admin-Token': token }, timeout: 60000 })
   },
   adminBanAccount(id, banned, token) {
     return call('/admin/accounts/' + encodeURIComponent(id) + '/ban', { method: 'POST', headers: { 'X-Admin-Token': token }, body: JSON.stringify({ banned }) })
   },
   adminSpecialNumbers(token) {
-    return call('/admin/special-numbers', { headers: { 'X-Admin-Token': token } })
+    return call('/admin/special-numbers', { headers: { 'X-Admin-Token': token }, timeout: 60000 })
   },
   adminSpecialSave(phone, remove, token) {
     return call('/admin/special-numbers', { method: 'POST', headers: { 'X-Admin-Token': token }, body: JSON.stringify({ phone, remove }) })
@@ -417,7 +417,7 @@ export const api = {
     return call('/admin/ai/review-all', { method: 'POST', headers: { 'X-Admin-Token': token } })
   },
   adminAnnouncements(token) {
-    return call('/admin/announcements', { headers: { 'X-Admin-Token': token } })
+    return call('/admin/announcements', { headers: { 'X-Admin-Token': token }, timeout: 60000 })
   },
   adminCreateAnnouncement(body, token) {
     return call('/admin/announcements', { method: 'POST', headers: { 'X-Admin-Token': token }, body: JSON.stringify(body) })
@@ -432,7 +432,7 @@ export const api = {
     return call('/admin/deploy', { method: 'POST', headers: { 'X-Admin-Token': token } })
   },
   adminDeployLog(token) {
-    return call('/admin/deploy-log', { headers: { 'X-Admin-Token': token } })
+    return call('/admin/deploy-log', { headers: { 'X-Admin-Token': token }, timeout: 60000 })
   },
   adminPatch(id, body, token) {
     return call('/admin/items/' + encodeURIComponent(id), { method: 'PATCH', headers: { 'X-Admin-Token': token }, body: JSON.stringify(body) })

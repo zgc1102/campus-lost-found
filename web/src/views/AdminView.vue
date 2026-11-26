@@ -46,6 +46,16 @@ const aiTestMsg = ref('')
 const aiTesting = ref(false)
 const aiBusy = ref('')
 const viewingImage = ref('')
+const photoLoaded = ref({})
+const photoFailed = ref({})
+const loadingPhrases = [
+  '正在把校园里的线索找出来…',
+  '正在翻一翻拾光里的小抽屉…',
+  '正在核对失物信息…',
+  '马上就好，先别走开…'
+]
+const loadingPhrase = ref(loadingPhrases[0])
+let loadingTimer = null
 
 const tabs = [
   ['pending', '待审核'],
@@ -74,8 +84,23 @@ const filteredItems = computed(() => {
     .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
 })
 
+function startLoadingVoice() {
+  if (loadingTimer) return
+  loadingTimer = setInterval(() => {
+    const i = loadingPhrases.indexOf(loadingPhrase.value)
+    loadingPhrase.value = loadingPhrases[(i + 1) % loadingPhrases.length]
+  }, 2600)
+}
+
+function stopLoadingVoice() {
+  if (loadingTimer) clearInterval(loadingTimer)
+  loadingTimer = null
+}
+
+watch([loading, tabLoading], ([a, b]) => { if (a || b) startLoadingVoice(); else stopLoadingVoice() })
+
 onMounted(() => { if (token.value) loadAll() })
-onUnmounted(() => { if (deployTimer) clearInterval(deployTimer) })
+onUnmounted(() => { if (deployTimer) clearInterval(deployTimer); stopLoadingVoice() })
 
 async function loadCore(silent = false) {
   if (!token.value) return
@@ -515,10 +540,10 @@ function statusClass(s) {
           <div class="admin-tabs">
             <button v-for="[id, name] in tabs" :key="id" type="button" :class="{ on: tab === id }" @click="selectTab(id)">{{ name }}<span v-if="id === 'reports'" class="tab-count">{{ reportTotal }}</span></button>
           </div>
-          <div v-if="tabLoading" class="admin-loading"><span class="spinner"></span><span>正在加载这个页面…</span></div>
+          <div v-if="tabLoading" class="admin-loading"><span class="spinner"></span><span>{{ loadingPhrase }}</span></div>
 
           <details v-if="tab === 'reports'" class="panel">
-    <summary class="panel-summary"><h3>举报记录</h3></summary>
+    <summary class="panel-summary"><h3>举报记录 <span class="panel-count">{{ reports.length }}</span></h3></summary>
     <div class="report-meta" style="margin-bottom:8px">举报由 AI 自动判定和处理；管理员只保留暂停解除权限。</div>
     <div v-if="!reports.length" class="reports-empty">还没有举报记录</div>
     <div v-for="r in reports" :key="r.id" class="report-row">
@@ -539,7 +564,7 @@ function statusClass(s) {
   </details>
 
   <details v-if="tab === 'reports'" class="panel" style="margin-top:14px">
-    <summary class="panel-summary"><h3>实时聊天告警</h3></summary>
+    <summary class="panel-summary"><h3>实时聊天告警 <span class="panel-count">{{ chatAlerts.length }}</span></h3></summary>
     <div v-if="!chatAlerts.length" class="reports-empty">还没有实时告警</div>
     <div v-for="a in chatAlerts" :key="a.id" class="report-row">
       <div class="report-head">
@@ -553,7 +578,7 @@ function statusClass(s) {
   </details>
 
   <details v-if="tab === 'reports'" class="panel" style="margin-top:14px">
-    <summary class="panel-summary"><h3>高风险用户</h3></summary>
+    <summary class="panel-summary"><h3>高风险用户 <span class="panel-count">{{ riskProfiles.length }}</span></h3></summary>
     <div v-if="!riskProfiles.length" class="reports-empty">还没有风险记录</div>
     <div v-for="u in riskProfiles" :key="u.owner" class="report-row">
       <div class="report-head"><b>{{ u.owner }}</b><span class="report-status">{{ u.level }}</span></div>
@@ -562,7 +587,7 @@ function statusClass(s) {
   </details>
 
   <details v-if="tab === 'reports'" class="panel" style="margin-top:14px">
-    <summary class="panel-summary"><h3>申诉</h3></summary>
+    <summary class="panel-summary"><h3>申诉 <span class="panel-count">{{ appeals.length }}</span></h3></summary>
     <div v-if="!appeals.length" class="reports-empty">还没有申诉</div>
     <div v-for="a in appeals" :key="a.id" class="report-row">
       <div class="report-head"><b>{{ a.owner }}</b><span class="report-status">{{ ({pending:'AI复核中',reviewing:'AI复核中',approved:'AI已通过',rejected:'AI已驳回'})[a.status] || a.status }}</span></div>
@@ -574,7 +599,7 @@ function statusClass(s) {
   </details>
 
   <details v-if="tab === 'reports'" class="panel" style="margin-top:14px">
-    <summary class="panel-summary"><h3>暂停聊天用户 <button type="button" class="report-export" @click.prevent.stop="exportEnforcements">导出 CSV</button></h3></summary>
+    <summary class="panel-summary"><h3>暂停聊天用户 <span class="panel-count">{{ enforcements.length }}</span> <button type="button" class="report-export" @click.prevent.stop="exportEnforcements">导出 CSV</button></h3></summary>
     <div v-if="!enforcements.length" class="reports-empty">还没有暂停记录</div>
     <div v-for="u in enforcements" :key="u.owner + ':' + u.scope" class="report-row">
       <div class="report-head"><b>{{ u.owner }}</b><span class="report-status">{{ u.mutedUntil > Date.now() ? '暂停中' : '已到期' }}</span></div>
@@ -675,12 +700,12 @@ function statusClass(s) {
             </div>
           </template>
 
-          <template v-else>
+          <template v-else-if="['pending', 'approved', 'rejected', 'all'].includes(tab)">
             <div class="toolbar">
               <input v-model="search" placeholder="搜索标题 / 地点 / 描述">
               <span>{{ filteredItems.length }} 条</span>
             </div>
-            <div v-if="loading" class="admin-loading"><span class="spinner"></span><span>正在读取…</span></div>
+            <div v-if="loading" class="admin-loading"><span class="spinner"></span><span>{{ loadingPhrase }}</span></div>
             <div v-else-if="!filteredItems.length" class="empty">暂无内容</div>
             <div v-else class="item-list">
               <article v-for="it in pagedItems" :key="it.id" class="admin-item">
@@ -714,7 +739,11 @@ function statusClass(s) {
                 </div>
                 <div v-if="it.secret" class="ai-secret">🔒 核验特征：{{ it.secret }}</div>
                 <div v-if="it.rejectReason" class="ai-secret" style="border-color:#F3CFCF;color:#A12F2F;background:#FDF2F2">{{ it.status === 'removed' ? '下架理由' : '驳回理由' }}：{{ it.rejectReason }}</div>
-                <img v-if="it.photoUrl" :src="photoSrc(it.photoUrl)" class="ai-photo" alt="" loading="lazy" @error="$event.target.style.visibility='hidden'" @click="viewingImage = photoSrc(it.photoUrl)">
+                <div v-if="it.photoUrl" class="photo-frame">
+                  <span v-if="!photoLoaded[it.id] && !photoFailed[it.id]" class="photo-loading">正在加载图片…</span>
+                  <span v-else-if="photoFailed[it.id]" class="photo-loading">图片暂时无法显示</span>
+                  <img v-if="!photoFailed[it.id]" :src="photoSrc(it.photoUrl)" class="ai-photo" :class="{ 'photo-ready': photoLoaded[it.id] }" alt="" @load="photoLoaded[it.id] = true" @error="photoFailed[it.id] = true" @click="viewingImage = photoSrc(it.photoUrl)">
+                </div>
                 <div v-if="it.contact && it.contact.phone" class="ai-phone">📞 联系电话：{{ it.contact.phone }}</div>
                 <div class="ai-actions">
                   <button v-if="it.status === 'pending'" type="button" class="primary" @click="review(it, 'approved')">通过并上架</button>
@@ -937,6 +966,11 @@ details[open] > .panel-summary::before { content:'▾'; }
 @keyframes adminSpin { to { transform: rotate(360deg); } }
 </style>
 <style scoped>
+.panel-count { display:inline-block; min-width:18px; margin-left:2px; padding:0 5px; border-radius:9px; background:#F1E8FB; color:#5B2A91; font-size:10px; font-weight:500; line-height:17px; text-align:center; }
+.photo-frame { position:relative; width:220px; min-height:120px; max-height:220px; margin-top:9px; border:1px solid #EDE3F8; border-radius:10px; background:#F7F2FC; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+.photo-frame .ai-photo { margin-top:0; max-width:100%; max-height:220px; border:0; border-radius:0; opacity:0; transition:opacity .2s; }
+.photo-frame .ai-photo.photo-ready { opacity:1; }
+.photo-loading { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:11px; color:#8E7FA3; background:#F7F2FC; }
 .tab-count { display:inline-block; min-width:16px; margin-left:4px; padding:0 4px; border-radius:8px; background:#5B2A91; color:#fff; font-size:9px; line-height:15px; text-align:center; }
 .pager { display:flex; align-items:center; justify-content:center; gap:12px; padding:14px 0 4px; color:#7A6A8D; font-size:11px; }
 .pager button { min-width:70px; }
