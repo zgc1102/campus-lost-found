@@ -1318,6 +1318,23 @@ def moderate_text(text, title="用户输入", allow_help=False):
     return True, ""
 
 
+def moderate_announcement(text):
+    """公告只走本地词库，不调用大模型。"""
+    text = str(text or "").strip()
+    if not text:
+        return True, ""
+    hits = []
+    try:
+        hits.extend(chat_lexicon.scan(text))
+    except Exception:
+        pass
+    hits.extend([w for w in TITLE_BLOCK if w in text])
+    hits = list(dict.fromkeys([w for w in hits if w]))
+    if hits:
+        return False, "公告包含本地词库拦截词：%s" % "、".join(hits[:8])
+    return True, ""
+
+
 def _can_reveal_phone(item, claim, owner, all_items):
     """谁有权把双方手机号公布出来。只允许发布者；双方都发过时只允许捡到物品的人。"""
     if not item or not claim:
@@ -3394,7 +3411,7 @@ class Handler(BaseHTTPRequestHandler):
             text = str(body.get("body") or "").strip()[:2000]
             if len(title) < 2 or len(text) < 5:
                 return self._json({"error": "标题或正文太短"}, 400)
-            _ok, _why = moderate_text(title + " " + text, "公告")
+            _ok, _why = moderate_announcement(title + " " + text)
             if not _ok:
                 return self._json({"error": "公告未通过审核：" + _why}, 400)
             now = now_ms()
@@ -6078,7 +6095,7 @@ class Handler(BaseHTTPRequestHandler):
             body = patch
             _check_text = (str(body.get("title") or "") + " " + str(body.get("body") or "")).strip()
             if _check_text:
-                _ok, _why = moderate_text(_check_text, "公告")
+                _ok, _why = moderate_announcement(_check_text)
                 if not _ok:
                     return self._json({"error": "公告未通过审核：" + _why}, 400)
             with LOCK:
