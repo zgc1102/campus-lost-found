@@ -3126,6 +3126,7 @@ class Handler(BaseHTTPRequestHandler):
                 "claims": len(claims),
                 "claimsByStatus": c_status,
                 "days": days,
+                "reportCount": moderation.summary().get("total", 0),
             })
 
         if path == "/api/admin/announcements":

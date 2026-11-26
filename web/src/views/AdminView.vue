@@ -63,6 +63,7 @@ const tabs = [
 
 const pagedItems = computed(() => filteredItems.value.slice((page.value - 1) * pageSize, page.value * pageSize))
 const pageCount = computed(() => Math.max(1, Math.ceil(filteredItems.value.length / pageSize)))
+const reportTotal = computed(() => Number(stats.value?.reportCount ?? reports.value.length ?? 0))
 watch([tab, search], () => { page.value = 1 })
 
 const filteredItems = computed(() => {
@@ -98,7 +99,7 @@ async function loadCore(silent = false) {
   }
 }
 
-async function loadTab(id, force = false) {
+async function loadTab(id, force = false, retry = true) {
   if (!token.value) return
   if (!force && tabLoaded.value[id]) return
   if (!['users', 'phone', 'announce', 'reports', 'deploy'].includes(id)) {
@@ -129,8 +130,14 @@ async function loadTab(id, force = false) {
     }
     tabLoaded.value[id] = true
   } catch (e) {
-    error.value = e.message || '读取失败'
-    if (e.status === 401 || /unauthorized|登录/i.test(String(e.message))) logout()
+    if (e.status === 401 || /unauthorized|登录/i.test(String(e.message))) {
+      logout()
+    } else if (retry) {
+      await new Promise((resolve) => setTimeout(resolve, 800))
+      return loadTab(id, true, false)
+    } else {
+      error.value = e.message || '读取失败，请点击当前标签重试'
+    }
   } finally {
     tabLoading.value = false
   }
@@ -501,11 +508,11 @@ function statusClass(s) {
           </div>
 
           <div class="admin-tabs">
-            <button v-for="[id, name] in tabs" :key="id" type="button" :class="{ on: tab === id }" @click="selectTab(id)">{{ name }}</button>
+            <button v-for="[id, name] in tabs" :key="id" type="button" :class="{ on: tab === id }" @click="selectTab(id)">{{ name }}<span v-if="id === 'reports' && reportTotal > 0" class="tab-count">{{ reportTotal }}</span></button>
           </div>
           <div v-if="tabLoading" class="admin-loading"><span class="spinner"></span><span>正在加载这个页面…</span></div>
 
-          <details v-if="tab === 'reports'" class="panel" open>
+          <details v-if="tab === 'reports'" class="panel">
     <summary class="panel-summary"><h3>举报记录</h3></summary>
     <div class="report-meta" style="margin-bottom:8px">举报由 AI 自动判定和处理；管理员只保留暂停解除权限。</div>
     <div v-if="!reports.length" class="reports-empty">还没有举报记录</div>
@@ -526,7 +533,7 @@ function statusClass(s) {
     </div>
   </details>
 
-  <details v-if="tab === 'reports'" class="panel" style="margin-top:14px" open>
+  <details v-if="tab === 'reports'" class="panel" style="margin-top:14px">
     <summary class="panel-summary"><h3>实时聊天告警</h3></summary>
     <div v-if="!chatAlerts.length" class="reports-empty">还没有实时告警</div>
     <div v-for="a in chatAlerts" :key="a.id" class="report-row">
@@ -540,7 +547,7 @@ function statusClass(s) {
     </div>
   </details>
 
-  <details v-if="tab === 'reports'" class="panel" style="margin-top:14px" open>
+  <details v-if="tab === 'reports'" class="panel" style="margin-top:14px">
     <summary class="panel-summary"><h3>高风险用户</h3></summary>
     <div v-if="!riskProfiles.length" class="reports-empty">还没有风险记录</div>
     <div v-for="u in riskProfiles" :key="u.owner" class="report-row">
@@ -549,7 +556,7 @@ function statusClass(s) {
     </div>
   </details>
 
-  <details v-if="tab === 'reports'" class="panel" style="margin-top:14px" open>
+  <details v-if="tab === 'reports'" class="panel" style="margin-top:14px">
     <summary class="panel-summary"><h3>申诉</h3></summary>
     <div v-if="!appeals.length" class="reports-empty">还没有申诉</div>
     <div v-for="a in appeals" :key="a.id" class="report-row">
@@ -561,7 +568,7 @@ function statusClass(s) {
     </div>
   </details>
 
-  <details v-if="tab === 'reports'" class="panel" style="margin-top:14px" open>
+  <details v-if="tab === 'reports'" class="panel" style="margin-top:14px">
     <summary class="panel-summary"><h3>暂停聊天用户 <button type="button" class="report-export" @click.prevent.stop="exportEnforcements">导出 CSV</button></h3></summary>
     <div v-if="!enforcements.length" class="reports-empty">还没有暂停记录</div>
     <div v-for="u in enforcements" :key="u.owner + ':' + u.scope" class="report-row">
@@ -925,6 +932,7 @@ details[open] > .panel-summary::before { content:'▾'; }
 @keyframes adminSpin { to { transform: rotate(360deg); } }
 </style>
 <style scoped>
+.tab-count { display:inline-block; min-width:16px; margin-left:4px; padding:0 4px; border-radius:8px; background:#5B2A91; color:#fff; font-size:9px; line-height:15px; text-align:center; }
 .pager { display:flex; align-items:center; justify-content:center; gap:12px; padding:14px 0 4px; color:#7A6A8D; font-size:11px; }
 .pager button { min-width:70px; }
 </style>
