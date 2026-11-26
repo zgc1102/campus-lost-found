@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { api } from '../api'
 
@@ -513,7 +513,7 @@ function statusClass(s) {
           </div>
 
           <div class="admin-tabs">
-            <button v-for="[id, name] in tabs" :key="id" type="button" :class="{ on: tab === id }" @click="selectTab(id)">{{ name }}<span v-if="id === 'reports' && reportTotal > 0" class="tab-count">{{ reportTotal }}</span></button>
+            <button v-for="[id, name] in tabs" :key="id" type="button" :class="{ on: tab === id }" @click="selectTab(id)">{{ name }}<span v-if="id === 'reports'" class="tab-count">{{ reportTotal }}</span></button>
           </div>
           <div v-if="tabLoading" class="admin-loading"><span class="spinner"></span><span>正在加载这个页面…</span></div>
 
