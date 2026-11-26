@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { api } from '../api'
+import LoadingState from '../components/LoadingState.vue'
 
 const emit = defineEmits(['nav'])
 const question = ref('')
@@ -69,7 +70,7 @@ onMounted(() => {
 
       <div v-if="asked" class="ask-card">
         <div class="ask-q">你问：{{ asked }}</div>
-        <div v-if="loading && !answer" class="ask-a">正在查资料…</div>
+        <LoadingState v-if="loading && !answer" compact />
         <div v-else class="ask-a" style="white-space:pre-line">{{ cleanAnswer }}</div>
       </div>
 

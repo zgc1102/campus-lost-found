@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { api } from '../api'
 import CountUp from '../components/CountUp.vue'
+import LoadingState from '../components/LoadingState.vue'
 
 const props = defineProps({
   type: { type: String, default: 'lost' }
@@ -537,7 +538,7 @@ function openOldHelp() {
         </button>
       </div>
 
-      <div v-if="loading" class="empty">正在读取校园数据…</div>
+      <LoadingState v-if="loading" />
       <div v-else-if="loadError" class="load-error">
         <b>校园数据没有加载成功</b>
         <span>{{ loadError }}</span>
@@ -599,7 +600,7 @@ function openOldHelp() {
       </div>
       <div class="own-box">
         <div class="own-title">与我发布的进行 AI 对比</div>
-        <div v-if="myLoading" class="own-empty">正在读取我的发布…</div>
+        <LoadingState v-if="myLoading" compact />
         <div v-else-if="ownCandidates.length" class="own-list">
           <button v-for="o in ownCandidates" :key="o.id" type="button" class="own-row" @click.stop="openOwnCompare(o)">
             <span>{{ o.title }}</span><i>{{ o.place || '未填写地点' }} · {{ fmt(o.createdAt) }}</i><b>对比 →</b>

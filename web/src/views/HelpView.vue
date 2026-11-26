@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { api } from '../api'
+import LoadingState from '../components/LoadingState.vue'
 
 const emit = defineEmits(['nav', 'publish'])
 const props = defineProps({
@@ -133,7 +134,7 @@ async function submitHelp() {
         </button>
       </div>
 
-      <div v-if="loading" class="empty">正在读取爱心求助…</div>
+      <LoadingState v-if="loading" />
       <div v-else-if="!visible.length" class="empty">这个方向暂时没有求助</div>
       <div v-else class="vue-list">
         <article v-for="it in visible" :key="it.id" class="item" @click="openDetail(it)">

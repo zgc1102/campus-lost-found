@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { api } from '../api'
+import LoadingState from '../components/LoadingState.vue'
 
 const emit = defineEmits(['nav'])
 
@@ -125,6 +126,7 @@ function openMemo(s) {
 
 <template>
   <section class="screen active" id="screen-home">
+  <LoadingState v-if="loading" compact />
     <div class="ticker">
       <div class="ticker-track">
         <span>校园失物招领 · 爱心互助 · 拾光码官方校验 · 不要求转账付款 · 请当面核对物品特征</span>

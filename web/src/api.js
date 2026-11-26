@@ -108,10 +108,10 @@ async function call(path, options = {}) {
 
 export const api = {
   items(includeClosed = false) {
-    return call('/items' + (includeClosed ? '?include_closed=1' : ''))
+    return cachedGet('/items' + (includeClosed ? '?include_closed=1' : ''), 15000)
   },
   announcements() {
-    return call('/announcements').catch(() => [])
+    return cachedGet('/announcements', 30000).catch(() => [])
   },
   create(item) {
     return call('/items', { method: 'POST', body: JSON.stringify(item) })
@@ -144,7 +144,7 @@ export const api = {
     return call('/claims/' + encodeURIComponent(id) + '/supplement', { method: 'POST', body: JSON.stringify(body || {}) })
   },
   mine() {
-    return call('/mine')
+    return cachedGet('/mine', 10000)
   },
   accountLogin(body) {
     return call('/account/login', { method: 'POST', body: JSON.stringify(body) })
@@ -242,7 +242,7 @@ export const api = {
     })
   },
   notices() {
-    return call('/notices')
+    return cachedGet('/notices', 15000)
   },
   readNotices() {
     return call('/notices/read', { method: 'POST', skipCacheClear: true })
