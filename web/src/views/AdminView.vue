@@ -624,7 +624,7 @@ function statusClass(s) {
               <input v-model="search" placeholder="搜索标题 / 地点 / 描述">
               <span>{{ filteredItems.length }} 条</span>
             </div>
-            <div v-if="loading" class="empty">正在读取…</div>
+            <div v-if="loading" class="admin-loading"><span class="spinner"></span><span>正在读取…</span></div>
             <div v-else-if="!filteredItems.length" class="empty">暂无内容</div>
             <div v-else class="item-list">
               <article v-for="it in filteredItems" :key="it.id" class="admin-item">
@@ -658,7 +658,7 @@ function statusClass(s) {
                 </div>
                 <div v-if="it.secret" class="ai-secret">🔒 核验特征：{{ it.secret }}</div>
                 <div v-if="it.rejectReason" class="ai-secret" style="border-color:#F3CFCF;color:#A12F2F;background:#FDF2F2">{{ it.status === 'removed' ? '下架理由' : '驳回理由' }}：{{ it.rejectReason }}</div>
-                <img v-if="it.photoUrl" :src="photoSrc(it.photoUrl)" class="ai-photo" alt="" @click="viewingImage = photoSrc(it.photoUrl)">
+                <img v-if="it.photoUrl" :src="photoSrc(it.photoUrl)" class="ai-photo" alt="" loading="lazy" @error="$event.target.style.visibility='hidden'" @click="viewingImage = photoSrc(it.photoUrl)">
                 <div v-if="it.contact && it.contact.phone" class="ai-phone">📞 联系电话：{{ it.contact.phone }}</div>
                 <div class="ai-actions">
                   <button v-if="it.status === 'pending'" type="button" class="primary" @click="review(it, 'approved')">通过并上架</button>
@@ -869,4 +869,9 @@ textarea.field { min-height: 78px; resize: vertical; }
 .panel-summary::before { content:'▸'; color:#8B6BB0; font-size:13px; transition:transform .15s; }
 details[open] > .panel-summary::before { content:'▾'; }
 .panel-summary h3 { margin:0; flex:1; }
+</style>
+<style scoped>
+.admin-loading { display:flex; align-items:center; justify-content:center; gap:10px; padding:30px 16px; color:#7A6A8D; font-size:12px; }
+.spinner { width:24px; height:24px; border:3px solid #E6D9F4; border-top-color:#5B2A91; border-radius:50%; animation:adminSpin .8s linear infinite; flex:none; }
+@keyframes adminSpin { to { transform: rotate(360deg); } }
 </style>
