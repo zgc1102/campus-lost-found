@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { api } from '../api'
 
 const TOKEN_KEY = 'sg:admin:token'
@@ -11,6 +11,8 @@ const loading = ref(false)
 const error = ref('')
 const tab = ref('all')
 const search = ref('')
+const page = ref(1)
+const pageSize = 20
 
 const stats = ref(null)
 const statsAt = ref('')
@@ -56,6 +58,10 @@ const tabs = [
   ['reports', '举报记录'],
   ['deploy', '部署日志']
 ]
+
+const pagedItems = computed(() => filteredItems.value.slice((page.value - 1) * pageSize, page.value * pageSize))
+const pageCount = computed(() => Math.max(1, Math.ceil(filteredItems.value.length / pageSize)))
+watch([tab, search], () => { page.value = 1 })
 
 const filteredItems = computed(() => {
   const q = search.value.trim().toLowerCase()
@@ -627,7 +633,7 @@ function statusClass(s) {
             <div v-if="loading" class="admin-loading"><span class="spinner"></span><span>正在读取…</span></div>
             <div v-else-if="!filteredItems.length" class="empty">暂无内容</div>
             <div v-else class="item-list">
-              <article v-for="it in filteredItems" :key="it.id" class="admin-item">
+              <article v-for="it in pagedItems" :key="it.id" class="admin-item">
                 <div class="ai-head">
                   <span class="tag" :class="it.type === 'lost' ? 'tag-lost' : 'tag-found'">{{ it.type === 'lost' ? '寻物' : '招领' }}</span>
                   <span class="status" :class="statusClass(it.status)">{{ statusText(it.status) }}</span>
@@ -670,6 +676,11 @@ function statusClass(s) {
                   <button v-if="it.phoneStatus === 'yellow' && !it.phoneVerified" type="button" class="ghost" @click="approvePhone(it)">通过号码</button>
                 </div>
               </article>
+            </div>
+            <div v-if="pageCount > 1" class="pager">
+              <button type="button" class="ghost" :disabled="page <= 1" @click="page--">上一页</button>
+              <span>第 {{ page }} / {{ pageCount }} 页</span>
+              <button type="button" class="ghost" :disabled="page >= pageCount" @click="page++">下一页</button>
             </div>
           </template>
         </template>
@@ -874,4 +885,8 @@ details[open] > .panel-summary::before { content:'▾'; }
 .admin-loading { display:flex; align-items:center; justify-content:center; gap:10px; padding:30px 16px; color:#7A6A8D; font-size:12px; }
 .spinner { width:24px; height:24px; border:3px solid #E6D9F4; border-top-color:#5B2A91; border-radius:50%; animation:adminSpin .8s linear infinite; flex:none; }
 @keyframes adminSpin { to { transform: rotate(360deg); } }
+</style>
+<style scoped>
+.pager { display:flex; align-items:center; justify-content:center; gap:12px; padding:14px 0 4px; color:#7A6A8D; font-size:11px; }
+.pager button { min-width:70px; }
 </style>
