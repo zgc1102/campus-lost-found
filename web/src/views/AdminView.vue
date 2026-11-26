@@ -153,6 +153,11 @@ function selectTab(id) {
   loadTab(id)
 }
 
+function retryCurrent() {
+  error.value = ''
+  loadAll(false)
+}
+
 async function login() {
   error.value = ''
   loading.value = true
@@ -486,7 +491,7 @@ function statusClass(s) {
         </div>
 
         <template v-else>
-          <div v-if="error" class="error top-error">{{ error }}</div>
+          <div v-if="error" class="error top-error">{{ error }} <button type="button" class="ghost" @click="retryCurrent">重试</button></div>
 
           <div class="overview-strip">
             <div class="ov-item"><b>{{ stats?.items ?? '—' }}</b><span>全部内容</span></div>
