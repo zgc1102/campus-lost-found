@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { api, clearApiCache } from '../api'
 import CountUp from '../components/CountUp.vue'
+import LoadingState from '../components/LoadingState.vue'
 import NoticePickup from '../components/NoticePickup.vue'
 import NoticeClaim from '../components/NoticeClaim.vue'
 import NoticeHelp from '../components/NoticeHelp.vue'
@@ -937,7 +938,7 @@ function fmt(ts) {
       <span class="unread-sum">共 {{ loading ? '—' : items.length }} 条 · 未读 {{ loading ? '—' : unread }}</span>
     </div>
     <div class="scroll">
-      <div v-if="loading" class="empty">正在读取通知…</div>
+      <LoadingState v-if="loading" compact />
       <div v-else-if="!visibleItems.length" class="empty">这个分类还没有通知</div>
       <template v-else>
         <div

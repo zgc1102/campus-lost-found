@@ -2,6 +2,8 @@
 import { computed, defineAsyncComponent, onMounted, onUnmounted, ref } from 'vue'
 import HomeView from './views/HomeView.vue'
 import ListView from './views/ListView.vue'
+import HelpView from './views/HelpView.vue'
+import NoticesView from './views/NoticesView.vue'
 import LoadingState from './components/LoadingState.vue'
 import BottomNav from './components/BottomNav.vue'
 import TourOverlay from './components/TourOverlay.vue'
@@ -12,7 +14,6 @@ const asyncView = (loader) => defineAsyncComponent({
   delay: 120
 })
 
-const HelpView = asyncView(() => import('./views/HelpView.vue'))
 const HelpPublishView = asyncView(() => import('./views/HelpPublishView.vue'))
 const PublishView = asyncView(() => import('./views/PublishView.vue'))
 const RadarView = asyncView(() => import('./views/RadarView.vue'))
@@ -23,7 +24,6 @@ const MineView = asyncView(() => import('./views/MineView.vue'))
 const GuideView = asyncView(() => import('./views/GuideView.vue'))
 const MapView = asyncView(() => import('./views/MapView.vue'))
 const AskView = asyncView(() => import('./views/AskView.vue'))
-const NoticesView = asyncView(() => import('./views/NoticesView.vue'))
 const SearchView = asyncView(() => import('./views/SearchView.vue'))
 const StaticInfoView = asyncView(() => import('./views/StaticInfoView.vue'))
 const SuccessView = asyncView(() => import('./views/SuccessView.vue'))
