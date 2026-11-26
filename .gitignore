@@ -59,3 +59,9 @@ _local_server.py
 # 安全修复：私密配置与 AI 预算运行数据
 private/
 ai_budget.json
+announcements.json
+special_numbers.json
+NUL
+chat_escalation.json
+help_tasks.json
+tag_reports.json
