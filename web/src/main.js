@@ -5,3 +5,4 @@ import './styles/aurora.css'
 import './styles/unified.css'
 
 createApp(App).mount('#app')
+window.dispatchEvent(new Event('sg:app-ready'))

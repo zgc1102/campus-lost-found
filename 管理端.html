@@ -159,13 +159,13 @@
       .intro-fallback p { margin: 14px 0 0; color: rgba(255,255,255,.62); font-size: 13px; line-height: 1.8; }
       .fallback-enter { margin-top: 26px; border: 1px solid rgba(232,205,142,.7); border-radius: 99px; background: linear-gradient(100deg,#c8a96a,#f3dfac,#c8a96a); color: #2b1645; padding: 12px 30px; font: inherit; font-size: 12px; font-weight: 700; letter-spacing: .1em; cursor: pointer; }
     </style>
-    <script type="module" crossorigin src="/web/assets/index-BYNFkK3S.js"></script>
+    <script type="module" crossorigin src="/web/assets/index-DbMpB3n5.js"></script>
     <link rel="stylesheet" crossorigin href="/web/assets/index-CO1F434T.css">
   </head>
 
   <body>
     <div id="intro" role="dialog" aria-label="拾光里介绍">
-      <video id="intro-video" class="intro-video" poster="/web/assets/intro-poster.jpg" preload="auto" muted playsinline autoplay></video>
+      <video id="intro-video" class="intro-video" poster="/web/assets/intro-poster.jpg" preload="none" muted playsinline></video>
       <button class="intro-play" type="button" id="intro-play">▶ 播放开场</button>
       <div class="intro-fallback" id="intro-fallback">
         <div class="fallback-mark">拾</div>
@@ -184,16 +184,23 @@
         var admin = location.pathname.replace(/\/+$/, '') === '/admin';
         var seen = false;
         try { seen = localStorage.getItem('sg:intro:v2') === '1' || sessionStorage.getItem('sg:intro:v2') === '1'; } catch (e) {}
-        if (admin || (!force && seen)) { intro.parentNode.removeChild(intro); return; }
+        if (admin) { intro.parentNode.removeChild(intro); return; }
+        var returning = seen && !force;
 
         var video = document.getElementById('intro-video');
         var closed = false;
+        var started = false;
+        var appReady = false;
+        var graceTimer = null;
         var fallbackTimer = null;
 
         function close() {
           if (closed) return;
           closed = true;
+          clearTimeout(graceTimer);
+          clearTimeout(fallbackTimer);
           try { localStorage.setItem('sg:intro:v2', '1'); sessionStorage.setItem('sg:intro:v2', '1'); } catch (e) {}
+          if (video) { try { video.pause(); } catch (e) {} }
           document.body.style.overflow = '';
           intro.classList.add('is-leaving');
           setTimeout(function () { if (intro.parentNode) intro.parentNode.removeChild(intro); }, 600);
@@ -208,29 +215,49 @@
           if (closed) return;
           intro.classList.add('need-play');
         }
-        function markSeen() { try { localStorage.setItem('sg:intro:v2', '1'); } catch (e) {} }
+        function startVideo() {
+          if (started || closed || !video) return;
+          started = true;
+          video.preload = 'auto';
+          video.load();
+          var p = video.play();
+          if (p && p.catch) p.catch(needPlay);
+          fallbackTimer = setTimeout(function () {
+            if (!closed && video.readyState < 2) fallback();
+          }, 7000);
+        }
+        function onAppReady() {
+          appReady = true;
+          // 回访用户如果页面已经好了，就不要为了开场视频再等；
+          // 第一次访问仍完整播放。
+          if (returning) close();
+        }
 
         document.body.style.overflow = 'hidden';
         document.getElementById('intro-skip').addEventListener('click', close);
         document.getElementById('intro-enter').addEventListener('click', close);
         document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+        window.addEventListener('sg:app-ready', onAppReady, { once: true });
 
         if (video) {
           var useMobile = (window.innerWidth <= 820) || (window.innerHeight > window.innerWidth && window.innerWidth < 1000);
           video.src = useMobile ? '/web/assets/intro-mobile.mp4?v=20261127' : '/web/assets/intro.mp4?v=20261127';
           if (useMobile) video.poster = '/web/assets/intro-mobile-poster.jpg?v=20261127';
+          video.preload = returning ? 'none' : 'auto';
           video.addEventListener('ended', close);
           video.addEventListener('error', fallback);
-          var play = video.play();
-          if (play && play.catch) play.catch(needPlay);
           document.getElementById('intro-play').addEventListener('click', function () {
             intro.classList.remove('need-play');
             var p2 = video.play();
             if (p2 && p2.catch) p2.catch(fallback);
           });
-          fallbackTimer = setTimeout(function () {
-            if (!closed && video.readyState < 2) fallback();
-          }, 7000);
+          if (returning) {
+            // 回访用户先给首页 1.1 秒；如果首页好了，onAppReady 会直接关闭；
+            // 如果还没好，才启动视频遮住白屏。
+            graceTimer = setTimeout(function () { if (!appReady) startVideo(); }, 1100);
+          } else {
+            startVideo();
+          }
         } else {
           fallback();
         }
