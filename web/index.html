@@ -215,8 +215,8 @@
 
         if (video) {
           var useMobile = (window.innerWidth <= 820) || (window.innerHeight > window.innerWidth && window.innerWidth < 1000);
-          video.src = useMobile ? '/web/assets/intro-mobile.mp4' : '/web/assets/intro.mp4';
-          if (useMobile) video.poster = '/web/assets/intro-mobile-poster.jpg';
+          video.src = useMobile ? '/web/assets/intro-mobile.mp4?v=20261127' : '/web/assets/intro.mp4?v=20261127';
+          if (useMobile) video.poster = '/web/assets/intro-mobile-poster.jpg?v=20261127';
           video.addEventListener('ended', close);
           video.addEventListener('error', fallback);
           var play = video.play();
