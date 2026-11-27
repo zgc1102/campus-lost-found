@@ -1,5 +1,8 @@
 <!doctype html>
 <html lang="zh-CN">
+<script type="module" crossorigin src="/web/assets/index-BYNFkK3S.js"></script>
+<link rel="stylesheet" crossorigin href="/web/assets/index-CO1F434T.css">
+
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
@@ -7,19 +10,33 @@
     <title>清华校园拾光里 v3.2.2 · 校园互助服务平台</title>
     <style>
       html, body { margin: 0; background: #F3EEFA; }
-      .boot-shell { min-height: 100vh; background: #F3EEFA; color: #3B1D63; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; }
-      .boot-top { display: flex; align-items: center; gap: 12px; padding: 22px 24px; background: linear-gradient(135deg, #2B1645, #5B2A91); color: #fff; }
-      .boot-mark { width: 42px; height: 42px; border-radius: 13px; background: rgba(255,255,255,.16); display: flex; align-items: center; justify-content: center; font-size: 21px; font-weight: 700; }
-      .boot-top b { display: block; font-size: 17px; letter-spacing: .5px; }
-      .boot-top span { display: block; margin-top: 3px; font-size: 11px; color: rgba(255,255,255,.72); }
-      .boot-body { min-height: 62vh; display: flex; align-items: center; justify-content: center; gap: 12px; color: #7A6A8D; font-size: 13px; }
-      .boot-spinner { width: 24px; height: 24px; border: 3px solid #E6D9F4; border-top-color: #5B2A91; border-radius: 50%; animation: bootSpin .8s linear infinite; }
+      .boot-shell { min-height: 100vh; display: flex; justify-content: center; background: #F3EEFA; color: #3B1D63; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; }
+      .boot-phone { width: 390px; max-width: 100%; min-height: 100vh; background: #F6F1FB; display: flex; flex-direction: column; position: relative; overflow: hidden; }
+      .boot-ticker { height: 22px; display: flex; align-items: center; background: #F7F0FF; color: #8A6AA8; font-size: 10px; padding: 0 10px; white-space: nowrap; overflow: hidden; }
+      .boot-topbar { height: 52px; display: flex; align-items: center; gap: 7px; padding: 0 10px; background: #5B2A91; color: #fff; flex: none; }
+      .boot-search { width: 30px; height: 30px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,.65); display: flex; align-items: center; justify-content: center; font-size: 17px; }
+      .boot-title { flex: 1; font-size: 15px; font-weight: 700; letter-spacing: .3px; }
+      .boot-title small { font-size: 8px; font-weight: 400; opacity: .65; margin-left: 3px; }
+      .boot-round { width: 30px; height: 30px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,.65); display: flex; align-items: center; justify-content: center; font-size: 14px; }
+      .boot-scroll { flex: 1; padding: 10px; display: flex; flex-direction: column; gap: 10px; }
+      .boot-mem { border-radius: 14px; padding: 13px 14px; background: linear-gradient(135deg, #4A1B72, #6A329D); color: #fff; display: flex; align-items: center; gap: 11px; box-shadow: 0 8px 22px rgba(74,27,114,.18); }
+      .boot-star { width: 34px; height: 34px; border-radius: 10px; background: rgba(255,255,255,.15); display: flex; align-items: center; justify-content: center; font-size: 17px; }
+      .boot-mem b { display: block; font-size: 12px; font-weight: 600; }
+      .boot-mem span { display: block; margin-top: 3px; font-size: 9px; color: rgba(255,255,255,.7); }
+      .boot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+      .boot-card { background: #fff; border: 1px solid #EDE3F8; border-radius: 13px; padding: 12px; min-height: 82px; display: flex; flex-direction: column; justify-content: space-between; }
+      .boot-card .dot { width: 28px; height: 28px; border-radius: 9px; background: #F1E8FB; }
+      .boot-card b { font-size: 11px; color: #4B2D6B; }
+      .boot-card span { font-size: 9px; color: #9B8AAC; }
+      .boot-skeleton { height: 8px; border-radius: 5px; background: #F1E8FB; margin-top: 8px; }
+      .boot-loading { display: flex; align-items: center; justify-content: center; gap: 7px; padding: 8px 0 2px; color: #8E7FA3; font-size: 10px; }
+      .boot-spinner { width: 15px; height: 15px; border: 2px solid #E6D9F4; border-top-color: #5B2A91; border-radius: 50%; animation: bootSpin .8s linear infinite; }
+      .boot-nav { height: 58px; flex: none; background: #fff; border-top: 1px solid #EDE3F8; display: flex; align-items: center; justify-content: space-around; color: #8E7FA3; font-size: 10px; }
+      .boot-nav span { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+      .boot-nav i { width: 18px; height: 18px; border-radius: 6px; background: #F1E8FB; display: block; }
+      .boot-nav .on { color: #5B2A91; font-weight: 600; }
       @keyframes bootSpin { to { transform: rotate(360deg); } }
-    </style>
-    <script type="module" crossorigin src="/web/assets/index-BYNFkK3S.js"></script>
-    <link rel="stylesheet" crossorigin href="/web/assets/index-CO1F434T.css">
-  </head>
-  <body>
-    <div id="app"><div class="boot-shell" aria-hidden="true"><div class="boot-top"><div class="boot-mark">拾</div><div><b>清华校园拾光里</b><span>校园互助服务平台</span></div></div><div class="boot-body"><span class="boot-spinner"></span><span>正在把校园里的线索找出来…</span></div></div></div>
+      @media (max-width: 759px) { .boot-phone { width: 100%; } }
+    </style>
   </body>
 </html>
