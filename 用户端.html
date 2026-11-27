@@ -165,9 +165,7 @@
 
   <body>
     <div id="intro" role="dialog" aria-label="拾光里介绍">
-      <video id="intro-video" class="intro-video" poster="/web/assets/intro-poster.jpg" preload="auto" muted playsinline autoplay>
-        <source src="/web/assets/intro.mp4" type="video/mp4">
-      </video>
+      <video id="intro-video" class="intro-video" poster="/web/assets/intro-poster.jpg" preload="auto" muted playsinline autoplay></video>
       <button class="intro-play" type="button" id="intro-play">▶ 播放开场</button>
       <div class="intro-fallback" id="intro-fallback">
         <div class="fallback-mark">拾</div>
@@ -218,6 +216,9 @@
         document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
 
         if (video) {
+          var useMobile = (window.innerWidth <= 820) || (window.innerHeight > window.innerWidth && window.innerWidth < 1000);
+          video.src = useMobile ? '/web/assets/intro-mobile.mp4' : '/web/assets/intro.mp4';
+          if (useMobile) video.poster = '/web/assets/intro-mobile-poster.jpg';
           video.addEventListener('ended', close);
           video.addEventListener('error', fallback);
           var play = video.play();
