@@ -150,6 +150,8 @@
       }
 
       .intro-video { position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; object-fit: cover; background: #140a22; }
+      .intro-toast { display: none; position: absolute; left: 50%; bottom: 34px; transform: translateX(-50%); z-index: 6; max-width: calc(100% - 44px); padding: 9px 14px; border: 1px solid rgba(232,205,142,.28); border-radius: 99px; background: rgba(20,10,34,.78); color: rgba(255,248,232,.82); font-size: 11px; line-height: 1.5; text-align: center; backdrop-filter: blur(8px); }
+      #intro.toast-on .intro-toast { display: block; }
       .intro-play { display: none; position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); z-index: 4; border: 1px solid rgba(232,205,142,.7); border-radius: 99px; background: rgba(20,10,34,.78); color: #e8cd8e; padding: 13px 24px; font: inherit; font-size: 12px; letter-spacing: .08em; cursor: pointer; backdrop-filter: blur(6px); }
       #intro.need-play .intro-play { display: block; }
       .intro-fallback { position: absolute; inset: 0; z-index: 3; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; background: radial-gradient(circle at 50% 35%, rgba(200,169,106,.12), transparent 40%), linear-gradient(155deg,#140a22,#2b1645); padding: 30px; }
@@ -173,9 +175,10 @@
         <p>让每件失物，都有回家的路。<br>校园公益失物招领与爱心互助平台。</p>
         <button class="fallback-enter" type="button" id="intro-enter">进入拾光里</button>
       </div>
+      <div class="intro-toast" id="intro-toast">暂时还没加载成功，请稍等一下…</div>
       <div class="intro-head"><div class="intro-brand"><div class="intro-brandmark">拾</div><span>拾光里 · CAMPUS LOST &amp; FOUND</span></div><button class="intro-skip" type="button" id="intro-skip">跳过 ›</button></div>
     </div>
-    <div id="app"><div class="boot-shell" aria-hidden="true"><div class="boot-phone"><div class="boot-ticker">校园失物招领 · 爱心互助 · 拾光码官方校验</div><div class="boot-topbar"><div class="boot-search">⌕</div><div class="boot-title">清华校园拾光里<small>v3.2.2</small></div><div class="boot-round">?</div><div class="boot-round">🔔</div><div class="boot-round">○</div></div><div class="boot-scroll"><div class="boot-mem"><div class="boot-star">📌</div><div><b>公告通知 · 左右滑动</b><span>失物招领点调整通知</span></div></div><div class="boot-grid"><div class="boot-card"><div class="dot"></div><b>失物招领</b><span>捡到的东西</span></div><div class="boot-card"><div class="dot"></div><b>寻物启事</b><span>丢了的东西</span></div><div class="boot-card"><div class="dot"></div><b>爱心 · 求助</b><span>借伞 · 充电宝</span></div><div class="boot-card"><div class="dot"></div><b>拾光码</b><span>给失物一张身份证</span></div></div><div class="boot-skeleton" style="width:70%"></div><div class="boot-skeleton" style="width:88%"></div><div class="boot-loading"><span class="boot-spinner"></span><span>正在加载校园信息…</span></div></div><div class="boot-nav"><span class="on"><i></i>首页</span><span><i></i>失物</span><span><i></i>互助</span><span><i></i>我的</span></div></div></div></div>
+    <div id="app"></div>
     <script>
       (function () {
         var intro = document.getElementById('intro');
@@ -188,72 +191,111 @@
         var returning = seen && !force;
 
         var video = document.getElementById('intro-video');
+        var toast = document.getElementById('intro-toast');
         var closed = false;
-        var started = false;
         var appReady = false;
+        var phase = 'idle';
+        var toastTimer = null;
         var fallbackTimer = null;
+        var mobile = (window.innerWidth <= 820) || (window.innerHeight > window.innerWidth && window.innerWidth < 1000);
+        var firstSrc = mobile ? '/web/assets/intro-first-mobile.mp4?v=20261127' : '/web/assets/intro-first.mp4?v=20261127';
+        var secondSrc = mobile ? '/web/assets/intro-second-mobile.mp4?v=20261127' : '/web/assets/intro-second.mp4?v=20261127';
+        var firstPoster = mobile ? '/web/assets/intro-mobile-poster.jpg?v=20261127' : '/web/assets/intro-poster.jpg?v=20261127';
 
         function close() {
           if (closed) return;
           closed = true;
+          clearTimeout(toastTimer);
           clearTimeout(fallbackTimer);
           try { localStorage.setItem('sg:intro:v2', '1'); sessionStorage.setItem('sg:intro:v2', '1'); } catch (e) {}
           if (video) { try { video.pause(); } catch (e) {} }
+          intro.classList.remove('toast-on');
           document.body.style.overflow = '';
           intro.classList.add('is-leaving');
           setTimeout(function () { if (intro.parentNode) intro.parentNode.removeChild(intro); }, 600);
+        }
+        function showToast(text) {
+          if (closed || !toast) return;
+          toast.textContent = text;
+          intro.classList.add('toast-on');
+          clearTimeout(toastTimer);
+          toastTimer = setTimeout(function () { intro.classList.remove('toast-on'); }, 4200);
         }
         function fallback() {
           if (closed) return;
           intro.classList.add('fallback-on');
           intro.classList.remove('need-play');
           if (video) { try { video.pause(); } catch (e) {} }
+          showToast('这个开场暂时加载不出来，可以直接进入拾光里');
         }
         function needPlay() {
           if (closed) return;
           intro.classList.add('need-play');
+          showToast('浏览器拦截了自动播放，点“播放开场”即可');
         }
-        function startVideo() {
-          if (started || closed || !video) return;
-          started = true;
+        function loadAndPlay(src, loop, poster) {
+          phase = loop ? 'second' : 'first';
+          if (!video) return false;
+          video.loop = loop;
           video.preload = 'auto';
+          video.poster = poster;
+          video.src = src;
           video.load();
           var p = video.play();
           if (p && p.catch) p.catch(needPlay);
+          return true;
+        }
+        function playSecond(reason) {
+          if (closed) return;
+          if (!loadAndPlay(secondSrc, true, firstPoster)) { fallback(); return; }
+          showToast(reason || '暂时还没加载成功，请稍等一下，视频会继续播放…');
           fallbackTimer = setTimeout(function () {
             if (!closed && video.readyState < 2) fallback();
           }, 7000);
         }
+        function playFirst() {
+          if (closed) return;
+          if (!loadAndPlay(firstSrc, false, firstPoster)) { fallback(); return; }
+        }
         function onAppReady() {
           appReady = true;
-          // 回访用户如果页面已经好了，就不要为了开场视频再等；
-          // 第一次访问仍完整播放。
-          if (returning) close();
+          // 第一次：让第一段介绍播完；如果已经播完，会进入第二段/首页。
+          // 第二次以后：只要首页好了，立即暂停视频并进入首页。
+          if (returning || phase === 'second') close();
         }
 
         document.body.style.overflow = 'hidden';
-        document.getElementById('intro-skip').addEventListener('click', close);
+        document.getElementById('intro-skip').addEventListener('click', function () {
+          if (returning || appReady) close();
+          else playSecond('正在继续加载，请稍等一下…');
+        });
         document.getElementById('intro-enter').addEventListener('click', close);
+        document.getElementById('intro-play').addEventListener('click', function () {
+          intro.classList.remove('need-play');
+          var p = video && video.play();
+          if (p && p.catch) p.catch(fallback);
+        });
         document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
         window.addEventListener('sg:app-ready', onAppReady, { once: true });
 
-        if (video) {
-          var useMobile = (window.innerWidth <= 820) || (window.innerHeight > window.innerWidth && window.innerWidth < 1000);
-          video.src = useMobile ? '/web/assets/intro-mobile.mp4?v=20261127' : '/web/assets/intro.mp4?v=20261127';
-          if (useMobile) video.poster = '/web/assets/intro-mobile-poster.jpg?v=20261127';
-          video.preload = 'auto';
-          video.addEventListener('ended', close);
-          video.addEventListener('error', fallback);
-          document.getElementById('intro-play').addEventListener('click', function () {
-            intro.classList.remove('need-play');
-            var p2 = video.play();
-            if (p2 && p2.catch) p2.catch(fallback);
-          });
-          // 第一次和回访都先把视频跑起来；回访用户只要首页加载好，
-          // onAppReady 会立刻暂停视频并过渡到首页。
-          startVideo();
+        if (!video) { fallback(); return; }
+        video.addEventListener('error', fallback);
+        video.addEventListener('ended', function () {
+          if (closed) return;
+          if (phase === 'first') {
+            if (appReady) close();
+            else playSecond('暂时还没加载成功，请稍等一下，视频会继续播放…');
+          }
+        });
+
+        if (returning) {
+          // 第二次以后先给首页一点时间；好就直接进，不好就播长版并循环。
+          setTimeout(function () {
+            if (closed || appReady) return;
+            playSecond('暂时还没加载成功，请稍等一下，视频会继续播放…');
+          }, 1400);
         } else {
-          fallback();
+          playFirst();
         }
       })();
     </script>
