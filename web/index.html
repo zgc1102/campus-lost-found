@@ -181,7 +181,7 @@
         var force = new URLSearchParams(location.search).get('intro') === '1';
         var admin = location.pathname.replace(/\/+$/, '') === '/admin';
         var seen = false;
-        try { seen = sessionStorage.getItem('sg:intro:v1') === '1'; } catch (e) {}
+        try { seen = localStorage.getItem('sg:intro:v2') === '1' || sessionStorage.getItem('sg:intro:v2') === '1'; } catch (e) {}
         if (admin || (!force && seen)) { intro.parentNode.removeChild(intro); return; }
 
         var video = document.getElementById('intro-video');
@@ -191,7 +191,7 @@
         function close() {
           if (closed) return;
           closed = true;
-          try { sessionStorage.setItem('sg:intro:v1', '1'); } catch (e) {}
+          try { localStorage.setItem('sg:intro:v2', '1'); sessionStorage.setItem('sg:intro:v2', '1'); } catch (e) {}
           document.body.style.overflow = '';
           intro.classList.add('is-leaving');
           setTimeout(function () { if (intro.parentNode) intro.parentNode.removeChild(intro); }, 600);
@@ -206,7 +206,7 @@
           if (closed) return;
           intro.classList.add('need-play');
         }
-        function markSeen() { try { sessionStorage.setItem('sg:intro:v1', '1'); } catch (e) {} }
+        function markSeen() { try { localStorage.setItem('sg:intro:v2', '1'); } catch (e) {} }
 
         document.body.style.overflow = 'hidden';
         document.getElementById('intro-skip').addEventListener('click', close);
