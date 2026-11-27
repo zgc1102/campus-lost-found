@@ -250,9 +250,9 @@
             if (p2 && p2.catch) p2.catch(fallback);
           });
           if (returning) {
-            // 回访用户先给首页 1.1 秒；如果首页好了，onAppReady 会直接关闭；
-            // 如果还没好，才启动视频遮住白屏。
-            graceTimer = setTimeout(function () { if (!appReady) startVideo(); }, 1100);
+            // 回访用户先给首页 2.5 秒；如果首页好了，onAppReady 会直接关闭；
+            // 只有确实还没好，才启动视频遮住白屏，避免“视频刚播就被切掉”。
+            graceTimer = setTimeout(function () { if (!appReady) startVideo(); }, 2500);
           } else {
             startVideo();
           }
