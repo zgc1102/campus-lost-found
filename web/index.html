@@ -189,13 +189,11 @@
         var closed = false;
         var started = false;
         var appReady = false;
-        var graceTimer = null;
         var fallbackTimer = null;
 
         function close() {
           if (closed) return;
           closed = true;
-          clearTimeout(graceTimer);
           clearTimeout(fallbackTimer);
           try { localStorage.setItem('sg:intro:v2', '1'); sessionStorage.setItem('sg:intro:v2', '1'); } catch (e) {}
           if (video) { try { video.pause(); } catch (e) {} }
@@ -241,7 +239,7 @@
           var useMobile = (window.innerWidth <= 820) || (window.innerHeight > window.innerWidth && window.innerWidth < 1000);
           video.src = useMobile ? '/web/assets/intro-mobile.mp4?v=20261127' : '/web/assets/intro.mp4?v=20261127';
           if (useMobile) video.poster = '/web/assets/intro-mobile-poster.jpg?v=20261127';
-          video.preload = returning ? 'none' : 'auto';
+          video.preload = 'auto';
           video.addEventListener('ended', close);
           video.addEventListener('error', fallback);
           document.getElementById('intro-play').addEventListener('click', function () {
@@ -249,13 +247,9 @@
             var p2 = video.play();
             if (p2 && p2.catch) p2.catch(fallback);
           });
-          if (returning) {
-            // 回访用户先给首页 2.5 秒；如果首页好了，onAppReady 会直接关闭；
-            // 只有确实还没好，才启动视频遮住白屏，避免“视频刚播就被切掉”。
-            graceTimer = setTimeout(function () { if (!appReady) startVideo(); }, 2500);
-          } else {
-            startVideo();
-          }
+          // 第一次和回访都先把视频跑起来；回访用户只要首页加载好，
+          // onAppReady 会立刻暂停视频并过渡到首页。
+          startVideo();
         } else {
           fallback();
         }
