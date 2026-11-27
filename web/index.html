@@ -150,6 +150,8 @@
       }
 
       .intro-video { position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; object-fit: cover; background: #140a22; }
+      .intro-play { display: none; position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); z-index: 4; border: 1px solid rgba(232,205,142,.7); border-radius: 99px; background: rgba(20,10,34,.78); color: #e8cd8e; padding: 13px 24px; font: inherit; font-size: 12px; letter-spacing: .08em; cursor: pointer; backdrop-filter: blur(6px); }
+      #intro.need-play .intro-play { display: block; }
       .intro-fallback { position: absolute; inset: 0; z-index: 3; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; background: radial-gradient(circle at 50% 35%, rgba(200,169,106,.12), transparent 40%), linear-gradient(155deg,#140a22,#2b1645); padding: 30px; }
       #intro.fallback-on .intro-fallback { display: flex; }
       .fallback-mark { width: 70px; height: 70px; border: 1px solid rgba(232,205,142,.6); border-radius: 20px; display: grid; place-items: center; color: #e8cd8e; font-size: 32px; margin-bottom: 18px; }
@@ -161,9 +163,10 @@
 
   <body>
     <div id="intro" role="dialog" aria-label="拾光里介绍">
-      <video id="intro-video" class="intro-video" poster="/web/assets/intro-poster.jpg" preload="auto" muted playsinline>
+      <video id="intro-video" class="intro-video" poster="/web/assets/intro-poster.jpg" preload="auto" muted playsinline autoplay>
         <source src="/web/assets/intro.mp4" type="video/mp4">
       </video>
+      <button class="intro-play" type="button" id="intro-play">▶ 播放开场</button>
       <div class="intro-fallback" id="intro-fallback">
         <div class="fallback-mark">拾</div>
         <h1>拾光里</h1>
@@ -198,7 +201,12 @@
         function fallback() {
           if (closed) return;
           intro.classList.add('fallback-on');
+          intro.classList.remove('need-play');
           if (video) { try { video.pause(); } catch (e) {} }
+        }
+        function needPlay() {
+          if (closed) return;
+          intro.classList.add('need-play');
         }
         function markSeen() { try { sessionStorage.setItem('sg:intro:v1', '1'); } catch (e) {} }
 
@@ -211,7 +219,12 @@
           video.addEventListener('ended', close);
           video.addEventListener('error', fallback);
           var play = video.play();
-          if (play && play.catch) play.catch(fallback);
+          if (play && play.catch) play.catch(needPlay);
+          document.getElementById('intro-play').addEventListener('click', function () {
+            intro.classList.remove('need-play');
+            var p2 = video.play();
+            if (p2 && p2.catch) p2.catch(fallback);
+          });
           fallbackTimer = setTimeout(function () {
             if (!closed && video.readyState < 2) fallback();
           }, 7000);
