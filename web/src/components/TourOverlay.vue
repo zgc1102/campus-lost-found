@@ -98,7 +98,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div v-if="show" class="guide-layer">
+  <div v-if="show" class="guide-layer" :class="{ dim: !slides[index].target }">
     <div class="guide-blocker"></div>
     <div class="guide-hole" :style="holeStyle"></div>
     <div ref="cardRef" class="guide-card" :class="placement" :style="cardStyle">
@@ -114,7 +114,8 @@ onUnmounted(() => {
 
 <style scoped>
 .guide-layer { position: fixed; inset: 0; z-index: 9998; }
-.guide-blocker { position: absolute; inset: 0; background: rgba(8, 4, 14, .18); }
+.guide-blocker { position: absolute; inset: 0; background: transparent; }
+.guide-layer.dim .guide-blocker { background: rgba(7, 3, 12, .72); }
 .guide-hole { position: fixed; z-index: 9999; border-radius: 14px; border: 2px solid #e8cd8e; box-shadow: 0 0 0 9999px rgba(7, 3, 12, .78), 0 0 24px rgba(232, 205, 142, .25); pointer-events: none; transition: left .3s ease, top .3s ease, width .3s ease, height .3s ease; }
 .guide-card { position: fixed; z-index: 10000; box-sizing: border-box; padding: 16px 17px 14px; border: 1px solid rgba(232, 205, 142, .35); border-radius: 15px; background: rgba(25, 13, 39, .96); color: #fff; box-shadow: 0 20px 60px rgba(0, 0, 0, .4); font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; }
 .guide-card.center { transform: translate(-50%, -50%); max-width: calc(100% - 28px); }
