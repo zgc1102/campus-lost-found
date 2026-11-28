@@ -119,7 +119,8 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div v-if="show" class="guide-layer" :class="layerClass">
+  <Teleport to="body">
+    <div v-if="show" class="guide-layer" :class="layerClass">
     <div class="guide-blocker"></div>
     <div class="guide-hole" :style="holeStyle"></div>
     <div class="guide-card-wrap" :style="cardStyle">
@@ -132,7 +133,8 @@ onUnmounted(() => {
         @skip="close"
       />
     </div>
-  </div>
+    </div>
+  </Teleport>
 </template>
 
 <style scoped>
