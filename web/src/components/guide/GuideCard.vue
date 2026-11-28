@@ -38,10 +38,10 @@ const last = computed(() => props.index >= props.total - 1)
 
 <style scoped>
 .guide-card {
-  position: fixed !important;
-  z-index: 10000;
-  width: 360px;
-  max-width: calc(100vw - 28px);
+  position: relative !important;
+  z-index: 1;
+  width: 100%;
+  max-width: none;
   max-height: calc(100vh - 28px);
   overflow-y: auto;
   box-sizing: border-box;
@@ -60,7 +60,7 @@ const last = computed(() => props.index >= props.total - 1)
 .guide-card.arrow-below .guide-arrow { left: 50%; margin-left: -7px; top: -8px; transform: rotate(45deg); border-right: 0; border-bottom: 0; }
 .guide-card.arrow-above .guide-arrow { left: 50%; margin-left: -7px; bottom: -8px; transform: rotate(225deg); border-left: 0; border-top: 0; }
 @media (max-width: 720px) {
-  .guide-card { left: 14px !important; right: 14px; bottom: 14px; top: auto !important; width: auto !important; max-height: 46vh; border-radius: 18px; }
+  .guide-card { max-height: 46vh; border-radius: 18px; }
   .guide-card .tour-title { font-size: 17px; }
   .guide-card .tour-body { font-size: 12px; line-height: 1.65; }
   .guide-card .tour-emoji { font-size: 34px; }

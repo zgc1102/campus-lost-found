@@ -122,15 +122,16 @@ onUnmounted(() => {
   <div v-if="show" class="guide-layer" :class="layerClass">
     <div class="guide-blocker"></div>
     <div class="guide-hole" :style="holeStyle"></div>
-    <GuideCard
-      :slide="guideSteps[index]"
-      :index="index"
-      :total="guideSteps.length"
-      :placement="placement"
-      :style="cardStyle"
-      @next="next"
-      @skip="close"
-    />
+    <div class="guide-card-wrap" :style="cardStyle">
+      <GuideCard
+        :slide="guideSteps[index]"
+        :index="index"
+        :total="guideSteps.length"
+        :placement="placement"
+        @next="next"
+        @skip="close"
+      />
+    </div>
   </div>
 </template>
 
@@ -138,5 +139,6 @@ onUnmounted(() => {
 .guide-layer { position: fixed; inset: 0; z-index: 9998; }
 .guide-blocker { position: absolute; inset: 0; background: transparent; }
 .guide-layer.dim .guide-blocker { background: rgba(7, 3, 12, .72); }
+.guide-card-wrap { position: fixed !important; z-index: 10000; box-sizing: border-box; }
 .guide-hole { position: fixed; z-index: 9999; border-radius: 14px; border: 2px solid #e8cd8e; box-shadow: 0 0 0 9999px rgba(7, 3, 12, .78), 0 0 24px rgba(232, 205, 142, .25); pointer-events: none; transition: left .3s ease, top .3s ease, width .3s ease, height .3s ease; }
 </style>
