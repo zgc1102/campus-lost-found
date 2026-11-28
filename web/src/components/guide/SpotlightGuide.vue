@@ -33,6 +33,7 @@ function centerCard() {
   layerClass.value = 'dim'
   holeStyle.value = { display: 'none' }
   cardStyle.value = {
+    position: 'fixed',
     left: '50%',
     top: '50%',
     transform: 'translate(-50%, -50%)',
@@ -67,6 +68,7 @@ async function place() {
     if (window.innerWidth <= 720) {
       placement.value = 'bottom'
       cardStyle.value = {
+        position: 'fixed',
         left: margin + 'px',
         right: margin + 'px',
         bottom: margin + 'px',
@@ -84,7 +86,7 @@ async function place() {
     const cardHeight = 350
     const top = Math.min(window.innerHeight - cardHeight - margin, Math.max(margin, r.top + r.height / 2 - cardHeight / 2))
     placement.value = left < r.left ? 'right' : 'left'
-    cardStyle.value = { left: left + 'px', top: top + 'px', width: width + 'px', transform: 'none' }
+    cardStyle.value = { position: 'fixed', left: left + 'px', top: top + 'px', width: width + 'px', transform: 'none' }
   }, 380)
 }
 

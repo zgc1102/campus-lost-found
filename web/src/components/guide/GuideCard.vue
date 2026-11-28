@@ -38,7 +38,7 @@ const last = computed(() => props.index >= props.total - 1)
 
 <style scoped>
 .guide-card {
-  position: fixed;
+  position: fixed !important;
   z-index: 10000;
   width: 360px;
   max-width: calc(100vw - 28px);
