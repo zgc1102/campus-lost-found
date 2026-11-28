@@ -789,8 +789,8 @@ function statusClass(s) {
 .admin-header { background: linear-gradient(135deg, #3B1D63, #5B2A91 60%, #7A3CB0); color: #fff; padding: 22px 0 20px; box-shadow: 0 8px 24px rgba(59,29,99,.16); }
 .admin-wrap { width: min(1120px, calc(100% - 48px)); margin: 0 auto; }
 .brand { display: flex; align-items: center; gap: 12px; }
-.brand-mark { width: 42px; height: 42px; border-radius: 13px; background: #241134; border: 1px solid rgba(216,181,106,.5); display: flex; align-items: center; justify-content: center; overflow: hidden; }
-  .brand-mark svg { width: 38px; height: 38px; display: block; }
+.brand-mark { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; overflow: visible; background: transparent; border: 0; }
+  .brand-mark svg { width: 44px; height: 44px; display: block; filter: drop-shadow(0 0 8px rgba(216,181,106,.25)); }
 .brand h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: .03em; }
 .brand p { margin: 5px 0 0; font-size: 11px; color: #D9CCEC; }
 .header-actions { float: right; margin-top: -42px; display: flex; gap: 8px; }
