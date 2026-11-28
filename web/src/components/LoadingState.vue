@@ -29,17 +29,30 @@ onUnmounted(() => clearInterval(timer))
 
 <style scoped>
 .loading-state {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 10px !important;
+  width: fit-content !important;
+  max-width: calc(100% - 24px);
+  margin: 0 auto !important;
   padding: 28px 16px;
   color: #7a6a8d;
   font-size: 12px;
   line-height: 1.5;
+  vertical-align: middle;
 }
-.loading-state.compact { padding: 12px 10px; font-size: 11px; }
+.loading-state .loading-text {
+  flex: 0 0 auto !important;
+  width: auto !important;
+  max-width: calc(100vw - 86px);
+  margin: 0 !important;
+  text-align: left;
+}
+.loading-state.compact { padding: 12px 10px; font-size: 11px; display: inline-flex !important; }
 .loading-spinner {
+  flex: 0 0 auto !important;
+  margin: 0 !important;
   width: 22px;
   height: 22px;
   border: 3px solid #e6d9f4;
