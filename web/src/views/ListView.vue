@@ -393,6 +393,7 @@ async function load() {
     loadError.value = e.message || '加载失败，请稍后重试'
   } finally {
     loading.value = false
+    window.dispatchEvent(new Event('sg:home-ready'))
   }
 }
 

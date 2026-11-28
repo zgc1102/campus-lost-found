@@ -111,6 +111,7 @@ async function load() {
     unread.value = Number(noticeRes?.unread || 0)
   }).catch(() => {})
   await Promise.allSettled([itemTask, annTask, noticeTask])
+  window.dispatchEvent(new Event('sg:home-ready'))
 }
 
 onMounted(load)
