@@ -281,69 +281,46 @@
     <script>
       (function () {
         var story = document.getElementById('story');
-        var loading = document.getElementById('loading');
-        var forceStory = /(?:\?|&)(?:intro|story)=1(?:&|$)/.test(location.search);
         if (!story) return;
-        var appReady = false;
-        var started = false;
-        var timer = null;
-        var index = 0;
+        var loading = document.getElementById('loading');
         var scenes = Array.prototype.slice.call(story.querySelectorAll('.story-scene'));
         var dots = Array.prototype.slice.call(story.querySelectorAll('#story-dots i'));
         var progress = document.getElementById('story-progress');
-        var durations = [3500, 4000, 4200, 4200, 6000];
-        var phraseTimer = null;
-        var phraseIndex = 0;
-        var phrases = [
-          '正在校园里，寻找那些走丢的小东西…',
-          '失物在排队，善意正在赶来的路上…',
-          '正在替每一件失物，找回家的方向…'
-        ];
-        function hideLoading() { if (loading && loading.parentNode) loading.remove(); }
-        function stopPhrases() { if (phraseTimer) { clearInterval(phraseTimer); phraseTimer = null; } }
-        function startPhrases() {
-          stopPhrases();
-          var el = document.getElementById('story-loading-text');
-          if (!el) return;
-          phraseTimer = setInterval(function () {
-            phraseIndex = (phraseIndex + 1) % phrases.length;
-            el.textContent = phrases[phraseIndex];
-          }, 2200);
-        }
-        function closeStory() {
-          if (timer) clearTimeout(timer);
-          stopPhrases();
-          // 应用已经准备好时，等待页一次性收起，避免列表已经出现、雷达/柳叶还残留在上面。
-          story.style.display = 'none';
-          if (story.parentNode) story.remove();
-        }
-        function show(n) {
+        var force = location.search.indexOf('story=1') !== -1 || location.search.indexOf('intro=1') !== -1;
+        var index = 0;
+        var tick = null;
+        var appReady = false;
+
+        function render(n) {
           index = n;
-          scenes.forEach(function (s, i) { s.classList.toggle('on', i === n); });
-          dots.forEach(function (d, i) { d.classList.toggle('on', i === n); });
+          scenes.forEach(function (el, i) { el.classList.toggle('on', i === n); });
+          dots.forEach(function (el, i) { el.classList.toggle('on', i === n); });
           story.setAttribute('data-act', String(n + 1));
-          progress.style.width = ((n + 1) / scenes.length * 100) + '%';
-          if (timer) clearTimeout(timer);
-          stopPhrases();
-          if (n === scenes.length - 1) startPhrases();
-          timer = setTimeout(function () {
-            if (appReady && !forceStory) return;
-            show(n < scenes.length - 1 ? n + 1 : 0);
-          }, durations[n]);
+          if (progress) progress.style.width = ((n + 1) / scenes.length * 100) + '%';
         }
+
         function start() {
-          if (started || appReady) return;
-          started = true;
-          window.__sgWaited = true;
-          hideLoading();
+          if (loading && loading.parentNode) loading.remove();
           story.hidden = false;
-          show(0);
+          render(0);
+          if (tick) clearInterval(tick);
+          // 固定节奏轮播：不依赖单个 setTimeout，页面切换/失焦也不会卡在第一页
+          tick = setInterval(function () {
+            if (!story.isConnected) { clearInterval(tick); return; }
+            if (appReady && !force) return;
+            render((index + 1) % scenes.length);
+          }, 4200);
         }
+
         window.addEventListener('sg:app-ready', function () {
           appReady = true;
-          if (timer && !forceStory) clearTimeout(timer);
-          if (started && !forceStory) closeStory();
+          // 正式流程：应用数据准备好了，等待页一次性收起；调试参数 ?story=1 则继续循环
+          if (!force) {
+            if (tick) clearInterval(tick);
+            story.remove();
+          }
         }, { once: true });
+
         start();
       })();
     </script>
