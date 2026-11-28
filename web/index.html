@@ -311,8 +311,9 @@
         function closeStory() {
           if (timer) clearTimeout(timer);
           stopPhrases();
-          story.classList.add('leaving');
-          setTimeout(function () { if (story.parentNode) story.remove(); }, 500);
+          // 应用已经准备好时，等待页一次性收起，避免列表已经出现、雷达/柳叶还残留在上面。
+          story.style.display = 'none';
+          if (story.parentNode) story.remove();
         }
         function show(n) {
           index = n;
