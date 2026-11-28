@@ -50,7 +50,7 @@
       if (closed) return
       if (step === scenes.length - 1) {
         if (appReady) close()
-        else { toastOn('暂时还没加载成功，请稍等一下…'); show(0) }
+        else { show(0); toastOn('暂时还没加载成功，请稍等一下…') }
       } else {
         show(step + 1)
       }
