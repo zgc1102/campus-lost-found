@@ -114,6 +114,8 @@
         if (admin) { w.remove(); return; }
         document.body.style.overflow = 'hidden';
         var closed = false;
+        var appReady = false;
+        var minShown = false;
         function close() {
           if (closed) return;
           closed = true;
@@ -121,10 +123,15 @@
           w.classList.add('leaving');
           setTimeout(function () { if (w.parentNode) w.parentNode.removeChild(w); }, 500);
         }
+        function maybeClose() {
+          if (minShown && appReady) close();
+        }
+        window.addEventListener('sg:app-ready', function () { appReady = true; maybeClose(); }, { once: true });
         document.getElementById('welcome-enter').addEventListener('click', close);
         document.getElementById('welcome-skip').addEventListener('click', close);
         document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
-        setTimeout(close, 4200);
+        setTimeout(function () { minShown = true; maybeClose(); }, 4200);
+        setTimeout(close, 20000);
       })();
     </script>
   </body>
