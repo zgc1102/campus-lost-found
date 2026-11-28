@@ -37,8 +37,9 @@
       .sg-word span:nth-child(1) { animation-delay: 1.45s; }
       .sg-word span:nth-child(2) { animation-delay: 1.58s; }
       .sg-word span:nth-child(3) { animation-delay: 1.71s; }
-      .sg-tagline { margin-top: 8px; color: rgba(216,181,106,.62); font-size: 7px; letter-spacing: .34em; text-indent: .34em; opacity: 0; animation: tagIn .7s ease 1.95s forwards; }
-      .sg-tagline::before { content: ''; display: inline-block; width: 0; height: 1px; margin-right: 7px; background: rgba(216,181,106,.45); vertical-align: middle; animation: lineIn .7s ease 1.8s forwards; }
+      .sg-tagline { margin-top: 8px; color: rgba(216,181,106,.62); font-size: 7px; letter-spacing: .34em; text-align: center; text-indent: 0; opacity: 0; animation: tagIn .7s ease 1.95s forwards; }
+      .sg-welcome { margin-top: 7px; color: rgba(255,255,255,.58); font-size: 10px; letter-spacing: .14em; text-align: center; text-indent: 0; opacity: 0; animation: welcomeIn .7s ease 2.15s forwards; }
+      .sg-tagline::before { display: none; }
       .loading-spinner { width: 17px; height: 17px; margin: 4px auto 12px; border: 2px solid rgba(232,205,142,.18); border-top-color: #e8cd8e; border-radius: 50%; animation: loadingSpin 1s linear infinite; }
       .loading-card p { margin: 0; color: rgba(255,255,255,.45); font-size: 10px; letter-spacing: .05em; line-height: 1.8; }
       @keyframes loadingSpin { to { transform: rotate(360deg); } }
@@ -52,11 +53,12 @@
       @keyframes dotIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
       @keyframes wordIn { to { opacity: 1; transform: translateY(0); filter: blur(0); } }
       @keyframes tagIn { to { opacity: 1; } }
+      @keyframes welcomeIn { to { opacity: 1; } }
       @keyframes lineIn { to { width: 24px; } }
       @keyframes auraIn { from { opacity: 0; transform: translate(-50%,-50%) scale(.7); } to { opacity: 1; transform: translate(-50%,-50%) scale(1); } }
       @keyframes shineSweep { 0% { opacity: 0; left: 18%; } 20% { opacity: 1; } 100% { opacity: 0; left: 82%; } }
       @media (prefers-reduced-motion: reduce) {
-        .sg-logo-aura, .sg-ring, .sg-hand, .sg-star, .sg-dot, .sg-word span, .sg-tagline, .sg-tagline::before, .sg-shine { animation: none !important; opacity: 1 !important; stroke-dashoffset: 0 !important; transform: none !important; }
+        .sg-logo-aura, .sg-ring, .sg-hand, .sg-star, .sg-dot, .sg-word span, .sg-tagline, .sg-tagline::before, .sg-welcome, .sg-shine { animation: none !important; opacity: 1 !important; stroke-dashoffset: 0 !important; transform: none !important; }
       }
           #story[hidden], #ready-logo[hidden], #loading[hidden] { display: none !important; }
       #ready-logo { position: fixed; inset: 0; z-index: 10001; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 38%, rgba(216,181,106,.16), transparent 34%), linear-gradient(155deg,#12081f,#2b1645 58%,#4b2477); color: #fff; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; }
@@ -132,7 +134,8 @@
 #story .story-chip.c1 { left: 0; top: 34px; } #story .story-chip.c2 { right: 0; top: 58px; } #story .story-chip.c3 { left: 12px; bottom: 30px; } #story .story-chip.c4 { right: 8px; bottom: 22px; }
 #story .story-final { grid-column: 1 / -1; text-align: center; display: flex; flex-direction: column; align-items: center; }
 #story .story-final .big-mark { width: 66px; height: 66px; border: 1px solid rgba(232,205,142,.55); border-radius: 18px; display: grid; place-items: center; color: #e8cd8e; font-size: 29px; margin-bottom: 16px; }
-#story .story-final h2 { margin: 0; color: #e8cd8e; font-size: clamp(34px,5vw,58px); letter-spacing: .08em; }
+#story .story-final-en { margin-top: 7px; color: rgba(216,181,106,.72); font-size: 8px; letter-spacing: .3em; text-indent: .3em; }
+      #story .story-final h2 { margin: 0; color: #e8cd8e; font-size: clamp(34px,5vw,58px); letter-spacing: .08em; }
 #story .story-final p { margin: 12px 0 0; color: rgba(255,255,255,.6); font-size: 11px; line-height: 1.9; }
 #story .story-sponsors { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 20px; }
 #story .story-sponsors span { border: 1px solid rgba(255,255,255,.12); border-radius: 8px; padding: 7px 10px; color: rgba(255,255,255,.55); font-size: 9px; }
@@ -203,7 +206,7 @@
     </style>
   </head>
   <body>
-    <div id="loading" hidden><div class="loading-card"><div class="sg-logo-reveal"><div class="sg-logo-aura"></div><div class="sg-shock"></div><div class="sg-burst"></div><div class="sg-particles"><i></i><i></i><i></i><i></i><i></i><i></i></div><svg class="sg-logo-mark" viewBox="0 0 200 200" aria-hidden="true"><circle class="sg-ring" cx="100" cy="100" r="78"/><path class="sg-hand h1" d="M34 116 C52 178 148 178 166 116"/><path class="sg-hand h2" d="M47 106 C60 158 140 158 153 106"/><path class="sg-hand h3" d="M60 96 C70 138 130 138 140 96"/><path class="sg-star" d="M100 30 L108 70 L148 78 L108 86 L100 126 L92 86 L52 78 L92 70 Z"/><circle class="sg-dot" cx="160" cy="56" r="4"/></svg><span class="sg-shine"></span><div class="sg-word"><span>拾</span><span>光</span><span>里</span></div><div class="sg-tagline">CAMPUS LOST &amp; FOUND</div></div><div class="loading-spinner"></div><p>还没加载好，请耐心等待一下…</p></div></div>
+    <div id="loading" hidden><div class="loading-card"><div class="sg-logo-reveal"><div class="sg-logo-aura"></div><div class="sg-shock"></div><div class="sg-burst"></div><div class="sg-particles"><i></i><i></i><i></i><i></i><i></i><i></i></div><svg class="sg-logo-mark" viewBox="0 0 200 200" aria-hidden="true"><circle class="sg-ring" cx="100" cy="100" r="78"/><path class="sg-hand h1" d="M34 116 C52 178 148 178 166 116"/><path class="sg-hand h2" d="M47 106 C60 158 140 158 153 106"/><path class="sg-hand h3" d="M60 96 C70 138 130 138 140 96"/><path class="sg-star" d="M100 30 L108 70 L148 78 L108 86 L100 126 L92 86 L52 78 L92 70 Z"/><circle class="sg-dot" cx="160" cy="56" r="4"/></svg><span class="sg-shine"></span><div class="sg-word"><span>拾</span><span>光</span><span>里</span></div><div class="sg-tagline">CAMPUS LOST &amp; FOUND</div></div><div class="loading-spinner"></div></div></div>
     <div id="story">
       <div class="story-noise"></div>
       <svg class="story-map" viewBox="0 0 1200 720" fill="none" aria-hidden="true"><path class="road" d="M-20 610 C170 520 280 570 420 500 S700 410 850 450 1120 360 1240 300"/><path class="road" d="M110 720 C180 600 320 620 430 540 S650 440 760 500 1050 500 1120 400"/><rect class="building" x="160" y="170" width="210" height="150" rx="10"/><rect class="building" x="470" y="120" width="170" height="190" rx="10"/><rect class="building" x="740" y="190" width="220" height="140" rx="10"/><rect class="building" x="890" y="430" width="180" height="120" rx="10"/></svg>
@@ -213,7 +216,7 @@
         <section class="story-scene" data-scene="1"><div class="story-copy"><div class="story-kicker">02 / 为什么做拾光里</div><h1>微信群刷屏，朋友圈沉底<br><em>失主和捡到的人，常常错过</em></h1><p>信息散落在太多地方，真正需要它的人反而看不到。<br>公益平台又很难靠人工值班撑起来。</p></div><div class="story-visual"><div class="story-phone"><div class="story-phone-in"><div class="story-phone-head"><i>拾</i>拾光里</div><div class="story-chat them">失主：校园卡掉在六教了</div><div class="story-chat me">同学：在六教捡到一张卡</div><div class="story-chat them">失主：蓝色卡套，有贴纸</div><div class="story-chat me">拾光里：匹配成功，请核对特征</div></div></div></div></section>
         <section class="story-scene" data-scene="2"><div class="story-copy"><div class="story-kicker">03 / 所以我们做了拾光里</div><h1>一个不交易、不收费的<br><em>校园失物招领与爱心互助平台</em></h1><p>把发布、审核、匹配、认领放在同一个地方。<br>让每一份善意，都能找到该去的地方。</p></div><div class="story-visual"><div class="story-match"><div class="story-match-card lost"><small>寻物启事</small><b>校园卡</b><span>六教 3 区 · 蓝色卡套</span></div><svg class="story-match-line" viewBox="0 0 120 110"><path d="M10 95 C20 25 95 20 108 88"/></svg><div class="story-match-badge">匹配成功</div><div class="story-match-card found"><small>招领信息</small><b>一张校园卡</b><span>六教门口 · 有贴纸</span></div></div></div></section>
         <section class="story-scene" data-scene="3"><div class="story-copy"><div class="story-kicker">04 / AI 做辅助</div><h1>AI 先审一遍<br><em>隐私交给你自己</em></h1><p>自动识别风险、匹配相似物品，手机号默认打码。<br>技术负责效率，公益仍然由人完成。</p></div><div class="story-visual"><div class="story-scan"><div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div><div class="core"><b>AI</b><small>审核中</small></div><span class="story-chip c1">相似度 92%</span><span class="story-chip c2">隐私打码</span><span class="story-chip c3">认领核对</span><span class="story-chip c4">拾光码</span></div></div></section>
-        <section class="story-scene" data-scene="4"><div class="story-final"><svg class="final-logo-svg" viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="78" fill="none" stroke="#d8b56a" stroke-width="1.4"/><path d="M34 116 C52 178 148 178 166 116" fill="none" stroke="#d8b56a" stroke-width="2.4" stroke-linecap="round"/><path d="M47 106 C60 158 140 158 153 106" fill="none" stroke="#d8b56a" stroke-width="1.9" stroke-linecap="round"/><path d="M60 96 C70 138 130 138 140 96" fill="none" stroke="#d8b56a" stroke-width="1.5" stroke-linecap="round"/><path d="M100 30 L108 70 L148 78 L108 86 L100 126 L92 86 L52 78 L92 70 Z" fill="#f4deaa"/><circle cx="160" cy="56" r="4" fill="#d8b56a"/></svg><h2>正在进入拾光里</h2><p>正在把走丢的小东西，一件件接回家。<br>加载完成后会自动进入</p><div class="story-sponsors"><span><b>国城控股集团</b> · 服务器与网络支持</span><span><b>中基控股集团</b> · 办公地点支持</span></div><div class="story-loading"><i></i><span id="story-loading-text">正在校园里，寻找那些走丢的小东西…</span></div></div></section>
+        <section class="story-scene" data-scene="4"><div class="story-final"><svg class="final-logo-svg" viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="78" fill="none" stroke="#d8b56a" stroke-width="1.4"/><path d="M34 116 C52 178 148 178 166 116" fill="none" stroke="#d8b56a" stroke-width="2.4" stroke-linecap="round"/><path d="M47 106 C60 158 140 158 153 106" fill="none" stroke="#d8b56a" stroke-width="1.9" stroke-linecap="round"/><path d="M60 96 C70 138 130 138 140 96" fill="none" stroke="#d8b56a" stroke-width="1.5" stroke-linecap="round"/><path d="M100 30 L108 70 L148 78 L108 86 L100 126 L92 86 L52 78 L92 70 Z" fill="#f4deaa"/><circle cx="160" cy="56" r="4" fill="#d8b56a"/></svg><h2>正在进入拾光里</h2><div class="story-final-en">CAMPUS LOST &amp; FOUND</div><p>正在把走丢的小东西，一件件接回家。<br>加载完成后会自动进入</p><div class="story-sponsors"><span><b>国城控股集团</b> · 服务器与网络支持</span><span><b>中基控股集团</b> · 办公地点支持</span></div><div class="story-loading"><i></i><span id="story-loading-text">正在校园里，寻找那些走丢的小东西…</span></div></div></section>
       </div>
       <div class="story-footer"><div class="story-dots" id="story-dots"><i class="on"></i><i></i><i></i><i></i><i></i></div><div class="story-progress"><i id="story-progress"></i></div></div>
     </div>
@@ -224,7 +227,8 @@
         <svg class="sg-logo-mark" viewBox="0 0 200 200" aria-hidden="true"><circle class="sg-ring" cx="100" cy="100" r="78"/><path class="sg-hand h1" d="M34 116 C52 178 148 178 166 116"/><path class="sg-hand h2" d="M47 106 C60 158 140 158 153 106"/><path class="sg-hand h3" d="M60 96 C70 138 130 138 140 96"/><path class="sg-star" d="M100 30 L108 70 L148 78 L108 86 L100 126 L92 86 L52 78 L92 70 Z"/><circle class="sg-dot" cx="160" cy="56" r="4"/></svg>
         <span class="sg-shine"></span>
         <div class="sg-word"><span>拾</span><span>光</span><span>里</span></div>
-        <div class="sg-tagline">欢迎来到拾光里</div>
+        <div class="sg-tagline">CAMPUS LOST &amp; FOUND</div>
+        <div class="sg-welcome">欢迎来到拾光里</div>
       </div>
     </div>
     <div id="app"></div>
@@ -325,8 +329,8 @@
         window.addEventListener('sg:app-ready', function () {
           ready.hidden = false;
           // 等 Logo 动画完整播完，再让应用入场
-          setTimeout(function () { ready.classList.add('leaving'); }, 3400);
-          setTimeout(function () { if (ready.parentNode) ready.remove(); }, 4050);
+          setTimeout(function () { ready.classList.add('leaving'); }, 3000);
+          setTimeout(function () { if (ready.parentNode) ready.remove(); }, 3600);
         }, { once: true });
       })();
     </script>
