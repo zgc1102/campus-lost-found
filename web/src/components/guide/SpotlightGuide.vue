@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { nextTick, onMounted, onUnmounted, ref } from 'vue'
 import GuideCard from './GuideCard.vue'
 import { guideSteps } from './guideSteps'
@@ -78,14 +78,12 @@ async function place() {
       }
       return
     }
-    const gap = 22
-    let left = r.left > window.innerWidth / 2 ? r.left - width - gap : r.right + gap
-    if (left < margin || left + width > window.innerWidth - margin) {
-      left = Math.min(window.innerWidth - width - margin, Math.max(margin, r.left + r.width / 2 - width / 2))
-    }
-    const cardHeight = 350
-    const top = Math.min(window.innerHeight - cardHeight - margin, Math.max(margin, r.top + r.height / 2 - cardHeight / 2))
-    placement.value = left < r.left ? 'right' : 'left'
+    const left = Math.min(window.innerWidth - width - margin, Math.max(margin, r.left + r.width / 2 - width / 2))
+    const cardH = 340
+    let top = r.bottom + 16
+    if (top + cardH > window.innerHeight - margin) top = r.top - cardH - 16
+    top = Math.min(window.innerHeight - cardH - margin, Math.max(margin, top))
+    placement.value = top < r.top ? 'above' : 'below'
     cardStyle.value = { position: 'fixed', left: left + 'px', top: top + 'px', width: width + 'px', transform: 'none' }
   }, 380)
 }

@@ -57,6 +57,8 @@ const last = computed(() => props.index >= props.total - 1)
 .guide-arrow { position: absolute; z-index: -1; width: 14px; height: 14px; background: #fff; border: 1px solid #e2d6f7; }
 .guide-card.arrow-left .guide-arrow { left: -8px; top: 54px; transform: rotate(45deg); border-right: 0; border-top: 0; }
 .guide-card.arrow-right .guide-arrow { right: -8px; top: 54px; transform: rotate(225deg); border-right: 0; border-top: 0; }
+.guide-card.arrow-below .guide-arrow { left: 50%; margin-left: -7px; top: -8px; transform: rotate(45deg); border-right: 0; border-bottom: 0; }
+.guide-card.arrow-above .guide-arrow { left: 50%; margin-left: -7px; bottom: -8px; transform: rotate(225deg); border-left: 0; border-top: 0; }
 @media (max-width: 720px) {
   .guide-card { left: 14px !important; right: 14px; bottom: 14px; top: auto !important; width: auto !important; max-height: 46vh; border-radius: 18px; }
   .guide-card .tour-title { font-size: 17px; }
