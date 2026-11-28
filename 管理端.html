@@ -39,7 +39,7 @@
       .sg-word span:nth-child(3) { animation-delay: 1.71s; }
       .sg-tagline { margin-top: 8px; color: rgba(216,181,106,.62); font-size: 7px; letter-spacing: .34em; text-align: center; text-indent: 0; opacity: 0; animation: tagIn .7s ease 1.95s forwards; }
       .sg-welcome { margin-top: 7px; color: rgba(255,255,255,.58); font-size: 10px; letter-spacing: .14em; text-align: center; text-indent: 0; opacity: 0; animation: welcomeIn .7s ease 2.15s forwards; }
-      .sg-tagline::before { display: none; }
+      .sg-tagline::before { content: '—'; display: inline-block; margin-right: 6px; color: rgba(216,181,106,.55); vertical-align: middle; }
       .loading-spinner { width: 17px; height: 17px; margin: 4px auto 12px; border: 2px solid rgba(232,205,142,.18); border-top-color: #e8cd8e; border-radius: 50%; animation: loadingSpin 1s linear infinite; }
       .loading-card p { margin: 0; color: rgba(255,255,255,.45); font-size: 10px; letter-spacing: .05em; line-height: 1.8; }
       @keyframes loadingSpin { to { transform: rotate(360deg); } }
@@ -331,8 +331,8 @@
         window.addEventListener('sg:app-ready', function () {
           ready.hidden = false;
           // 等 Logo 动画完整播完，再让应用入场
-          setTimeout(function () { ready.classList.add('leaving'); }, 3000);
-          setTimeout(function () { if (ready.parentNode) ready.remove(); }, 3600);
+          setTimeout(function () { ready.classList.add('leaving'); }, 2700);
+          setTimeout(function () { if (ready.parentNode) ready.remove(); }, 3200);
         }, { once: true });
       })();
     </script>
