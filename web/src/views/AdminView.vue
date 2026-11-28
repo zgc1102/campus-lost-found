@@ -484,7 +484,7 @@ function statusClass(s) {
     <header class="admin-header">
       <div class="admin-wrap">
         <div class="brand">
-          <div class="brand-mark">拾</div>
+          <div class="brand-mark"><svg viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="78" fill="none" stroke="#d8b56a" stroke-width="2"/><path d="M34 116 C52 178 148 178 166 116" fill="none" stroke="#d8b56a" stroke-width="3" stroke-linecap="round"/><path d="M47 106 C60 158 140 158 153 106" fill="none" stroke="#d8b56a" stroke-width="2.4" stroke-linecap="round"/><path d="M60 96 C70 138 130 138 140 96" fill="none" stroke="#d8b56a" stroke-width="1.9" stroke-linecap="round"/><path d="M100 30 L108 70 L148 78 L108 86 L100 126 L92 86 L52 78 L92 70 Z" fill="#f4deaa"/><circle cx="160" cy="56" r="4" fill="#d8b56a"/></svg></div>
           <div>
             <h1>管理后台 · 清华校园拾光里</h1>
             <p>仅管理员可见 · 审核发布内容 · 管理公告与用户 · 管理端</p>
@@ -788,7 +788,8 @@ function statusClass(s) {
 .admin-header { background: linear-gradient(135deg, #3B1D63, #5B2A91 60%, #7A3CB0); color: #fff; padding: 22px 0 20px; box-shadow: 0 8px 24px rgba(59,29,99,.16); }
 .admin-wrap { width: min(1120px, calc(100% - 48px)); margin: 0 auto; }
 .brand { display: flex; align-items: center; gap: 12px; }
-.brand-mark { width: 42px; height: 42px; border-radius: 13px; background: rgba(255,255,255,.15); display: flex; align-items: center; justify-content: center; font-size: 19px; font-weight: 700; }
+.brand-mark { width: 42px; height: 42px; border-radius: 13px; background: #241134; border: 1px solid rgba(216,181,106,.5); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .brand-mark svg { width: 38px; height: 38px; display: block; }
 .brand h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: .03em; }
 .brand p { margin: 5px 0 0; font-size: 11px; color: #D9CCEC; }
 .header-actions { float: right; margin-top: -42px; display: flex; gap: 8px; }
