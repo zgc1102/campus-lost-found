@@ -58,7 +58,7 @@
       @media (prefers-reduced-motion: reduce) {
         .sg-logo-aura, .sg-ring, .sg-hand, .sg-star, .sg-dot, .sg-word span, .sg-tagline, .sg-tagline::before, .sg-shine { animation: none !important; opacity: 1 !important; stroke-dashoffset: 0 !important; transform: none !important; }
       }
-          #story[hidden], #ready-logo[hidden] { display: none !important; }
+          #story[hidden], #ready-logo[hidden], #loading[hidden] { display: none !important; }
       #ready-logo { position: fixed; inset: 0; z-index: 10001; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 38%, rgba(216,181,106,.16), transparent 34%), linear-gradient(155deg,#12081f,#2b1645 58%,#4b2477); color: #fff; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; }
       #ready-logo.leaving { opacity: 0; transition: opacity .5s ease; pointer-events: none; }
       #ready-logo .sg-logo-reveal { margin-bottom: 0; }
@@ -203,8 +203,8 @@
     </style>
   </head>
   <body>
-    <div id="loading"><div class="loading-card"><div class="sg-logo-reveal"><div class="sg-logo-aura"></div><div class="sg-shock"></div><div class="sg-burst"></div><div class="sg-particles"><i></i><i></i><i></i><i></i><i></i><i></i></div><svg class="sg-logo-mark" viewBox="0 0 200 200" aria-hidden="true"><circle class="sg-ring" cx="100" cy="100" r="78"/><path class="sg-hand h1" d="M34 116 C52 178 148 178 166 116"/><path class="sg-hand h2" d="M47 106 C60 158 140 158 153 106"/><path class="sg-hand h3" d="M60 96 C70 138 130 138 140 96"/><path class="sg-star" d="M100 30 L108 70 L148 78 L108 86 L100 126 L92 86 L52 78 L92 70 Z"/><circle class="sg-dot" cx="160" cy="56" r="4"/></svg><span class="sg-shine"></span><div class="sg-word"><span>拾</span><span>光</span><span>里</span></div><div class="sg-tagline">CAMPUS LOST &amp; FOUND</div></div><div class="loading-spinner"></div><p>还没加载好，请耐心等待一下…</p></div></div>
-    <div id="story" hidden>
+    <div id="loading" hidden><div class="loading-card"><div class="sg-logo-reveal"><div class="sg-logo-aura"></div><div class="sg-shock"></div><div class="sg-burst"></div><div class="sg-particles"><i></i><i></i><i></i><i></i><i></i><i></i></div><svg class="sg-logo-mark" viewBox="0 0 200 200" aria-hidden="true"><circle class="sg-ring" cx="100" cy="100" r="78"/><path class="sg-hand h1" d="M34 116 C52 178 148 178 166 116"/><path class="sg-hand h2" d="M47 106 C60 158 140 158 153 106"/><path class="sg-hand h3" d="M60 96 C70 138 130 138 140 96"/><path class="sg-star" d="M100 30 L108 70 L148 78 L108 86 L100 126 L92 86 L52 78 L92 70 Z"/><circle class="sg-dot" cx="160" cy="56" r="4"/></svg><span class="sg-shine"></span><div class="sg-word"><span>拾</span><span>光</span><span>里</span></div><div class="sg-tagline">CAMPUS LOST &amp; FOUND</div></div><div class="loading-spinner"></div><p>还没加载好，请耐心等待一下…</p></div></div>
+    <div id="story">
       <div class="story-noise"></div>
       <svg class="story-map" viewBox="0 0 1200 720" fill="none" aria-hidden="true"><path class="road" d="M-20 610 C170 520 280 570 420 500 S700 410 850 450 1120 360 1240 300"/><path class="road" d="M110 720 C180 600 320 620 430 540 S650 440 760 500 1050 500 1120 400"/><rect class="building" x="160" y="170" width="210" height="150" rx="10"/><rect class="building" x="470" y="120" width="170" height="190" rx="10"/><rect class="building" x="740" y="190" width="220" height="140" rx="10"/><rect class="building" x="890" y="430" width="180" height="120" rx="10"/></svg>
       <div class="story-head"><div class="story-brand"><svg class="brand-star" viewBox="0 0 100 100" aria-hidden="true"><path d="M50 6 L56 42 L94 50 L56 58 L50 94 L44 58 L6 50 L44 42 Z" fill="#e8cd8e"/></svg><span class="brand-word">拾光里</span><span class="brand-en">CAMPUS LOST &amp; FOUND</span></div></div>
@@ -315,7 +315,7 @@
           if (timer) clearTimeout(timer);
           if (started) closeStory();
         }, { once: true });
-        setTimeout(function () { if (!appReady) start(); }, 1200);
+        start();
       })();
     </script>
     <script>
@@ -323,7 +323,6 @@
         var ready = document.getElementById('ready-logo');
         if (!ready) return;
         window.addEventListener('sg:app-ready', function () {
-          if (!window.__sgWaited) return;
           ready.hidden = false;
           setTimeout(function () { ready.classList.add('leaving'); }, 2100);
           setTimeout(function () { if (ready.parentNode) ready.remove(); }, 2700);
