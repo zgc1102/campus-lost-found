@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#3B1D63" />
     <title>清华校园拾光里 v3.2.2 · 校园互助服务平台</title>
+    <link rel="stylesheet" href="/web/assets/intro-tour.css?v=1">
     <style>
       html, body { margin: 0; background: #F3EEFA; }
       .boot-shell { min-height: 100vh; display: flex; justify-content: center; background: #F3EEFA; color: #3B1D63; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; }
@@ -82,82 +83,101 @@
   </head>
 
   <body>
-    <div id="intro" role="dialog" aria-label="拾光里介绍">
-      <div class="intro-noise"></div><div class="intro-glow a"></div><div class="intro-glow b"></div>
-      <div class="intro-head"><div class="intro-brand"><div class="intro-mark">拾</div><span>拾光里 · CAMPUS LOST &amp; FOUND</span></div><button class="intro-skip" type="button" id="intro-skip">跳过 ›</button></div>
-      <div class="intro-stage">
-        <section class="intro-scene on" data-scene="0">
-          <div class="intro-kicker">01 / 有些东西会走丢</div>
-          <h1 class="intro-title">校园里，总有些东西<br><em>走着走着就不见了</em></h1>
-          <p class="intro-sub">校园卡、耳机、雨伞、钥匙。<br>它们不应该因为一次疏忽，就永远留在某个角落。</p>
-          <div class="intro-items"><div class="intro-item"><b>🎒</b>书包</div><div class="intro-item"><b>🎧</b>耳机</div><div class="intro-item"><b>🌂</b>雨伞</div><div class="intro-item"><b>🔑</b>钥匙</div></div>
-        </section>
-        <section class="intro-scene" data-scene="1">
-          <div class="intro-kicker">02 / 为什么做拾光里</div>
-          <h1 class="intro-title">微信群刷屏，朋友圈沉底<br><em>失主和捡到的人，常常错过</em></h1>
-          <p class="intro-sub">信息散落在太多地方，真正需要它的人反而看不到。<br>公益平台又很难靠人工值班撑起来。</p>
-          <div class="intro-bubbles"><div class="intro-bubble"><b>失主：</b>“我的校园卡好像掉在六教了……”</div><div class="intro-bubble"><b>捡到的人：</b>“这是谁的耳机？在图书馆捡到的。”</div></div>
-        </section>
-        <section class="intro-scene" data-scene="2">
-          <div class="intro-kicker">03 / 所以我们做了拾光里</div>
-          <h1 class="intro-title">一个不交易、不收费的<br><em>校园失物招领与爱心互助平台</em></h1>
-          <p class="intro-sub">把发布、审核、匹配、认领放在同一个地方。<br>让每一份善意，都能找到该去的地方。</p>
-          <div class="intro-features"><div class="intro-feature"><b>AI 辅助审核</b>自动识别风险，减少人工值守</div><div class="intro-feature"><b>相似物品匹配</b>寻物与招领自动对上</div><div class="intro-feature"><b>认领前核对</b>用独有特征确认归属</div><div class="intro-feature"><b>隐私保护</b>手机号默认打码，通过后才交换</div></div>
-        </section>
-        <section class="intro-scene" data-scene="3">
-          <div class="intro-kicker">04 / 感谢一路相助</div>
-          <h1 class="intro-title">有些善意<br><em>让这件事真正发生</em></h1>
-          <p class="intro-sub">谢谢每一位指导老师、参与测试的同学，<br>也谢谢愿意把捡到的东西交回来的你。</p>
-          <div class="intro-sponsors"><div class="intro-sponsor"><b>国城控股集团</b><span>为本平台提供服务器与网络应用的支持</span></div><div class="intro-sponsor"><b>中基控股集团</b><span>为本平台提供办公地点的支持</span></div></div>
-        </section>
-        <section class="intro-scene" data-scene="4">
-          <div class="intro-kicker">05 / 让失物回家</div>
-          <h1 class="intro-title">让每件失物<br><em>都有回家的路</em></h1>
-          <p class="intro-sub">拾光里，校园公益失物招领与爱心互助平台。<br>不交易，不收费，非清华官方平台。</p>
-          <button class="intro-enter" type="button" id="intro-enter">进入拾光里</button>
-        </section>
-        <div class="intro-dots" id="intro-dots"><i class="on"></i><i></i><i></i><i></i><i></i></div>
+    <div id="intro-tour" data-step="0" role="dialog" aria-label="拾光里使用导览">
+      <div class="tour-noise"></div><div class="tour-glow a"></div><div class="tour-glow b"></div>
+      <div class="tour-head"><div class="tour-brand"><div class="tour-mark">拾</div><span>拾光里 · CAMPUS LOST &amp; FOUND</span></div><button class="tour-skip" type="button" id="tour-skip">跳过导览 ›</button></div>
+      <div class="tour-stage">
+        <div class="tour-device">
+          <div class="tour-viewport">
+            <div class="tour-screen screen-problem on" data-screen="problem">
+              <div class="tour-status"><span>9:41</span><span>拾光里</span></div>
+              <div class="tour-content" style="justify-content:center;gap:12px;position:relative;">
+                <div style="text-align:center;margin-bottom:8px;"><div style="font-size:9px;color:#b08a3e;letter-spacing:.22em;">有些东西会走丢</div><div style="font-size:20px;font-weight:700;color:#4b2d6b;line-height:1.4;margin-top:6px;">校园卡、耳机、雨伞<br>它们也会找不到主人</div></div>
+                <div class="problem-card" data-target="problem" style="align-self:flex-start;width:70%;background:#fff;border:1px solid #ede3f8;border-radius:11px;padding:10px;box-shadow:0 6px 16px rgba(91,42,145,.08);"><div style="display:flex;gap:8px;align-items:center;"><div style="width:26px;height:26px;border-radius:8px;background:#f1e8fb;display:grid;place-items:center;color:#5b2a91;font-size:11px;">卡</div><div><b style="display:block;font-size:9px;color:#5b2a91;">校园卡 · 六教</b><span style="font-size:7px;color:#9b8aac;">蓝色卡套，有贴纸</span></div></div></div>
+                <div style="align-self:flex-end;width:62%;background:#fff;border:1px solid #ede3f8;border-radius:11px;padding:10px;box-shadow:0 6px 16px rgba(91,42,145,.08);"><b style="display:block;font-size:8px;color:#4b2d6b;">耳机 · 图书馆</b><span style="font-size:7px;color:#9b8aac;">黑色，耳罩有一点磨损</span></div>
+                <div style="align-self:flex-start;width:56%;background:#fff;border:1px solid #ede3f8;border-radius:11px;padding:10px;box-shadow:0 6px 16px rgba(91,42,145,.08);"><b style="display:block;font-size:8px;color:#4b2d6b;">雨伞 · 食堂</b><span style="font-size:7px;color:#9b8aac;">深蓝色折叠伞</span></div>
+              </div>
+            </div>
+
+            <div class="tour-screen screen-home" data-screen="home">
+              <div class="tour-status"><span>9:41</span><span>拾光里</span></div>
+              <div class="tour-ticker">校园失物招领 · 爱心互助 · 拾光码官方校验</div>
+              <div class="tour-topbar"><i>⌕</i><b>清华校园拾光里<small style="font-size:7px;opacity:.6"> v3.2.2</small></b><i>?</i><i>🔔</i><i>○</i></div>
+              <div class="tour-content">
+                <div class="mini-ann"><div class="ic">📌</div><div><b>公告通知 · 左右滑动</b><span>失物招领点调整通知</span></div></div>
+                <div class="entry-grid"><div class="entry-card"><div class="dot"></div><b>失物招领</b><span>捡到的东西</span></div><div class="entry-card"><div class="dot"></div><b>寻物启事</b><span>丢了的东西</span></div><div class="entry-card"><div class="dot"></div><b>爱心 · 求助</b><span>借伞 · 充电宝</span></div><div class="entry-card"><div class="dot"></div><b>拾光码</b><span>给失物一张身份证</span></div></div>
+                <div class="publish-btn" data-target="publish">＋ 发布一条失物 / 招领</div>
+              </div>
+            </div>
+
+            <div class="tour-screen screen-publish" data-screen="publish">
+              <div class="tour-status"><span>9:41</span><span>发布</span></div>
+              <div class="tour-topbar"><i>‹</i><b>发布寻物启事</b><i>·</i></div>
+              <div class="tour-content">
+                <div class="form-card">
+                  <div class="line">标题：校园卡丢失</div>
+                  <div class="line">地点：六教 3 区</div>
+                  <div class="line area">描述：蓝色卡套，背面有一张贴纸……</div>
+                  <div class="upload">＋ 上传一张照片</div>
+                  <div class="feature-row" data-target="feature"><span class="tag">独有特征</span><span style="font-size:7px;color:#9b8aac;">只有失主知道的细节</span></div>
+                </div>
+                <div style="font-size:7px;color:#9b8aac;text-align:center;line-height:1.7;">写清地点、时间、颜色和独有特征<br>更容易被正确的人看到</div>
+              </div>
+            </div>
+
+            <div class="tour-screen screen-ai" data-screen="ai">
+              <div class="tour-status"><span>9:41</span><span>智能审核</span></div>
+              <div class="tour-topbar"><i>‹</i><b>拾光里 · 智能审核</b><i>·</i></div>
+              <div class="tour-content">
+                <div class="ai-panel" data-target="ai"><div class="ai-head"><span class="orb-small"></span>AI 正在读这条信息</div><div class="ai-bar"><i></i></div><div class="ai-note">检查是否属于校园失物招领范围，识别广告、诈骗和隐私风险。</div><div class="ai-ok">✓ 信息清晰，已通过，准备上架</div></div>
+                <div style="font-size:7px;color:#9b8aac;text-align:center;line-height:1.7;">AI 先审一遍<br>没有问题的内容几秒内就能被看见</div>
+              </div>
+            </div>
+
+            <div class="tour-screen screen-match" data-screen="match">
+              <div class="tour-status"><span>9:41</span><span>智能匹配</span></div>
+              <div class="tour-topbar"><i>‹</i><b>发现相似物品</b><i>·</i></div>
+              <div class="tour-content">
+                <div class="match-pair" data-target="match">
+                  <div class="match-box"><b>寻物：校园卡</b><span>六教 3 区 · 蓝色卡套</span></div>
+                  <div class="match-join">匹配成功</div>
+                  <div class="match-box" style="border-color:#e8cd8e;"><b>招领：一张校园卡</b><span>六教门口 · 有贴纸</span></div>
+                </div>
+                <div style="font-size:7px;color:#9b8aac;text-align:center;line-height:1.7;">系统会把相似的寻物和招领放在一起<br>不用自己一页页翻</div>
+              </div>
+            </div>
+
+            <div class="tour-screen screen-claim" data-screen="claim">
+              <div class="tour-status"><span>9:41</span><span>认领核对</span></div>
+              <div class="tour-topbar"><i>‹</i><b>认领前核对</b><i>·</i></div>
+              <div class="tour-content">
+                <div class="claim-card" data-target="claim"><h4>请填写只有失主知道的特征</h4><div class="field">例如：卡套背面是什么贴纸？</div><div class="field">例如：卡套里还放了什么？</div><div class="privacy" data-target="privacy">🔒 手机号默认打码，核对通过后才交换</div></div>
+                <div style="font-size:7px;color:#9b8aac;text-align:center;line-height:1.7;">不是谁先点认领就归谁<br>答对独有特征，才进入下一步</div>
+              </div>
+            </div>
+
+            <div class="tour-screen screen-final" data-screen="final">
+              <div class="tour-status"><span>9:41</span><span>拾光里</span></div>
+              <div class="final-card" data-target="final"><div class="big-mark">拾</div><h3>拾光里</h3><p>让每件失物，都有回家的路。<br>校园公益 · 不交易 · 不收费</p><div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:center;margin-top:2px;"><span style="border:1px solid #e8cd8e55;border-radius:5px;padding:4px 6px;color:#8a6aa8;font-size:6px;">国城控股集团 · 服务器与网络</span><span style="border:1px solid #e8cd8e55;border-radius:5px;padding:4px 6px;color:#8a6aa8;font-size:6px;">中基控股集团 · 办公地点</span></div><button type="button" id="tour-enter" style="border:0;border-radius:99px;background:linear-gradient(100deg,#c8a96a,#f3dfac,#c8a96a);color:#2b1645;padding:8px 18px;font:inherit;font-size:9px;font-weight:700;margin-top:5px;">进入拾光里 →</button></div>
+            </div>
+
+            <div class="tour-ring" id="tour-ring"></div>
+            <div class="tour-cursor" id="tour-cursor"><svg viewBox="0 0 30 34" fill="none"><path d="M4 3.5 25.5 17 15 19.2 11 30 4 3.5Z" fill="#fff" stroke="#2b1645" stroke-width="1.4"/></svg></div>
+            <div class="tour-ai" id="tour-ai">AI</div>
+          </div>
+        </div>
+
+        <div class="tour-callout on" id="tour-callout">
+          <div class="step-no" id="tour-stepno">01 / 07</div>
+          <h3 id="tour-title">东西丢了，先别急</h3>
+          <p id="tour-text">拾光里会把寻物和招领放在同一个地方，让捡到的人更容易找到失主。</p>
+          <div class="tour-tip" id="tour-tip">点击“下一步”，跟着光标看一遍。</div>
+        </div>
       </div>
-      <div class="intro-foot">拾光里 · 校园公益项目 · 感谢每一次归还</div>
+      <div class="tour-footer"><div class="tour-progress"><i id="tour-progress"></i></div><span class="tour-count" id="tour-count">1 / 7</span><div class="tour-actions"><button type="button" id="tour-prev">上一步</button><button type="button" class="primary" id="tour-next">下一步</button></div></div>
     </div>
     <div id="app"></div>
-    <script>
-      (function () {
-        var intro = document.getElementById('intro');
-        if (!intro) return;
-        var force = new URLSearchParams(location.search).get('intro') === '1';
-        var admin = location.pathname.replace(/\/+$/, '') === '/admin';
-        var seen = false;
-        try { seen = localStorage.getItem('sg:intro:css:v1') === '1'; } catch (e) {}
-        if (admin || (!force && seen)) { intro.parentNode.removeChild(intro); return; }
-        document.body.style.overflow = 'hidden';
-        var scenes = Array.prototype.slice.call(intro.querySelectorAll('.intro-scene'));
-        var dots = Array.prototype.slice.call(intro.querySelectorAll('#intro-dots i'));
-        var index = 0, timer = null, closed = false;
-        function show(n) {
-          index = n;
-          scenes.forEach(function (s, i) { s.classList.toggle('on', i === n); });
-          dots.forEach(function (d, i) { d.classList.toggle('on', i === n); });
-        }
-        function close() {
-          if (closed) return;
-          closed = true;
-          clearTimeout(timer);
-          try { localStorage.setItem('sg:intro:css:v1', '1'); } catch (e) {}
-          document.body.style.overflow = '';
-          intro.classList.add('is-leaving');
-          setTimeout(function () { if (intro.parentNode) intro.parentNode.removeChild(intro); }, 600);
-        }
-        function next() {
-          if (index < scenes.length - 1) { show(index + 1); timer = setTimeout(next, index === 3 ? 3600 : 2400); }
-          else { timer = setTimeout(close, 2800); }
-        }
-        document.getElementById('intro-skip').addEventListener('click', close);
-        document.getElementById('intro-enter').addEventListener('click', close);
-        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
-        timer = setTimeout(next, 2400);
-      })();
-    </script>
+    <script src="/web/assets/intro-tour.js?v=1" defer></script>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
