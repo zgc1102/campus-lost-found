@@ -34,7 +34,8 @@ export const guideSteps = [
     e: '🧩',
     t: '智能匹配与 AI 对比',
     b: '发布后系统会自动配对相似招领 / 寻物，并在铃铛里提醒。\n打开任意物品，还能点「与我发布的进行 AI 对比」，看颜色、地点和特征是否对得上。',
-    target: ''
+    target: '',
+    compareDemo: true
   },
   {
     e: '🕵️',

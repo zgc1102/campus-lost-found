@@ -7,7 +7,7 @@ const props = defineProps({
   total: { type: Number, required: true },
   placement: { type: String, default: 'center' }
 })
-const emit = defineEmits(['next', 'skip'])
+const emit = defineEmits(['next', 'skip', 'demo'])
 
 const progress = computed(() => ((props.index + 1) / props.total * 100) + '%')
 const last = computed(() => props.index >= props.total - 1)
@@ -23,6 +23,7 @@ const last = computed(() => props.index >= props.total - 1)
     </div>
     <div class="tour-title">{{ slide.t }}</div>
     <div class="tour-body">{{ slide.b }}</div>
+    <button v-if="slide.compareDemo" type="button" class="guide-demo-link" @click="emit('demo')">看看 AI 对比示例 →</button>
     <div class="tour-dots">
       <i v-for="i in total" :key="i" :class="{ on: i - 1 === index }"></i>
     </div>

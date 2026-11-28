@@ -1,6 +1,7 @@
 ﻿<script setup>
 import { nextTick, onMounted, onUnmounted, ref } from 'vue'
 import GuideCard from './GuideCard.vue'
+import AiCompareDemo from './AiCompareDemo.vue'
 import { guideSteps } from './guideSteps'
 
 const KEY = 'sg:tour:v6'
@@ -11,6 +12,7 @@ const cardStyle = ref({})
 const placement = ref('center')
 const layerClass = ref('')
 const cardReady = ref(false)
+const demoOpen = ref(false)
 
 function isFirstVisit() {
   if (location.search.includes('tour=off')) return false
@@ -124,9 +126,11 @@ onUnmounted(() => {
         :placement="placement"
         @next="next"
         @skip="close"
+        @demo="demoOpen = true"
       />
     </div>
     </div>
+    <AiCompareDemo v-if="demoOpen" @close="demoOpen = false" />
   </Teleport>
 </template>
 
