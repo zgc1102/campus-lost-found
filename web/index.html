@@ -59,7 +59,10 @@
       @media (prefers-reduced-motion: reduce) {
         .sg-logo-aura, .sg-ring, .sg-hand, .sg-star, .sg-dot, .sg-word span, .sg-tagline, .sg-tagline::before, .sg-shine { animation: none !important; opacity: 1 !important; stroke-dashoffset: 0 !important; transform: none !important; }
       }
-          #story[hidden] { display: none !important; }
+          #story[hidden], #ready-logo[hidden] { display: none !important; }
+      #ready-logo { position: fixed; inset: 0; z-index: 10001; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 38%, rgba(216,181,106,.16), transparent 34%), linear-gradient(155deg,#12081f,#2b1645 58%,#4b2477); color: #fff; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; }
+      #ready-logo.leaving { opacity: 0; transition: opacity .5s ease; pointer-events: none; }
+      #ready-logo .sg-logo-reveal { margin-bottom: 0; }
       .story-loading { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 14px; color: #7a6a8d; font-size: 10px; }
       .story-loading i { width: 14px; height: 14px; border: 2px solid #e6d9f4; border-top-color: #5b2a91; border-radius: 50%; animation: loadingSpin .8s linear infinite; }
           #story .story-mark { width: 30px; height: 30px; object-fit: contain; border: 0; background: transparent; }
@@ -80,6 +83,16 @@
         <section class="story-scene" data-scene="4"><div class="story-final"><img class="big-mark" src="/web/assets/logo-shiguangli.png" alt="拾光里"><h2>正在进入拾光里</h2><p>正在把走丢的小东西，一件件接回家。<br>加载完成后会自动进入</p><div class="story-sponsors"><span><b>国城控股集团</b> · 服务器与网络支持</span><span><b>中基控股集团</b> · 办公地点支持</span></div><div class="story-loading"><i></i><span id="story-loading-text">正在校园里，寻找那些走丢的小东西…</span></div></div></section>
       </div>
       <div class="story-footer"><div class="story-dots" id="story-dots"><i class="on"></i><i></i><i></i><i></i><i></i></div><div class="story-progress"><i id="story-progress"></i></div></div>
+    </div>
+    <div id="ready-logo" hidden>
+      <div class="sg-logo-reveal">
+        <div class="sg-logo-aura"></div><div class="sg-shock"></div><div class="sg-burst"></div>
+        <div class="sg-particles"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <svg class="sg-logo-mark" viewBox="0 0 200 200" aria-hidden="true"><circle class="sg-ring" cx="100" cy="100" r="78"/><path class="sg-hand h1" d="M34 116 C52 178 148 178 166 116"/><path class="sg-hand h2" d="M47 106 C60 158 140 158 153 106"/><path class="sg-hand h3" d="M60 96 C70 138 130 138 140 96"/><path class="sg-star" d="M100 30 L108 70 L148 78 L108 86 L100 126 L92 86 L52 78 L92 70 Z"/><circle class="sg-dot" cx="160" cy="56" r="4"/></svg>
+        <span class="sg-shine"></span>
+        <div class="sg-word"><span>拾</span><span>光</span><span>里</span></div>
+        <div class="sg-tagline">欢迎来到拾光里</div>
+      </div>
     </div>
     <div id="app"></div>
     <script>
@@ -159,6 +172,7 @@
         function start() {
           if (started || appReady) return;
           started = true;
+          window.__sgWaited = true;
           hideLoading();
           story.hidden = false;
           show(0);
@@ -169,6 +183,18 @@
           if (started) closeStory();
         }, { once: true });
         setTimeout(function () { if (!appReady) start(); }, 1200);
+      })();
+    </script>
+    <script>
+      (function () {
+        var ready = document.getElementById('ready-logo');
+        if (!ready) return;
+        window.addEventListener('sg:app-ready', function () {
+          if (!window.__sgWaited) return;
+          ready.hidden = false;
+          setTimeout(function () { ready.classList.add('leaving'); }, 2100);
+          setTimeout(function () { if (ready.parentNode) ready.remove(); }, 2700);
+        }, { once: true });
       })();
     </script>
     <script type="module" src="/src/main.js"></script>
