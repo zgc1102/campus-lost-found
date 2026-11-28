@@ -62,7 +62,7 @@ async function place() {
       width: Math.max(18, r.width + pad * 2) + 'px',
       height: Math.max(18, r.height + pad * 2) + 'px'
     }
-    layerClass.value = 'spot'
+    layerClass.value = 'is-spot'
     const margin = 16
     const width = Math.min(360, window.innerWidth - margin * 2)
     if (window.innerWidth <= 720) {
