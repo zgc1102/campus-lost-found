@@ -24,7 +24,7 @@ import PhonesView from './views/PhonesView.vue'
 import InfoView from './views/InfoView.vue'
 import AdminView from './views/AdminView.vue'
 import BottomNav from './components/BottomNav.vue'
-import TourOverlay from './components/TourOverlay.vue'
+import SpotlightGuide from './components/guide/SpotlightGuide.vue'
 
 const params = new URLSearchParams(location.search)
 const initial = params.get('view')
@@ -190,7 +190,7 @@ function editItem(item) {
     <PhonesView v-else-if="view === 'phones'" @nav="go" />
       </div>
     </Transition>
-    <TourOverlay v-if="view !== 'tag-scan'" />
+    <SpotlightGuide v-if="view !== 'tag-scan'" />
     <BottomNav v-if="view !== 'map' && view !== 'ask' && view !== 'tag-scan'" :active="view === 'publish' ? (publishType === 'help' ? 'help' : publishType) : view" @nav="go" />
   </div>
 </template>
