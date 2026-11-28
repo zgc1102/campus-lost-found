@@ -243,6 +243,18 @@
         #story .story-dots i { width: 22px !important; }
         #story .story-dots { gap: 6px !important; }
       }
+
+      /* 移动端兜底：即使 JS 定时器被 WebView 节流，页面本身也按 21 秒一轮自动切换 */
+      #story .story-scene { animation: storyAutoCycle 21s linear infinite both !important; }
+      #story .story-scene:nth-child(1) { animation-delay: 0s !important; }
+      #story .story-scene:nth-child(2) { animation-delay: 4.2s !important; }
+      #story .story-scene:nth-child(3) { animation-delay: 8.4s !important; }
+      #story .story-scene:nth-child(4) { animation-delay: 12.6s !important; }
+      #story .story-scene:nth-child(5) { animation-delay: 16.8s !important; }
+      @keyframes storyAutoCycle {
+        0%, 19.9% { opacity: 1; visibility: visible; }
+        20%, 100% { opacity: 0; visibility: hidden; }
+      }
     </style>
   </head>
   <body>
