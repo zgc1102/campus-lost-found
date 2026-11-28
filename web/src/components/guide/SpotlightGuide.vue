@@ -64,24 +64,12 @@ async function place() {
     }
     layerClass.value = 'is-spot'
     const margin = 16
-    const width = Math.min(360, window.innerWidth - margin * 2)
-    if (window.innerWidth <= 720) {
-      placement.value = 'bottom'
-      cardStyle.value = {
-        position: 'fixed',
-        left: margin + 'px',
-        right: margin + 'px',
-        bottom: margin + 'px',
-        top: 'auto',
-        width: 'auto',
-        transform: 'none'
-      }
-      return
-    }
-    const left = Math.min(window.innerWidth - width - margin, Math.max(margin, r.left + r.width / 2 - width / 2))
-    const cardH = 340
-    let top = r.bottom + 16
-    if (top + cardH > window.innerHeight - margin) top = r.top - cardH - 16
+    const mobile = window.innerWidth <= 720
+    const width = mobile ? window.innerWidth - margin * 2 : Math.min(360, window.innerWidth - margin * 2)
+    const left = mobile ? margin : Math.min(window.innerWidth - width - margin, Math.max(margin, r.left + r.width / 2 - width / 2))
+    const cardH = Math.min(340, window.innerHeight * 0.46)
+    let top = r.bottom + 14
+    if (top + cardH > window.innerHeight - margin) top = r.top - cardH - 14
     top = Math.min(window.innerHeight - cardH - margin, Math.max(margin, top))
     placement.value = top < r.top ? 'above' : 'below'
     cardStyle.value = { position: 'fixed', left: left + 'px', top: top + 'px', width: width + 'px', transform: 'none' }
