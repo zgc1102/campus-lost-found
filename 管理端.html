@@ -222,6 +222,8 @@
       #story .brand-logo { width: 48px !important; height: 48px !important; }
       #story .brand-logo circle { stroke-width: 4.5 !important; }
       #story .brand-logo path[stroke] { stroke-width: 5 !important; }
+      #story .story-map .building { display: none !important; }
+      #story .story-map { opacity: .18 !important; }
     </style>
     <script type="module" crossorigin src="/web/assets/index-BJ8toQ1k.js"></script>
     <link rel="stylesheet" crossorigin href="/web/assets/index-BcvFGIem.css">
@@ -338,7 +340,7 @@
         }
         window.addEventListener('sg:app-ready', function () {
           appReady = true;
-          if (timer) clearTimeout(timer);
+          if (timer && !forceStory) clearTimeout(timer);
           if (started && !forceStory) closeStory();
         }, { once: true });
         start();
