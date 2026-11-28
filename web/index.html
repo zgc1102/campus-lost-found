@@ -230,6 +230,19 @@
       #story .story-visual::before, #story .story-visual::after { content: ''; position: absolute; width: 44px; height: 44px; pointer-events: none; opacity: .55; }
       #story .story-visual::before { left: 0; top: 8%; border-left: 1px solid rgba(216,181,106,.35); border-top: 1px solid rgba(216,181,106,.35); }
       #story .story-visual::after { right: 0; bottom: 8%; border-right: 1px solid rgba(216,181,106,.35); border-bottom: 1px solid rgba(216,181,106,.35); }
+
+      /* 左下角 5 段进度：当前段从 0 长到 100%，到点后切到下一段 */
+      #story .story-dots { gap: 7px !important; align-items: center !important; }
+      #story .story-dots i { position: relative !important; display: block !important; width: 34px !important; height: 3px !important; border-radius: 99px !important; background: rgba(255,255,255,.18) !important; overflow: hidden !important; transition: none !important; }
+      #story .story-dots i::after { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: 99px; background: linear-gradient(90deg,#c8a96a,#f4deaa); }
+      #story .story-dots i.done::after { width: 100%; }
+      #story .story-dots i.on::after { animation: storyDotFill 4.2s linear forwards; }
+      #story .story-progress { display: none !important; }
+      @keyframes storyDotFill { from { width: 0; } to { width: 100%; } }
+      @media (max-width: 620px) {
+        #story .story-dots i { width: 22px !important; }
+        #story .story-dots { gap: 6px !important; }
+      }
     </style>
   </head>
   <body>
@@ -298,7 +311,7 @@
         function render(n) {
           index = n;
           scenes.forEach(function (el, i) { el.classList.toggle('on', i === n); });
-          dots.forEach(function (el, i) { el.classList.toggle('on', i === n); });
+          dots.forEach(function (el, i) { el.classList.toggle('on', i === n); el.classList.toggle('done', i < n); });
           story.setAttribute('data-act', String(n + 1));
           if (progress) progress.style.width = ((n + 1) / scenes.length * 100) + '%';
         }
