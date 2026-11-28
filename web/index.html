@@ -213,6 +213,15 @@
       @keyframes flDraw { to { stroke-dashoffset: 0; } }
       @keyframes flStar { 0% { opacity: 0; transform: scale(.2) rotate(-30deg); } 65% { opacity: 1; transform: scale(1.1) rotate(3deg); } 100% { opacity: 1; transform: scale(1) rotate(0); } }
       @keyframes flDot { to { opacity: 1; } }
+
+      /* 雷达页去掉任何方块底板/方形遮罩，只保留圆环、光束和文字 */
+      #story .story-visual, #story .story-scan { background: transparent !important; border: 0 !important; box-shadow: none !important; }
+      #story .story-scan::before, #story .story-scan::after { display: none !important; }
+      #story .story-chip { background: transparent !important; border: 0 !important; padding: 2px 0 !important; color: rgba(255,255,255,.62) !important; }
+      #story .story-visual .story-item, #story .story-match-card { background: rgba(255,255,255,.035) !important; box-shadow: none !important; }
+      #story .brand-logo { width: 48px !important; height: 48px !important; }
+      #story .brand-logo circle { stroke-width: 4.5 !important; }
+      #story .brand-logo path[stroke] { stroke-width: 5 !important; }
     </style>
   </head>
   <body>
