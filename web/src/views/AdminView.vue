@@ -1,6 +1,7 @@
 ﻿<script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { api } from '../api'
+import LoadingState from '../components/LoadingState.vue'
 
 const TOKEN_KEY = 'sg:admin:token'
 const token = ref(sessionStorage.getItem(TOKEN_KEY) || '')
@@ -540,7 +541,7 @@ function statusClass(s) {
           <div class="admin-tabs">
             <button v-for="[id, name] in tabs" :key="id" type="button" :class="{ on: tab === id }" @click="selectTab(id)">{{ name }}<span v-if="id === 'reports'" class="tab-count">{{ reportTotal }}</span></button>
           </div>
-          <div v-if="tabLoading" class="admin-loading"><span class="spinner"></span><span>{{ loadingPhrase }}</span></div>
+          <LoadingState v-if="tabLoading" :text="loadingPhrase" />
 
           <details v-if="tab === 'reports'" class="panel">
     <summary class="panel-summary"><h3>举报记录 <span class="panel-count">{{ reports.length }}</span></h3></summary>
@@ -705,7 +706,7 @@ function statusClass(s) {
               <input v-model="search" placeholder="搜索标题 / 地点 / 描述">
               <span>{{ filteredItems.length }} 条</span>
             </div>
-            <div v-if="loading" class="admin-loading"><span class="spinner"></span><span>{{ loadingPhrase }}</span></div>
+            <LoadingState v-if="loading" :text="loadingPhrase" />
             <div v-else-if="!filteredItems.length" class="empty">暂无内容</div>
             <div v-else class="item-list">
               <article v-for="it in pagedItems" :key="it.id" class="admin-item">
