@@ -12,7 +12,7 @@
       #loading { position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 35%, rgba(200,169,106,.14), transparent 34%), linear-gradient(155deg,#140a22,#2b1645 58%,#4b2477); color: #fff; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; transition: opacity .35s ease; }
       #loading.leaving { opacity: 0; pointer-events: none; }
       .loading-card { text-align: center; padding: 28px; }
-      .loading-mark { width: 56px; height: 56px; margin: 0 auto 14px; border: 1px solid rgba(232,205,142,.55); border-radius: 16px; display: grid; place-items: center; color: #e8cd8e; font-size: 27px; }
+      .loading-mark { width: 58px; height: 58px; margin: 0 auto 14px; display: block; object-fit: contain; }
       .loading-spinner { width: 24px; height: 24px; margin: 0 auto 13px; border: 3px solid rgba(232,205,142,.25); border-top-color: #e8cd8e; border-radius: 50%; animation: loadingSpin .8s linear infinite; }
       .loading-card h1 { margin: 0; color: #e8cd8e; font-size: 18px; font-weight: 600; letter-spacing: .12em; }
       .loading-card p { margin: 9px 0 0; color: rgba(255,255,255,.55); font-size: 11px; line-height: 1.8; }
@@ -20,22 +20,24 @@
           #story[hidden] { display: none !important; }
       .story-loading { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 14px; color: #7a6a8d; font-size: 10px; }
       .story-loading i { width: 14px; height: 14px; border: 2px solid #e6d9f4; border-top-color: #5b2a91; border-radius: 50%; animation: loadingSpin .8s linear infinite; }
+          #story .story-mark { width: 30px; height: 30px; object-fit: contain; border: 0; background: transparent; }
+      #story .big-mark { width: 76px; height: 76px; object-fit: contain; border: 0; background: transparent; }
     </style>
     <script type="module" crossorigin src="/web/assets/index-B0OhziCN.js"></script>
     <link rel="stylesheet" crossorigin href="/web/assets/index-BIacKRbs.css">
   </head>
   <body>
-    <div id="loading"><div class="loading-card"><div class="loading-mark">拾</div><div class="loading-spinner"></div><h1>拾光里</h1><p>还没加载好，请耐心等待一下…</p></div></div>
+    <div id="loading"><div class="loading-card"><img class="loading-mark" src="/web/assets/logo-shiguangli.png" alt="拾光里"><div class="loading-spinner"></div><h1>拾光里</h1><p>还没加载好，请耐心等待一下…</p></div></div>
     <div id="story" hidden>
       <div class="story-noise"></div>
       <svg class="story-map" viewBox="0 0 1200 720" fill="none" aria-hidden="true"><path class="road" d="M-20 610 C170 520 280 570 420 500 S700 410 850 450 1120 360 1240 300"/><path class="road" d="M110 720 C180 600 320 620 430 540 S650 440 760 500 1050 500 1120 400"/><rect class="building" x="160" y="170" width="210" height="150" rx="10"/><rect class="building" x="470" y="120" width="170" height="190" rx="10"/><rect class="building" x="740" y="190" width="220" height="140" rx="10"/><rect class="building" x="890" y="430" width="180" height="120" rx="10"/></svg>
-      <div class="story-head"><div class="story-brand"><div class="story-mark">拾</div><span>拾光里 · CAMPUS LOST &amp; FOUND</span></div></div>
+      <div class="story-head"><div class="story-brand"><img class="story-mark" src="/web/assets/logo-shiguangli.png" alt="拾光里"><span>拾光里 · CAMPUS LOST &amp; FOUND</span></div></div>
       <div class="story-stage">
         <section class="story-scene on" data-scene="0"><div class="story-copy"><div class="story-kicker">01 / 有些东西会走丢</div><h1>校园里，总有些东西<br><em>走着走着就不见了</em></h1><p>校园卡、耳机、雨伞、钥匙。<br>它们不应该因为一次疏忽，就永远留在某个角落。</p></div><div class="story-visual"><div class="story-item"><b>卡</b><span>校园卡 · 六教</span></div><div class="story-item"><b>耳</b><span>耳机 · 图书馆</span></div><div class="story-item"><b>伞</b><span>雨伞 · 食堂</span></div><div class="story-item"><b>钥</b><span>钥匙 · 宿舍</span></div></div></section>
         <section class="story-scene" data-scene="1"><div class="story-copy"><div class="story-kicker">02 / 为什么做拾光里</div><h1>微信群刷屏，朋友圈沉底<br><em>失主和捡到的人，常常错过</em></h1><p>信息散落在太多地方，真正需要它的人反而看不到。<br>公益平台又很难靠人工值班撑起来。</p></div><div class="story-visual"><div class="story-phone"><div class="story-phone-in"><div class="story-phone-head"><i>拾</i>拾光里</div><div class="story-chat them">失主：校园卡掉在六教了</div><div class="story-chat me">同学：在六教捡到一张卡</div><div class="story-chat them">失主：蓝色卡套，有贴纸</div><div class="story-chat me">拾光里：匹配成功，请核对特征</div></div></div></div></section>
         <section class="story-scene" data-scene="2"><div class="story-copy"><div class="story-kicker">03 / 所以我们做了拾光里</div><h1>一个不交易、不收费的<br><em>校园失物招领与爱心互助平台</em></h1><p>把发布、审核、匹配、认领放在同一个地方。<br>让每一份善意，都能找到该去的地方。</p></div><div class="story-visual"><div class="story-match"><div class="story-match-card lost"><small>寻物启事</small><b>校园卡</b><span>六教 3 区 · 蓝色卡套</span></div><svg class="story-match-line" viewBox="0 0 120 110"><path d="M10 95 C20 25 95 20 108 88"/></svg><div class="story-match-badge">匹配成功</div><div class="story-match-card found"><small>招领信息</small><b>一张校园卡</b><span>六教门口 · 有贴纸</span></div></div></div></section>
         <section class="story-scene" data-scene="3"><div class="story-copy"><div class="story-kicker">04 / AI 做辅助</div><h1>AI 先审一遍<br><em>隐私交给你自己</em></h1><p>自动识别风险、匹配相似物品，手机号默认打码。<br>技术负责效率，公益仍然由人完成。</p></div><div class="story-visual"><div class="story-scan"><div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div><div class="core">拾</div><span class="story-chip c1">相似度 92%</span><span class="story-chip c2">隐私打码</span><span class="story-chip c3">认领核对</span><span class="story-chip c4">拾光码</span></div></div></section>
-        <section class="story-scene" data-scene="4"><div class="story-final"><div class="big-mark">拾</div><h2>正在进入拾光里</h2><p>后台还在加载，请再等一下…<br>加载完成后会自动进入</p><div class="story-sponsors"><span><b>国城控股集团</b> · 服务器与网络支持</span><span><b>中基控股集团</b> · 办公地点支持</span></div><div class="story-loading"><i></i><span>正在加载中，请等待</span></div></div></section>
+        <section class="story-scene" data-scene="4"><div class="story-final"><img class="big-mark" src="/web/assets/logo-shiguangli.png" alt="拾光里"><h2>正在进入拾光里</h2><p>正在把走丢的小东西，一件件接回家。<br>加载完成后会自动进入</p><div class="story-sponsors"><span><b>国城控股集团</b> · 服务器与网络支持</span><span><b>中基控股集团</b> · 办公地点支持</span></div><div class="story-loading"><i></i><span id="story-loading-text">正在校园里，寻找那些走丢的小东西…</span></div></div></section>
       </div>
       <div class="story-footer"><div class="story-dots" id="story-dots"><i class="on"></i><i></i><i></i><i></i><i></i></div><div class="story-progress"><i id="story-progress"></i></div></div>
     </div>
@@ -71,10 +73,28 @@
         var scenes = Array.prototype.slice.call(story.querySelectorAll('.story-scene'));
         var dots = Array.prototype.slice.call(story.querySelectorAll('#story-dots i'));
         var progress = document.getElementById('story-progress');
-        var durations = [3500, 4000, 4200, 4200, 7000];
+        var durations = [3500, 4000, 4200, 4200, 6000];
+        var phraseTimer = null;
+        var phraseIndex = 0;
+        var phrases = [
+          '正在校园里，寻找那些走丢的小东西…',
+          '失物在排队，善意正在赶来的路上…',
+          '正在替每一件失物，找回家的方向…'
+        ];
         function hideLoading() { if (loading && loading.parentNode) loading.remove(); }
+        function stopPhrases() { if (phraseTimer) { clearInterval(phraseTimer); phraseTimer = null; } }
+        function startPhrases() {
+          stopPhrases();
+          var el = document.getElementById('story-loading-text');
+          if (!el) return;
+          phraseTimer = setInterval(function () {
+            phraseIndex = (phraseIndex + 1) % phrases.length;
+            el.textContent = phrases[phraseIndex];
+          }, 2200);
+        }
         function closeStory() {
           if (timer) clearTimeout(timer);
+          stopPhrases();
           story.classList.add('leaving');
           setTimeout(function () { if (story.parentNode) story.remove(); }, 500);
         }
@@ -85,9 +105,12 @@
           story.setAttribute('data-act', String(n + 1));
           progress.style.width = ((n + 1) / scenes.length * 100) + '%';
           if (timer) clearTimeout(timer);
-          if (n < scenes.length - 1) {
-            timer = setTimeout(function () { if (!appReady) show(n + 1); }, durations[n]);
-          }
+          stopPhrases();
+          if (n === scenes.length - 1) startPhrases();
+          timer = setTimeout(function () {
+            if (appReady) return;
+            show(n < scenes.length - 1 ? n + 1 : 0);
+          }, durations[n]);
         }
         function start() {
           if (started || appReady) return;
