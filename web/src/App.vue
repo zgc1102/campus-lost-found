@@ -24,7 +24,6 @@ import PhonesView from './views/PhonesView.vue'
 import InfoView from './views/InfoView.vue'
 import AdminView from './views/AdminView.vue'
 import BottomNav from './components/BottomNav.vue'
-import TourOverlay from './components/TourOverlay.vue'
 
 const params = new URLSearchParams(location.search)
 const initial = params.get('view')
@@ -191,7 +190,6 @@ function editItem(item) {
       </div>
     </Transition>
     <BottomNav v-if="view !== 'map' && view !== 'ask' && view !== 'tag-scan'" :active="view === 'publish' ? (publishType === 'help' ? 'help' : publishType) : view" @nav="go" />
-    <TourOverlay v-if="view !== 'tag-scan'" />
   </div>
 </template>
 
