@@ -45,7 +45,9 @@ const last = computed(() => props.index >= props.total - 1)
   max-height: calc(100vh - 28px);
   overflow-y: auto;
   box-sizing: border-box;
+  scrollbar-width: none;
 }
+.guide-card::-webkit-scrollbar { display: none; width: 0; }
 .guide-icon-row { display: flex; align-items: center; gap: 9px; position: relative; }
 .guide-emoji { margin: 10px 0 4px; }
 .deepseek-chip { display: inline-flex; align-items: center; gap: 4px; margin-top: 8px; border-radius: 99px; background: linear-gradient(135deg,#1d5fd1,#2f8cff); color: #fff; font-size: 10px; font-weight: 600; padding: 4px 9px; letter-spacing: .02em; }

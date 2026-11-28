@@ -10,7 +10,7 @@ export const guideSteps = [
     e: '🔎',
     t: '失物 · 寻物',
     b: '丢了东西点「寻物启事」，捡到东西点「失物招领」。\n点首页「发布」就能发布，类型选错会智能纠正。',
-    target: '.entry-section.section-lost'
+    target: '.section-lost .entry-list'
   },
   {
     e: '🧭',
