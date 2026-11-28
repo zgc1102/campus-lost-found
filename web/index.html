@@ -224,6 +224,26 @@
       #story .brand-logo path[stroke] { stroke-width: 5 !important; }
       #story .story-map .building { display: none !important; }
       #story .story-map { opacity: .18 !important; }
+
+      /* 只恢复“视觉框线”和“分段进度”，不加入任何 CSS 自动轮播 */
+      #story .story-map .building { display: block !important; fill: transparent !important; stroke: rgba(216,181,106,.16) !important; }
+      #story .story-map { opacity: .32 !important; }
+      #story .story-visual .story-item, #story .story-match-card { background: rgba(255,255,255,.055) !important; box-shadow: 0 14px 30px rgba(0,0,0,.12) !important; }
+      #story .story-chip { background: rgba(255,255,255,.035) !important; border: 1px solid rgba(216,181,106,.18) !important; padding: 6px 8px !important; color: rgba(255,255,255,.68) !important; }
+      #story .story-scan::before, #story .story-scan::after { display: block !important; content: '' !important; position: absolute !important; width: 46px !important; height: 46px !important; pointer-events: none !important; background: transparent !important; border: 0 !important; }
+      #story .story-scan::before { left: -18px !important; top: -18px !important; border-left: 1px solid rgba(216,181,106,.55) !important; border-top: 1px solid rgba(216,181,106,.55) !important; }
+      #story .story-scan::after { right: -18px !important; bottom: -18px !important; border-right: 1px solid rgba(216,181,106,.55) !important; border-bottom: 1px solid rgba(216,181,106,.55) !important; }
+      #story .story-visual::before, #story .story-visual::after { content: ''; position: absolute; width: 44px; height: 44px; pointer-events: none; opacity: .55; }
+      #story .story-visual::before { left: 0; top: 8%; border-left: 1px solid rgba(216,181,106,.35); border-top: 1px solid rgba(216,181,106,.35); }
+      #story .story-visual::after { right: 0; bottom: 8%; border-right: 1px solid rgba(216,181,106,.35); border-bottom: 1px solid rgba(216,181,106,.35); }
+      #story .story-dots { gap: 7px !important; align-items: center !important; }
+      #story .story-dots i { position: relative !important; display: block !important; width: 34px !important; height: 3px !important; border-radius: 99px !important; background: rgba(255,255,255,.18) !important; overflow: hidden !important; transition: none !important; }
+      #story .story-dots i::after { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: 99px; background: linear-gradient(90deg,#c8a96a,#f4deaa); }
+      #story .story-dots i.done::after { width: 100%; }
+      #story .story-dots i.on::after { animation: storyDotFill 4.2s linear forwards; }
+      #story .story-progress { display: none !important; }
+      @keyframes storyDotFill { from { width: 0; } to { width: 100%; } }
+      @media (max-width: 620px) { #story .story-dots i { width: 22px !important; } #story .story-dots { gap: 6px !important; } }
     </style>
   </head>
   <body>
@@ -292,7 +312,7 @@
         function render(n) {
           index = n;
           scenes.forEach(function (el, i) { el.classList.toggle('on', i === n); });
-          dots.forEach(function (el, i) { el.classList.toggle('on', i === n); });
+          dots.forEach(function (el, i) { el.classList.toggle('on', i === n); el.classList.toggle('done', i < n); });
           story.setAttribute('data-act', String(n + 1));
           if (progress) progress.style.width = ((n + 1) / scenes.length * 100) + '%';
         }
