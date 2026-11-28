@@ -136,5 +136,5 @@ onUnmounted(() => {
 .guide-layer.dim .guide-blocker { background: rgba(7, 3, 12, .72); }
 .guide-card-wrap { position: fixed !important; z-index: 10000; box-sizing: border-box; opacity: 0; transition: opacity .22s ease; }
 .guide-card-wrap.ready { opacity: 1; }
-.guide-hole { position: fixed; z-index: 9999; border-radius: 14px; border: 2px solid #e8cd8e; box-shadow: 0 0 0 9999px rgba(7, 3, 12, .78), 0 0 24px rgba(232, 205, 142, .25); pointer-events: none; transition: left .3s ease, top .3s ease, width .3s ease, height .3s ease; }
+.guide-hole { position: fixed; z-index: 9999; border-radius: 16px; border: 0; box-shadow: 0 0 0 9999px rgba(7, 3, 12, .80), 0 0 34px rgba(232, 205, 142, .12); pointer-events: none; transition: left .3s ease, top .3s ease, width .3s ease, height .3s ease; }
 </style>
