@@ -174,6 +174,32 @@
 @media (prefers-reduced-motion: reduce) { #story .story-item, #story .story-chat, #story .story-match-line path, #story .story-scan .ring, #story .story-map .road, #story .story-map .pin { animation: none !important; } }
 
       #story .story-mark svg { width: 24px; height: 24px; display: block; }
+
+      #story .story-brand { gap: 8px; }
+      #story .brand-star { width: 18px; height: 18px; display: block; filter: drop-shadow(0 0 8px rgba(216,181,106,.35)); }
+      #story .brand-word { color: #e8cd8e; font-size: 14px; font-weight: 600; letter-spacing: .16em; }
+      #story .brand-en { color: rgba(232,205,142,.55); font-size: 6px; letter-spacing: .22em; }
+      #story .story-scan .core { z-index: 3; font-size: 30px; font-weight: 700; letter-spacing: .04em; color: #f4deaa; line-height: 1; }
+      #story .story-scan .core b { display: block; font-weight: 700; }
+      #story .story-scan .core small { display: block; margin-top: 5px; color: rgba(244,222,170,.55); font-size: 6px; font-weight: 400; letter-spacing: .2em; }
+      #story .story-scan::before { content: ''; position: absolute; width: 250px; height: 250px; border-radius: 50%; background: conic-gradient(from 0deg, transparent 0 72%, rgba(216,181,106,.22) 86%, transparent 100%); -webkit-mask-image: radial-gradient(circle, transparent 0 30%, #000 38%, #000 72%, transparent 76%); mask-image: radial-gradient(circle, transparent 0 30%, #000 38%, #000 72%, transparent 76%); animation: radarSweep 4.2s linear infinite; pointer-events: none; }
+      #story .story-scan::after { content: ''; position: absolute; width: 1px; height: 92px; left: 50%; top: 50%; transform-origin: 50% 100%; transform: translate(-50%,-100%) rotate(18deg); background: linear-gradient(0deg, rgba(216,181,106,.65), transparent); animation: radarBeam 4.2s linear infinite; pointer-events: none; }
+      #story .story-scan .ring.r2 { animation: radarRing 5s ease-in-out infinite; }
+      #story .story-scan .ring.r3 { animation: ringSpin 3.2s linear infinite; }
+      @keyframes radarSweep { to { transform: rotate(360deg); } }
+      @keyframes radarBeam { 0%,100% { transform: translate(-50%,-100%) rotate(18deg); opacity: .2; } 50% { transform: translate(-50%,-100%) rotate(198deg); opacity: .9; } }
+      @keyframes radarRing { 0%,100% { opacity: .55; } 50% { opacity: 1; } }
+      @keyframes finalLogoIn {
+        0% { opacity: 0; transform: scale(.42) rotate(-18deg); filter: blur(8px) drop-shadow(0 0 0 rgba(216,181,106,0)); }
+        58% { opacity: 1; transform: scale(1.08) rotate(3deg); filter: blur(0) drop-shadow(0 0 32px rgba(216,181,106,.65)); }
+        100% { opacity: 1; transform: scale(1) rotate(0); filter: drop-shadow(0 0 22px rgba(216,181,106,.35)); }
+      }
+      #story .story-scene.on .final-logo-svg { animation: finalLogoIn 1.25s cubic-bezier(.16,.8,.2,1) both; }
+      #story .story-final h2 { animation: finalTitleIn .8s ease .25s both; }
+      @keyframes finalTitleIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+      @media (prefers-reduced-motion: reduce) {
+        #story .story-scan::before, #story .story-scan::after, #story .story-scan .ring, #story .story-scene.on .final-logo-svg, #story .story-final h2 { animation: none !important; }
+      }
     </style>
     <script type="module" crossorigin src="/web/assets/index-8ri8zcrN.js"></script>
     <link rel="stylesheet" crossorigin href="/web/assets/index-dxF0Rcex.css">
@@ -183,12 +209,12 @@
     <div id="story" hidden>
       <div class="story-noise"></div>
       <svg class="story-map" viewBox="0 0 1200 720" fill="none" aria-hidden="true"><path class="road" d="M-20 610 C170 520 280 570 420 500 S700 410 850 450 1120 360 1240 300"/><path class="road" d="M110 720 C180 600 320 620 430 540 S650 440 760 500 1050 500 1120 400"/><rect class="building" x="160" y="170" width="210" height="150" rx="10"/><rect class="building" x="470" y="120" width="170" height="190" rx="10"/><rect class="building" x="740" y="190" width="220" height="140" rx="10"/><rect class="building" x="890" y="430" width="180" height="120" rx="10"/></svg>
-      <div class="story-head"><div class="story-brand"><span class="story-mark"><svg viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="78" fill="none" stroke="#d8b56a" stroke-width="2.2"/><path d="M34 116 C52 178 148 178 166 116" fill="none" stroke="#d8b56a" stroke-width="3" stroke-linecap="round"/><path d="M47 106 C60 158 140 158 153 106" fill="none" stroke="#d8b56a" stroke-width="2.6" stroke-linecap="round"/><path d="M60 96 C70 138 130 138 140 96" fill="none" stroke="#d8b56a" stroke-width="2.2" stroke-linecap="round"/><path d="M100 30 L108 70 L148 78 L108 86 L100 126 L92 86 L52 78 L92 70 Z" fill="#f4deaa"/><circle cx="160" cy="56" r="4" fill="#d8b56a"/></svg></span><span>拾光里 · CAMPUS LOST &amp; FOUND</span></div></div>
+      <div class="story-head"><div class="story-brand"><svg class="brand-star" viewBox="0 0 100 100" aria-hidden="true"><path d="M50 6 L56 42 L94 50 L56 58 L50 94 L44 58 L6 50 L44 42 Z" fill="#e8cd8e"/></svg><span class="brand-word">拾光里</span><span class="brand-en">CAMPUS LOST &amp; FOUND</span></div></div>
       <div class="story-stage">
         <section class="story-scene on" data-scene="0"><div class="story-copy"><div class="story-kicker">01 / 有些东西会走丢</div><h1>校园里，总有些东西<br><em>走着走着就不见了</em></h1><p>校园卡、耳机、雨伞、钥匙。<br>它们不应该因为一次疏忽，就永远留在某个角落。</p></div><div class="story-visual"><div class="story-item"><b>卡</b><span>校园卡 · 六教</span></div><div class="story-item"><b>耳</b><span>耳机 · 图书馆</span></div><div class="story-item"><b>伞</b><span>雨伞 · 食堂</span></div><div class="story-item"><b>钥</b><span>钥匙 · 宿舍</span></div></div></section>
         <section class="story-scene" data-scene="1"><div class="story-copy"><div class="story-kicker">02 / 为什么做拾光里</div><h1>微信群刷屏，朋友圈沉底<br><em>失主和捡到的人，常常错过</em></h1><p>信息散落在太多地方，真正需要它的人反而看不到。<br>公益平台又很难靠人工值班撑起来。</p></div><div class="story-visual"><div class="story-phone"><div class="story-phone-in"><div class="story-phone-head"><i>拾</i>拾光里</div><div class="story-chat them">失主：校园卡掉在六教了</div><div class="story-chat me">同学：在六教捡到一张卡</div><div class="story-chat them">失主：蓝色卡套，有贴纸</div><div class="story-chat me">拾光里：匹配成功，请核对特征</div></div></div></div></section>
         <section class="story-scene" data-scene="2"><div class="story-copy"><div class="story-kicker">03 / 所以我们做了拾光里</div><h1>一个不交易、不收费的<br><em>校园失物招领与爱心互助平台</em></h1><p>把发布、审核、匹配、认领放在同一个地方。<br>让每一份善意，都能找到该去的地方。</p></div><div class="story-visual"><div class="story-match"><div class="story-match-card lost"><small>寻物启事</small><b>校园卡</b><span>六教 3 区 · 蓝色卡套</span></div><svg class="story-match-line" viewBox="0 0 120 110"><path d="M10 95 C20 25 95 20 108 88"/></svg><div class="story-match-badge">匹配成功</div><div class="story-match-card found"><small>招领信息</small><b>一张校园卡</b><span>六教门口 · 有贴纸</span></div></div></div></section>
-        <section class="story-scene" data-scene="3"><div class="story-copy"><div class="story-kicker">04 / AI 做辅助</div><h1>AI 先审一遍<br><em>隐私交给你自己</em></h1><p>自动识别风险、匹配相似物品，手机号默认打码。<br>技术负责效率，公益仍然由人完成。</p></div><div class="story-visual"><div class="story-scan"><div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div><div class="core">拾</div><span class="story-chip c1">相似度 92%</span><span class="story-chip c2">隐私打码</span><span class="story-chip c3">认领核对</span><span class="story-chip c4">拾光码</span></div></div></section>
+        <section class="story-scene" data-scene="3"><div class="story-copy"><div class="story-kicker">04 / AI 做辅助</div><h1>AI 先审一遍<br><em>隐私交给你自己</em></h1><p>自动识别风险、匹配相似物品，手机号默认打码。<br>技术负责效率，公益仍然由人完成。</p></div><div class="story-visual"><div class="story-scan"><div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div><div class="core"><b>AI</b><small>审核中</small></div><span class="story-chip c1">相似度 92%</span><span class="story-chip c2">隐私打码</span><span class="story-chip c3">认领核对</span><span class="story-chip c4">拾光码</span></div></div></section>
         <section class="story-scene" data-scene="4"><div class="story-final"><svg class="final-logo-svg" viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="78" fill="none" stroke="#d8b56a" stroke-width="1.4"/><path d="M34 116 C52 178 148 178 166 116" fill="none" stroke="#d8b56a" stroke-width="2.4" stroke-linecap="round"/><path d="M47 106 C60 158 140 158 153 106" fill="none" stroke="#d8b56a" stroke-width="1.9" stroke-linecap="round"/><path d="M60 96 C70 138 130 138 140 96" fill="none" stroke="#d8b56a" stroke-width="1.5" stroke-linecap="round"/><path d="M100 30 L108 70 L148 78 L108 86 L100 126 L92 86 L52 78 L92 70 Z" fill="#f4deaa"/><circle cx="160" cy="56" r="4" fill="#d8b56a"/></svg><h2>正在进入拾光里</h2><p>正在把走丢的小东西，一件件接回家。<br>加载完成后会自动进入</p><div class="story-sponsors"><span><b>国城控股集团</b> · 服务器与网络支持</span><span><b>中基控股集团</b> · 办公地点支持</span></div><div class="story-loading"><i></i><span id="story-loading-text">正在校园里，寻找那些走丢的小东西…</span></div></div></section>
       </div>
       <div class="story-footer"><div class="story-dots" id="story-dots"><i class="on"></i><i></i><i></i><i></i><i></i></div><div class="story-progress"><i id="story-progress"></i></div></div>
