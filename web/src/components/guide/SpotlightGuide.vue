@@ -25,6 +25,7 @@ function close() {
 
 function next() {
   if (index.value >= guideSteps.length - 1) return close()
+  cardReady.value = false
   index.value++
   place()
 }
@@ -45,7 +46,6 @@ function centerCard() {
 
 async function place() {
   if (!show.value) return
-  cardReady.value = false
   await nextTick()
   const slide = guideSteps[index.value]
   const target = slide.target ? document.querySelector(slide.target) : null
