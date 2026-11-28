@@ -324,8 +324,9 @@
         if (!ready) return;
         window.addEventListener('sg:app-ready', function () {
           ready.hidden = false;
-          setTimeout(function () { ready.classList.add('leaving'); }, 2100);
-          setTimeout(function () { if (ready.parentNode) ready.remove(); }, 2700);
+          // 等 Logo 动画完整播完，再让应用入场
+          setTimeout(function () { ready.classList.add('leaving'); }, 3400);
+          setTimeout(function () { if (ready.parentNode) ready.remove(); }, 4050);
         }, { once: true });
       })();
     </script>
