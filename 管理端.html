@@ -161,143 +161,41 @@
       .intro-fallback p { margin: 14px 0 0; color: rgba(255,255,255,.62); font-size: 13px; line-height: 1.8; }
       .fallback-enter { margin-top: 26px; border: 1px solid rgba(232,205,142,.7); border-radius: 99px; background: linear-gradient(100deg,#c8a96a,#f3dfac,#c8a96a); color: #2b1645; padding: 12px 30px; font: inherit; font-size: 12px; font-weight: 700; letter-spacing: .1em; cursor: pointer; }
     </style>
+    <link rel="stylesheet" href="/web/assets/story-intro.css?v=1">
     <script type="module" crossorigin src="/web/assets/index-BOPCvUu4.js"></script>
     <link rel="stylesheet" crossorigin href="/web/assets/index-CO1F434T.css">
   </head>
 
   <body>
-    <div id="intro" role="dialog" aria-label="拾光里介绍">
-      <video id="intro-video" class="intro-video" poster="/web/assets/intro-poster.jpg" preload="none" muted playsinline></video>
-      <button class="intro-play" type="button" id="intro-play">▶ 播放开场</button>
-      <div class="intro-fallback" id="intro-fallback">
-        <div class="fallback-mark">拾</div>
-        <h1>拾光里</h1>
-        <p>让每件失物，都有回家的路。<br>校园公益失物招领与爱心互助平台。</p>
-        <button class="fallback-enter" type="button" id="intro-enter">进入拾光里</button>
+    <div id="story" data-act="1" role="dialog" aria-label="拾光里介绍">
+      <div class="story-noise"></div>
+      <svg class="story-map" viewBox="0 0 1200 720" fill="none" aria-hidden="true"><path class="road" d="M-20 610 C170 520 280 570 420 500 S700 410 850 450 1120 360 1240 300"/><path class="road" d="M110 720 C180 600 320 620 430 540 S650 440 760 500 1050 500 1120 400"/><rect class="building" x="160" y="170" width="210" height="150" rx="10"/><rect class="building" x="470" y="120" width="170" height="190" rx="10"/><rect class="building" x="740" y="190" width="220" height="140" rx="10"/><rect class="building" x="890" y="430" width="180" height="120" rx="10"/><circle class="pin" cx="270" cy="250" r="5"/><circle class="pin" cx="570" cy="210" r="5"/><circle class="pin" cx="850" cy="260" r="5"/><circle class="pin" cx="980" cy="490" r="5"/></svg>
+      <div class="story-head"><div class="story-brand"><div class="story-mark">拾</div><span>拾光里 · CAMPUS LOST &amp; FOUND</span></div><button class="story-skip" type="button" id="story-skip">跳过 ›</button></div>
+      <div class="story-stage">
+        <section class="story-scene on" data-scene="0">
+          <div class="story-copy"><div class="story-kicker">01 / 有些东西会走丢</div><h1>校园里，总有些东西<br><em>走着走着就不见了</em></h1><p>校园卡、耳机、雨伞、钥匙。<br>它们不应该因为一次疏忽，就永远留在某个角落。</p></div>
+          <div class="story-visual"><div class="story-item"><b>卡</b><span>校园卡 · 六教</span></div><div class="story-item"><b>耳</b><span>耳机 · 图书馆</span></div><div class="story-item"><b>伞</b><span>雨伞 · 食堂</span></div><div class="story-item"><b>钥</b><span>钥匙 · 宿舍</span></div></div>
+        </section>
+        <section class="story-scene" data-scene="1">
+          <div class="story-copy"><div class="story-kicker">02 / 为什么做拾光里</div><h1>微信群刷屏，朋友圈沉底<br><em>失主和捡到的人，常常错过</em></h1><p>信息散落在太多地方，真正需要它的人反而看不到。<br>公益平台又很难靠人工值班撑起来。</p></div>
+          <div class="story-visual"><div class="story-phone"><div class="story-phone-in"><div class="story-phone-head"><i>拾</i>拾光里</div><div class="story-chat them">失主：校园卡掉在六教了</div><div class="story-chat me">同学：在六教捡到一张卡</div><div class="story-chat them">失主：蓝色卡套，有贴纸</div><div class="story-chat me">拾光里：匹配成功，请核对特征</div></div></div></div>
+        </section>
+        <section class="story-scene" data-scene="2">
+          <div class="story-copy"><div class="story-kicker">03 / 所以我们做了拾光里</div><h1>一个不交易、不收费的<br><em>校园失物招领与爱心互助平台</em></h1><p>把发布、审核、匹配、认领放在同一个地方。<br>让每一份善意，都能找到该去的地方。</p></div>
+          <div class="story-visual"><div class="story-match"><div class="story-match-card lost"><small>寻物启事</small><b>校园卡</b><span>六教 3 区 · 蓝色卡套</span></div><svg class="story-match-line" viewBox="0 0 120 110"><path d="M10 95 C20 25 95 20 108 88"/></svg><div class="story-match-badge">匹配成功</div><div class="story-match-card found"><small>招领信息</small><b>一张校园卡</b><span>六教门口 · 有贴纸</span></div></div></div>
+        </section>
+        <section class="story-scene" data-scene="3">
+          <div class="story-copy"><div class="story-kicker">04 / AI 做辅助，把判断留给人</div><h1>AI 先审一遍<br><em>隐私交给你自己</em></h1><p>自动识别风险、匹配相似物品，手机号默认打码。<br>技术负责效率，公益仍然由人完成。</p></div>
+          <div class="story-visual"><div class="story-scan"><div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div><div class="core">拾</div><span class="story-chip c1">相似度 92%</span><span class="story-chip c2">隐私打码</span><span class="story-chip c3">认领核对</span><span class="story-chip c4">拾光码</span></div></div>
+        </section>
+        <section class="story-scene" data-scene="4">
+          <div class="story-final"><div class="big-mark">拾</div><h2>让每件失物，都有回家的路</h2><p>校园公益失物招领与爱心互助平台<br>不交易 · 不收费 · 非清华官方平台</p><div class="story-sponsors"><span><b>国城控股集团</b> · 服务器与网络支持</span><span><b>中基控股集团</b> · 办公地点支持</span></div><button class="story-enter" type="button" id="story-enter">进入拾光里 →</button></div>
+        </section>
       </div>
-      <div class="intro-toast" id="intro-toast">暂时还没加载成功，请稍等一下…</div>
-      <div class="intro-head"><div class="intro-brand"><div class="intro-brandmark">拾</div><span>拾光里 · CAMPUS LOST &amp; FOUND</span></div><button class="intro-skip" type="button" id="intro-skip">跳过 ›</button></div>
+      <div class="story-toast" id="story-toast">暂时还没加载成功，请稍等一下…</div>
+      <div class="story-footer"><div class="story-dots" id="story-dots"><i class="on"></i><i></i><i></i><i></i><i></i></div><div class="story-progress"><i id="story-progress"></i></div><button class="story-next" type="button" id="story-next">下一步</button></div>
     </div>
     <div id="app"></div>
-    <script>
-      (function () {
-        var intro = document.getElementById('intro');
-        if (!intro) return;
-        var force = new URLSearchParams(location.search).get('intro') === '1';
-        var admin = location.pathname.replace(/\/+$/, '') === '/admin';
-        var seen = false;
-        try { seen = localStorage.getItem('sg:intro:v2') === '1' || sessionStorage.getItem('sg:intro:v2') === '1'; } catch (e) {}
-        if (admin) { intro.parentNode.removeChild(intro); return; }
-        var returning = seen && !force;
-
-        var video = document.getElementById('intro-video');
-        var toast = document.getElementById('intro-toast');
-        var closed = false;
-        var appReady = false;
-        var phase = 'idle';
-        var toastTimer = null;
-        var fallbackTimer = null;
-        var mobile = (window.innerWidth <= 820) || (window.innerHeight > window.innerWidth && window.innerWidth < 1000);
-        var firstSrc = mobile ? '/web/assets/intro-first-mobile.mp4?v=20261128c' : '/web/assets/intro-first.mp4?v=20261128c';
-        var secondSrc = mobile ? '/web/assets/intro-second-mobile.mp4?v=20261128c' : '/web/assets/intro-second.mp4?v=20261128c';
-        var firstPoster = mobile ? '/web/assets/intro-mobile-poster.jpg?v=20261128c' : '/web/assets/intro-poster.jpg?v=20261128c';
-
-        function close() {
-          if (closed) return;
-          closed = true;
-          clearTimeout(toastTimer);
-          clearTimeout(fallbackTimer);
-          try { localStorage.setItem('sg:intro:v2', '1'); sessionStorage.setItem('sg:intro:v2', '1'); } catch (e) {}
-          if (video) { try { video.pause(); } catch (e) {} }
-          intro.classList.remove('toast-on');
-          document.body.style.overflow = '';
-          intro.classList.add('is-leaving');
-          setTimeout(function () { if (intro.parentNode) intro.parentNode.removeChild(intro); }, 600);
-        }
-        function showToast(text) {
-          if (closed || !toast) return;
-          toast.textContent = text;
-          intro.classList.add('toast-on');
-          clearTimeout(toastTimer);
-          toastTimer = setTimeout(function () { intro.classList.remove('toast-on'); }, 4200);
-        }
-        function fallback() {
-          if (closed) return;
-          intro.classList.add('fallback-on');
-          intro.classList.remove('need-play');
-          if (video) { try { video.pause(); } catch (e) {} }
-          showToast('这个开场暂时加载不出来，可以直接进入拾光里');
-        }
-        function needPlay() {
-          if (closed) return;
-          intro.classList.add('need-play');
-          showToast('浏览器拦截了自动播放，点“播放开场”即可');
-        }
-        function loadAndPlay(src, loop, poster) {
-          phase = loop ? 'second' : 'first';
-          if (!video) return false;
-          video.loop = loop;
-          video.preload = 'auto';
-          video.poster = poster;
-          video.src = src;
-          video.load();
-          var p = video.play();
-          if (p && p.catch) p.catch(needPlay);
-          return true;
-        }
-        function playSecond(reason) {
-          if (closed) return;
-          if (!loadAndPlay(secondSrc, true, firstPoster)) { fallback(); return; }
-          showToast(reason || '暂时还没加载成功，请稍等一下，视频会继续播放…');
-          fallbackTimer = setTimeout(function () {
-            if (!closed && video.readyState < 2) fallback();
-          }, 7000);
-        }
-        function playFirst() {
-          if (closed) return;
-          if (!loadAndPlay(firstSrc, false, firstPoster)) { fallback(); return; }
-        }
-        function onAppReady() {
-          appReady = true;
-          // 第一次：让第一段介绍播完；如果已经播完，会进入第二段/首页。
-          // 第二次以后：只要首页好了，立即暂停视频并进入首页。
-          if (returning || phase === 'second') close();
-        }
-
-        document.body.style.overflow = 'hidden';
-        document.getElementById('intro-skip').addEventListener('click', function () {
-          if (returning || appReady) close();
-          else playSecond('正在继续加载，请稍等一下…');
-        });
-        document.getElementById('intro-enter').addEventListener('click', close);
-        document.getElementById('intro-play').addEventListener('click', function () {
-          intro.classList.remove('need-play');
-          var p = video && video.play();
-          if (p && p.catch) p.catch(fallback);
-        });
-        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
-        window.addEventListener('sg:app-ready', onAppReady, { once: true });
-
-        if (!video) { fallback(); return; }
-        video.addEventListener('error', fallback);
-        video.addEventListener('ended', function () {
-          if (closed) return;
-          if (phase === 'first') {
-            if (appReady) close();
-            else playSecond('暂时还没加载成功，请稍等一下，视频会继续播放…');
-          }
-        });
-
-        if (returning) {
-          // 第二次以后先给首页一点时间；好就直接进，不好就播长版并循环。
-          setTimeout(function () {
-            if (closed || appReady) return;
-            playSecond('暂时还没加载成功，请稍等一下，视频会继续播放…');
-          }, 1400);
-        } else {
-          playFirst();
-        }
-      })();
-    </script>
+    <script src="/web/assets/story-intro.js?v=1" defer></script>
   </body>
 </html>
